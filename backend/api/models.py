@@ -29,6 +29,9 @@ class Usuario(AbstractBaseUser):
             self.password = make_password(self.password)
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        return self.email
+
 class PerfilMedico(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name="perfil_medico")
@@ -43,10 +46,15 @@ class PerfilMedico(models.Model):
             models.CheckConstraint(check=models.Q(peso__gt=0, peso__lt=500), name='peso_valido'),
             models.CheckConstraint(check=models.Q(altura__gt=0, altura__lt=3), name='altura_valida')
         ]
+    def __str__(self):
+        return self.usuario.email
 
 class CondicionPrevia(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.nombre
 
 class UsuarioCondicion(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="condiciones")
@@ -55,26 +63,35 @@ class UsuarioCondicion(models.Model):
     class Meta:
         unique_together = ('usuario', 'condicion')
 
+    def __str__(self):
+        return f"{self.usuario.email} - {self.condicion.nombre}"
+
 class CategoriaAlimento(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
 
+    def __str__(self):
+        return self.nombre
+
 class UnidadMedida(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.nombre
 
 class Alimento(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     categoria = models.ForeignKey(CategoriaAlimento, on_delete=models.SET_NULL, null=True, blank=True)
     nombre = models.CharField(max_length=100, unique=True)
     energia = models.DecimalField(max_digits=6, decimal_places=2)
+    humedad = models.DecimalField(max_digits=6, decimal_places=2, default=0.0)
     cenizas = models.DecimalField(max_digits=6, decimal_places=2)
     proteinas = models.DecimalField(max_digits=5, decimal_places=2)
     hidratos_carbono = models.DecimalField(max_digits=5, decimal_places=2)
     azucares_totales = models.DecimalField(max_digits=5, decimal_places=2)
     fibra_dietetica = models.DecimalField(max_digits=5, decimal_places=2)
     lipidos_totales = models.DecimalField(max_digits=5, decimal_places=2)
-    carbohidratos = models.DecimalField(max_digits=5, decimal_places=2)
     acidos_grasos_saturados = models.DecimalField(max_digits=5, decimal_places=2)
     acidos_grasos_monoinsaturados = models.DecimalField(max_digits=5, decimal_places=2)
     acidos_grasos_poliinsaturados = models.DecimalField(max_digits=5, decimal_places=2)
@@ -104,11 +121,17 @@ class Alimento(models.Model):
     alcohol = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
     activo = models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.nombre
+
 class PorcionAlimento(models.Model):
     id = models.AutoField(primary_key=True)
     alimento = models.ForeignKey(Alimento, on_delete=models.CASCADE, related_name="porciones")
     cantidad = models.DecimalField(max_digits=6, decimal_places=2)
     unidad = models.ForeignKey(UnidadMedida, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.alimento.nombre} - {self.cantidad} {self.unidad.nombre}"
 
 class MinutaNutricional(models.Model):
     ESTADO_CHOICES = [
@@ -122,15 +145,24 @@ class MinutaNutricional(models.Model):
     fecha_vigencia = models.DateField()
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='activa')
 
+    def __str__(self):
+        return f"{self.usuario.email} - {self.fecha_creacion}"
+
 class ComidaDia(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.nombre
 
 class Receta(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nombre = models.CharField(max_length=100)
     preparacion = models.TextField()
     informacion_nutricional = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.nombre
 
 class IngredienteReceta(models.Model):
     id = models.AutoField(primary_key=True)
@@ -139,16 +171,25 @@ class IngredienteReceta(models.Model):
     cantidad = models.DecimalField(max_digits=6, decimal_places=2)
     unidad = models.ForeignKey(UnidadMedida, on_delete=models.SET_NULL, null=True, blank=True)
 
+    def __str__(self):
+        return f"{self.receta.nombre} - {self.alimento.nombre}"
+
 class DetalleMinuta(models.Model):
     id = models.AutoField(primary_key=True)
     minuta = models.ForeignKey(MinutaNutricional, on_delete=models.CASCADE, related_name="detalles")
     comida = models.ForeignKey(ComidaDia, on_delete=models.CASCADE)
     receta = models.ForeignKey(Receta, on_delete=models.CASCADE)
 
+    def __str__(self):
+        return f"{self.minuta.usuario.email} - {self.comida.nombre}"
+
 class ImagenComida(models.Model):
     id = models.AutoField(primary_key=True)
     receta = models.ForeignKey(Receta, on_delete=models.CASCADE, related_name="imagenes")
     url_imagen = models.ImageField(upload_to='imagenes/')
+
+    def __str__(self):
+        return self.receta.nombre
 
 class RegistroComida(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -157,6 +198,9 @@ class RegistroComida(models.Model):
     porcion = models.ForeignKey(PorcionAlimento, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_consumo = models.DateTimeField(auto_now_add=True)
     notas = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.usuario.email} - {self.fecha_consumo}"
 
 class CentroMedico(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -170,18 +214,27 @@ class CentroMedico(models.Model):
     servicio_dialisis = models.BooleanField(default=False)
     activo = models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.nombre
+
 class ConsejoNutricional(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    url_imagen = models.ImageField(upload_to='imagenes/', blank=True, null=True)
+    url_imagen = models.CharField(max_length=255)
     titulo = models.CharField(max_length=200)
     contenido = models.TextField()
     categoria = models.CharField(max_length=50, blank=True, null=True)
     fecha_publicacion = models.DateField(auto_now_add=True)
     activo = models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.titulo
+
 class Rol(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.nombre
 
 class UsuarioRol(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="roles")
@@ -189,6 +242,9 @@ class UsuarioRol(models.Model):
 
     class Meta:
         unique_together = ('usuario', 'rol')
+
+    def __str__(self):
+        return f"{self.usuario.email} - {self.rol.nombre}"
 
 class Publicacion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -199,12 +255,18 @@ class Publicacion(models.Model):
     likes = models.PositiveIntegerField(default=0)
     activo = models.BooleanField(default=True)
 
+    def __str__(self):
+        return self.asunto
+
 class Comentario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     publicacion = models.ForeignKey(Publicacion, on_delete=models.CASCADE, related_name="comentarios")
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
     contenido = models.TextField()
     fecha_comentario = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.publicacion.asunto} - {self.usuario.email}"
 
 class RespuestaComentario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -213,6 +275,9 @@ class RespuestaComentario(models.Model):
     contenido = models.TextField()
     fecha_respuesta = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.comentario.publicacion.asunto} - {self.usuario.email}"
+
 class AnalisisImagen(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="analisis_imagenes")
@@ -220,3 +285,6 @@ class AnalisisImagen(models.Model):
     fecha_analisis = models.DateTimeField(auto_now_add=True)
     resultado = models.JSONField()
     conclusion = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.usuario.email} - {self.fecha_analisis}"

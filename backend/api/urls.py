@@ -16,7 +16,7 @@ router.register(r'condiciones-previas', CondicionPreviaViewSet)
 router.register(r'usuario-condiciones', UsuarioCondicionViewSet)
 router.register(r'categorias-alimento', CategoriaAlimentoViewSet)
 router.register(r'unidades-medida', UnidadMedidaViewSet)
-router.register(r'alimentos', AlimentoViewSet)
+router.register(r'alimentos', AlimentoViewSet, basename="alimentos")
 router.register(r'porciones-alimento', PorcionAlimentoViewSet)
 router.register(r'minutas-nutricionales', MinutaNutricionalViewSet)
 router.register(r'comidas-dia', ComidaDiaViewSet)
@@ -36,5 +36,4 @@ router.register(r'analisis-imagenes', AnalisisImagenViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('auth/', obtain_auth_token),
 ]

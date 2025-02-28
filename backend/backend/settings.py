@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -25,7 +26,7 @@ SECRET_KEY = 'django-insecure-@b!j7+l224)2dug)23#x+ky+#yn#_0he&7y0#m(9oi&%z^443z
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.0.4", "192.168.1.100", "192.168.0.18"]
 
 
 # Application definition
@@ -39,8 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'api',
-    'corsheaders',
-    'rest_framework.authtoken',
+    'corsheaders'
 ]
 
 MIDDLEWARE = [
@@ -126,7 +126,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'backend' , 'static')]
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
@@ -135,13 +138,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',
     ],
 }
-
+# Configuración global de CORS para desarrollo
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Add your frontend URL here
+    'http://127.0.0.1:8081',
+    'http://192.168.0.4:8000',      # Backend usando IP de la PC
+    'exp://192.168.0.4:8081'         # Frontend Expo
 ]

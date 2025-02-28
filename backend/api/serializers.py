@@ -4,6 +4,7 @@ from .models import (
     MinutaNutricional, ComidaDia, Receta, IngredienteReceta, DetalleMinuta, ImagenComida, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen
 )
+from django.conf import settings
 
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -86,6 +87,15 @@ class CentroMedicoSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class ConsejoNutricionalSerializer(serializers.ModelSerializer):
+    url_imagen = serializers.SerializerMethodField()
+
+    def get_url_imagen(self, obj):
+        if obj.url_imagen:
+            # Asegurar que no haya doble "imagenes/"
+            ruta_imagen = obj.url_imagen.lstrip('/')  # Eliminar "/" si está al inicio
+            return f"/static/{ruta_imagen}"
+        return None
+
     class Meta:
         model = ConsejoNutricional
         fields = '__all__'
