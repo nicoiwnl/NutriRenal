@@ -8,6 +8,7 @@ import { Toaster } from 'sonner-native';
 import { useNavigation } from '@react-navigation/native';
 import { MenuProvider } from 'react-native-popup-menu';
 import { Menu, MenuOptions, MenuOption, MenuTrigger } from 'react-native-popup-menu';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import LoginScreen from "../screens/LoginScreen";
 import HomeScreen from "../screens/HomeScreen";
 import ForgotPasswordScreen from "../screens/ForgotPasswordScreen";
@@ -20,12 +21,30 @@ import ConsejosScreen from "../screens/ConsejosScreen";
 import AlimentosCategoriaScreen from "../screens/AlimentosCategoriaScreen";
 import ConsejosCategoriaScreen from "../screens/ConsejosCategoriaScreen";
 import ConsejosPorCategoriaScreen from "../screens/ConsejosPorCategoriaScreen";
+import NuevaPublicacionScreen from '@/screens/NuevaPublicacionScreen';
+import PublicacionDetailScreen from '@/screens/PublicacionDetailScreen';
 
 // New: Define the navigators
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-function HeaderRight() {
+// Añadir función para limpiar datos al cerrar sesión
+function clearUserData() {
+  return Promise.all([
+    AsyncStorage.removeItem('userToken'),
+    AsyncStorage.removeItem('userData')
+  ]);
+}
+
+function HeaderRight({ navigation }) {
+  const handleLogout = async () => {
+    await clearUserData(); // Usar función centralizada para limpiar datos
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
+  };
+
   return (
     <Menu>
       <MenuTrigger>
@@ -38,12 +57,15 @@ function HeaderRight() {
         <MenuOption onSelect={() => alert('Opción 2')}>
           <Text style={{ padding: 10 }}>Opción 2</Text>
         </MenuOption>
+        <MenuOption onSelect={handleLogout}>
+          <Text style={{ padding: 10 }}>Cerrar Sesión</Text>
+        </MenuOption>
       </MenuOptions>
     </Menu>
   );
 }
 
-function TabNavigator() {
+function TabNavigator({ navigation }) {
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
@@ -69,12 +91,13 @@ function TabNavigator() {
         headerShown: true,
         headerTitle: route.name,
         headerTitleAlign: 'center',
-        headerRight: () => <HeaderRight />,
+        headerRight: () => <HeaderRight navigation={navigation} />,
         tabBarStyle: ({ focused }) => ({
           backgroundColor: '#F1E3D3',
           borderTopWidth: 0,
           elevation: 0,
-          shadowOpacity: 0,
+          boxShadow: Platform.OS === 'web' ? '0px 4px 5px rgba(0, 0, 0, 0.1)' : undefined,
+          elevation: 5,
           height: 80,
           paddingBottom: 10,
           paddingTop: 10,
@@ -83,14 +106,6 @@ function TabNavigator() {
           left: 20,
           right: 20,
           borderRadius: 20,
-          shadowColor: '#000',
-          shadowOffset: {
-            width: 0,
-            height: 4,
-          },
-          shadowOpacity: 0.1,
-          shadowRadius: 5,
-          elevation: 5,
         }),
         tabBarItemStyle: {
           marginTop: route.name === 'QRScanner' ? -20 : 0,
@@ -127,14 +142,13 @@ function TabNavigator() {
 }
 
 function RootStack() {
-  const navigation = useNavigation();
   return (
     <Stack.Navigator 
-      screenOptions={{
+      screenOptions={({ navigation }) => ({
         headerShown: true,
         headerTitleAlign: 'center',
-        headerRight: () => <HeaderRight />,
-      }}
+        headerRight: () => <HeaderRight navigation={navigation} />,
+      })}
       initialRouteName="Login"
     >
       <Stack.Screen 
@@ -152,6 +166,19 @@ function RootStack() {
         component={ForgotPasswordScreen} 
         options={{ title: 'Recuperar Contraseña',headerShown: false }}
       />
+      
+      {/* Add these screens to the root stack */}
+      <Stack.Screen 
+        name="NuevaPublicacion" 
+        component={NuevaPublicacionScreen} 
+        options={{ title: 'Nueva Publicación' }}
+      />
+      <Stack.Screen 
+        name="PublicacionDetail" 
+        component={PublicacionDetailScreen} 
+        options={{ title: 'Publicación' }}
+      />
+      
       <Stack.Screen 
         name="AlimentoDetailScreen" 
         component={AlimentoDetailScreen} 

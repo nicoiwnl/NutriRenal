@@ -1,3 +1,3 @@
 from django.test import TestCase
 
-# Create your tests here.
+# Actualiza tus pruebas para reflejar los cambios en los modelos

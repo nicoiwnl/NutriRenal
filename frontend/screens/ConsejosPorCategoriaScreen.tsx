@@ -24,7 +24,7 @@ export default function ConsejosPorCategoriaScreen({ route }) {
       });
   }, [categoria]);
 
-  const BASE_URL = Platform.OS === 'web' ? 'http://127.0.0.1:8000' : 'http://192.168.0.4:8000'; // Cambiar por la IP local de tu máquina
+  const BASE_URL = Platform.OS === 'web' ? 'http://127.0.0.1:8000' : 'http://192.168.0.2:8000'; // Cambiar por la IP local de tu máquina
 
   const renderConsejo = ({ item }) => (
     <View style={styles.consejoContainer}>

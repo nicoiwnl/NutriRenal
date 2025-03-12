@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-@b!j7+l224)2dug)23#x+ky+#yn#_0he&7y0#m(9oi&%z^443z
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.0.4", "192.168.1.100", "192.168.0.18"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.0.4", "192.168.1.100", "192.168.0.2", "192.168.0.9"]
 
 
 # Application definition
@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'rest_framework.authtoken',  # Añadir esta línea
     'api',
     'corsheaders'
 ]
@@ -143,9 +144,13 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny',
     ],
 }
+
 # Configuración global de CORS para desarrollo
 CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:8081',
-    'http://192.168.0.4:8000',      # Backend usando IP de la PC
-    'exp://192.168.0.4:8081'         # Frontend Expo
+    'http://12.0.0.1:8000',
+    'http://192.168.0.2:8000',      # Backend usando IP de la PC
+    'exp://192.168.0.2:8081',
+    'exp://192.168.0.2:8082',
+    'http://127.0.0.1:8082',       # Frontend Expo
 ]

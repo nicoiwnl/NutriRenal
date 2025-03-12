@@ -1,15 +1,35 @@
 from rest_framework import serializers
 from .models import (
-    Usuario, PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
+    PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
     MinutaNutricional, ComidaDia, Receta, IngredienteReceta, DetalleMinuta, ImagenComida, RegistroComida, CentroMedico,
-    ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen
+    ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
+    User, Persona  # Make sure these imports match your actual models
 )
 from django.conf import settings
+from datetime import datetime
 
-class UsuarioSerializer(serializers.ModelSerializer):
+class UserSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Usuario
-        fields = '__all__'
+        model = User
+        fields = ['rut', 'email', 'password', 'id_persona']
+        extra_kwargs = {'password': {'write_only': True}}
+
+class PersonaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Persona
+        fields = ['id', 'nombres', 'apellidos', 'foto_perfil', 'fecha_nacimiento', 'activo', 'edad', 'genero']
+
+class RegisterSerializer(serializers.Serializer):
+    rut = serializers.IntegerField()
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+    nombres = serializers.CharField(required=False, default='')
+    apellidos = serializers.CharField(required=False, default='')
+    foto_perfil = serializers.CharField(required=False, allow_blank=True, default='')
+    fecha_nacimiento = serializers.DateField(required=False, default=datetime.now().date())
+    edad = serializers.IntegerField(required=False, default=0)
+    genero = serializers.CharField(required=False, allow_blank=True, default='')
+
 
 class PerfilMedicoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -103,29 +123,90 @@ class ConsejoNutricionalSerializer(serializers.ModelSerializer):
 class RolSerializer(serializers.ModelSerializer):
     class Meta:
         model = Rol
-        fields = '__all__'
+        fields = ['id', 'nombre']
 
 class UsuarioRolSerializer(serializers.ModelSerializer):
+    rol = serializers.PrimaryKeyRelatedField(queryset=Rol.objects.all())
+    id_persona = serializers.PrimaryKeyRelatedField(queryset=Persona.objects.all())
+    
     class Meta:
         model = UsuarioRol
         fields = '__all__'
+        
+    def to_representation(self, instance):
+        representation = super().to_representation(instance)
+        representation['rol'] = {
+            'id': instance.rol.id,
+            'nombre': instance.rol.nombre
+        }
+        return representation
 
 class PublicacionSerializer(serializers.ModelSerializer):
+    autor_nombre = serializers.SerializerMethodField()
+    autor_foto = serializers.SerializerMethodField()
+    comentarios_count = serializers.SerializerMethodField()
+    
     class Meta:
         model = Publicacion
         fields = '__all__'
 
+    def get_autor_nombre(self, obj):
+        if obj.id_persona:
+            return f"{obj.id_persona.nombres} {obj.id_persona.apellidos}"
+        return "Usuario"
+
+    def get_autor_foto(self, obj):
+        if obj.id_persona and obj.id_persona.foto_perfil:
+            return obj.id_persona.foto_perfil
+        return None
+    
+    def get_comentarios_count(self, obj):
+        return obj.comentarios.filter(activo=True).count()
+
+
 class ComentarioSerializer(serializers.ModelSerializer):
+    autor_nombre = serializers.SerializerMethodField()
+    autor_foto = serializers.SerializerMethodField()
+    
     class Meta:
         model = Comentario
         fields = '__all__'
 
+    def get_autor_nombre(self, obj):
+        if obj.id_persona:
+            return f"{obj.id_persona.nombres} {obj.id_persona.apellidos}"
+        return "Usuario"
+
+    def get_autor_foto(self, obj):
+        if obj.id_persona and obj.id_persona.foto_perfil:
+            return obj.id_persona.foto_perfil
+        return None
+
+
 class RespuestaComentarioSerializer(serializers.ModelSerializer):
+    autor_nombre = serializers.SerializerMethodField()
+    autor_foto = serializers.SerializerMethodField()
+    
     class Meta:
         model = RespuestaComentario
         fields = '__all__'
 
+    def get_autor_nombre(self, obj):
+        if obj.id_persona:
+            return f"{obj.id_persona.nombres} {obj.id_persona.apellidos}"
+        return "Usuario"
+
+    def get_autor_foto(self, obj):
+        if obj.id_persona and obj.id_persona.foto_perfil:
+            return obj.id_persona.foto_perfil
+        return None
+
 class AnalisisImagenSerializer(serializers.ModelSerializer):
     class Meta:
         model = AnalisisImagen
+        fields = '__all__'
+
+class VinculoPacienteCuidadorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = VinculoPacienteCuidador
         fields = '__all__'

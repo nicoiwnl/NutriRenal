@@ -1,53 +1,128 @@
 from django.db import models
 import uuid
-from django.contrib.auth.models import AbstractBaseUser
-from django.contrib.auth.hashers import make_password
 
-class Usuario(AbstractBaseUser):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+# Inicio de la seccion de Usuario
+
+# credenciales persona - simplified model without any auth fields
+class User(models.Model):
+    rut = models.IntegerField(primary_key=True, unique=True)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255)
-    nombres = models.CharField(max_length=100)
-    apellidos = models.CharField(max_length=100)
-    foto_perfil = models.ImageField(upload_to='imagenes/', blank=True, null=True)
-    fecha_registro = models.DateTimeField(auto_now_add=True)
-    activo = models.BooleanField(default=True)
-    edad = models.PositiveIntegerField()
-    genero = models.CharField(max_length=50, blank=True, null=True)
-    alergias = models.TextField(blank=True, null=True)
-
-    USERNAME_FIELD = 'email'
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(check=models.Q(edad__gt=0), name='edad_gt_0'),
-            models.CheckConstraint(check=models.Q(email__regex=r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'), name='email_valido')
-        ]
-
-    def save(self, *args, **kwargs):
-        if not self.pk:
-            self.password = make_password(self.password)
-        super().save(*args, **kwargs)
-
+    id_persona = models.ForeignKey('Persona', on_delete=models.CASCADE, related_name="usuario", null=True, blank=True)
+    
     def __str__(self):
         return self.email
 
+# informacion personal del usuario
+class Persona(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    nombres = models.CharField(max_length=200)
+    apellidos = models.CharField(max_length=200)
+    foto_perfil = models.CharField(max_length=255)
+    fecha_nacimiento = models.DateField()
+    activo = models.BooleanField(default=True)
+    edad = models.PositiveIntegerField()
+    genero = models.CharField(max_length=50, blank=True, null=True)
+
+    def __str__(self):
+        fecha_formateada = self.fecha_nacimiento.strftime('%d-%m-%Y') if self.fecha_nacimiento else ''
+        return f"{self.nombres} {self.apellidos} ({fecha_formateada})"
+    
+    def calcular_edad(self):
+        """
+        Calcula la edad en años basada en la fecha de nacimiento
+        """
+        from datetime import date
+        today = date.today()
+        born = self.fecha_nacimiento
+        age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+        return age
+    
+    def save(self, *args, **kwargs):
+        """
+        Sobreescribir el método save para actualizar automáticamente la edad
+        """
+        if self.fecha_nacimiento:
+            self.edad = self.calcular_edad()
+        super(Persona, self).save(*args, **kwargs)
+
+# perfil medico del usuario
 class PerfilMedico(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    usuario = models.OneToOneField(Usuario, on_delete=models.CASCADE, related_name="perfil_medico")
+    id_persona = models.OneToOneField(Persona, on_delete=models.CASCADE, related_name="perfil_medico", null=True, blank=True)
     peso = models.DecimalField(max_digits=5, decimal_places=2)
     altura = models.DecimalField(max_digits=5, decimal_places=2)
-    condiciones_especificas = models.TextField(blank=True, null=True)
-    tipo_dialisis = models.CharField(max_length=50, blank=True, null=True)
+    tipo_dialisis = models.CharField(
+        max_length=50, 
+        choices=[
+            ('hemodialisis', 'Hemodiálisis'),
+            ('dialisis_peritoneal', 'Diálisis Peritoneal')
+        ],
+        default='hemodialisis'
+    )
     ultima_actualizacion = models.DateTimeField(auto_now=True)
+    nivel_actividad = models.CharField(max_length=50, choices=[
+        ('sedentario', 'Sedentario'),
+        ('ligera', 'Ligera'),
+        ('moderada', 'Moderada'),
+        ('alta', 'Alta'),
+        ('muy alta', 'Muy Alta')
+    ], default='sedentario')
 
     class Meta:
         constraints = [
             models.CheckConstraint(check=models.Q(peso__gt=0, peso__lt=500), name='peso_valido'),
             models.CheckConstraint(check=models.Q(altura__gt=0, altura__lt=3), name='altura_valida')
         ]
+
     def __str__(self):
-        return self.usuario.email
+        return self.id_persona.email
+
+    def calcular_imc(self):
+        try:
+            peso = float(self.peso)
+            altura = float(self.altura)
+            if altura <= 0:
+                print("Error: altura es cero o negativa")
+                return 0
+            # Cálculo con redondeo a dos decimales
+            return round(peso / (altura ** 2), 2)
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            print(f"Error al calcular IMC: {e}")
+            return 0
+
+    def calcular_calorias_diarias(self, genero, edad):
+        try:
+            peso = float(self.peso)
+            altura = float(self.altura)
+            edad_num = int(edad) if edad else 30
+            
+            # Asegúrate de que genero tenga un valor predeterminado
+            genero = genero.lower() if genero else 'femenino'
+            
+            if genero == 'masculino':
+                tmb = 88.362 + (13.397 * peso) + (4.799 * altura * 100) - (5.677 * edad_num)
+            else:
+                tmb = 447.593 + (9.247 * peso) + (3.098 * altura * 100) - (4.330 * edad_num)
+
+            # Asegúrate de que nivel_actividad tenga un valor predeterminado
+            nivel_actividad = self.nivel_actividad if self.nivel_actividad else 'sedentario'
+            
+            if nivel_actividad == 'sedentario':
+                calorias = tmb * 1.2
+            elif nivel_actividad == 'ligera':
+                calorias = tmb * 1.375
+            elif nivel_actividad == 'moderada':
+                calorias = tmb * 1.55
+            elif nivel_actividad == 'alta':
+                calorias = tmb * 1.725
+            else:  
+                calorias = tmb * 1.9
+
+            return calorias
+        except (ValueError, TypeError) as e:
+            print(f"Error al calcular calorías: {e}")
+            return 0
 
 class CondicionPrevia(models.Model):
     id = models.AutoField(primary_key=True)
@@ -57,15 +132,46 @@ class CondicionPrevia(models.Model):
         return self.nombre
 
 class UsuarioCondicion(models.Model):
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="condiciones")
+    id = models.AutoField(primary_key=True)
+    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="condiciones", null=True, blank=True)
     condicion = models.ForeignKey(CondicionPrevia, on_delete=models.CASCADE)
 
     class Meta:
-        unique_together = ('usuario', 'condicion')
+        unique_together = ('id_persona', 'condicion')
 
     def __str__(self):
-        return f"{self.usuario.email} - {self.condicion.nombre}"
+        return f"{self.id_persona.nombres} {self.id_persona.apellidos} - {self.condicion.nombre}"
 
+class Rol(models.Model):
+    nombre = models.CharField(max_length=100)
+
+    def __str__(self):
+        return self.nombre
+
+class UsuarioRol(models.Model):
+    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="usuario_roles")
+    rol = models.ForeignKey(Rol, on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('id_persona', 'rol')
+
+    def __str__(self):
+        return f"{self.id_persona} - {self.rol.nombre}"
+
+class VinculoPacienteCuidador(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    paciente = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="cuidadores")
+    cuidador = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="pacientes")
+    fecha_creacion = models.DateTimeField(auto_now_add=True)  # ...added field...
+
+    class Meta:
+        unique_together = ('paciente', 'cuidador')
+
+    def __str__(self):
+        return f"{self.cuidador.nombres} {self.cuidador.apellidos} cuida a {self.paciente.nombres} {self.paciente.apellidos}"
+
+# Fin de la seccion de Usuario
+# Inicio Seccion de Alimentos y Medidas
 class CategoriaAlimento(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=100, unique=True)
@@ -132,21 +238,17 @@ class PorcionAlimento(models.Model):
 
     def __str__(self):
         return f"{self.alimento.nombre} - {self.cantidad} {self.unidad.nombre}"
-
+# Fin Seccion de Alimentos y Medidas
+# Inicio Seccion de Minutas
 class MinutaNutricional(models.Model):
-    ESTADO_CHOICES = [
-        ('activa', 'Activa'),
-        ('inactiva', 'Inactiva'),
-        ('expirada', 'Expirada'),
-    ]
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="minutas")
+    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="minutas", null=True, blank=True)
     fecha_creacion = models.DateField(auto_now_add=True)
     fecha_vigencia = models.DateField()
-    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='activa')
+    estado = models.CharField(max_length=20, default='activa')
 
     def __str__(self):
-        return f"{self.usuario.email} - {self.fecha_creacion}"
+        return f"{self.id_persona.email} - {self.fecha_creacion}"
 
 class ComidaDia(models.Model):
     id = models.AutoField(primary_key=True)
@@ -181,27 +283,40 @@ class DetalleMinuta(models.Model):
     receta = models.ForeignKey(Receta, on_delete=models.CASCADE)
 
     def __str__(self):
-        return f"{self.minuta.usuario.email} - {self.comida.nombre}"
+        return f"{self.minuta.id_persona.email} - {self.comida.nombre}"
 
 class ImagenComida(models.Model):
     id = models.AutoField(primary_key=True)
     receta = models.ForeignKey(Receta, on_delete=models.CASCADE, related_name="imagenes")
-    url_imagen = models.ImageField(upload_to='imagenes/')
+    url_imagen = models.CharField(max_length=255)
 
     def __str__(self):
         return self.receta.nombre
 
 class RegistroComida(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="registros_comida")
+    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="registros_comida", null=True, blank=True)
     alimento = models.ForeignKey(Alimento, on_delete=models.SET_NULL, null=True, blank=True)
     porcion = models.ForeignKey(PorcionAlimento, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_consumo = models.DateTimeField(auto_now_add=True)
     notas = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.usuario.email} - {self.fecha_consumo}"
+        return f"{self.id_persona.email} - {self.fecha_consumo}"
 
+class AnalisisImagen(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="analisis_imagenes", null=True, blank=True)
+    url_imagen = models.CharField(max_length=255)
+    fecha_analisis = models.DateTimeField(auto_now_add=True)
+    resultado = models.JSONField()
+    conclusion = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.id_persona.nombres if self.id_persona else 'Sin persona'} - {self.fecha_analisis}"
+
+# Fin Seccion de Minutas
+# Inicio Seccion de Ayudas
 class CentroMedico(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     nombre = models.CharField(max_length=100)
@@ -228,63 +343,58 @@ class ConsejoNutricional(models.Model):
 
     def __str__(self):
         return self.titulo
-
-class Rol(models.Model):
-    id = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=50, unique=True)
-
-    def __str__(self):
-        return self.nombre
-
-class UsuarioRol(models.Model):
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="roles")
-    rol = models.ForeignKey(Rol, on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = ('usuario', 'rol')
-
-    def __str__(self):
-        return f"{self.usuario.email} - {self.rol.nombre}"
-
+# Fin Seccion de Ayudas
+# Inicio Seccion Comunidad
 class Publicacion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="publicaciones")
-    asunto = models.CharField(max_length=100, blank=True, null=True)
+    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name='publicaciones')
+    asunto = models.CharField(max_length=100)
     contenido = models.TextField()
-    fecha_publicacion = models.DateTimeField(auto_now_add=True)
-    likes = models.PositiveIntegerField(default=0)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
     activo = models.BooleanField(default=True)
 
     def __str__(self):
-        return self.asunto
+        return f"{self.asunto} - {self.id_persona}"
+    
+    class Meta:
+        verbose_name = "Publicación"
+        verbose_name_plural = "Publicaciones"
+        ordering = ['-fecha_creacion']
+
 
 class Comentario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    publicacion = models.ForeignKey(Publicacion, on_delete=models.CASCADE, related_name="comentarios")
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    publicacion = models.ForeignKey(Publicacion, on_delete=models.CASCADE, related_name='comentarios')
+    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name='comentarios')
     contenido = models.TextField()
-    fecha_comentario = models.DateTimeField(auto_now_add=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    activo = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.publicacion.asunto} - {self.usuario.email}"
+        return f"Comentario por {self.id_persona} en {self.publicacion.asunto[:20]}"
+    
+    class Meta:
+        verbose_name = "Comentario"
+        verbose_name_plural = "Comentarios"
+        ordering = ['fecha_creacion']
+
 
 class RespuestaComentario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, related_name="respuestas")
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, related_name='respuestas')
+    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name='respuestas_comentario')
     contenido = models.TextField()
-    fecha_respuesta = models.DateTimeField(auto_now_add=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+    activo = models.BooleanField(default=True)
 
     def __str__(self):
-        return f"{self.comentario.publicacion.asunto} - {self.usuario.email}"
-
-class AnalisisImagen(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="analisis_imagenes")
-    url_imagen = models.ImageField(upload_to='imagenes/')
-    fecha_analisis = models.DateTimeField(auto_now_add=True)
-    resultado = models.JSONField()
-    conclusion = models.TextField(blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.usuario.email} - {self.fecha_analisis}"
+        return f"Respuesta por {self.id_persona} a comentario de {self.comentario.id_persona}"
+    
+    class Meta:
+        verbose_name = "Respuesta a Comentario"
+        verbose_name_plural = "Respuestas a Comentarios"
+        ordering = ['fecha_creacion']
+# Fin Seccion Comunidad
