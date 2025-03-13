@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getPublicaciones } from '../services/comunidadService';
 import { getImageUrl } from '../utils/imageHelper';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 
 export const options = {
   title: 'Comunidad'
@@ -58,20 +58,58 @@ export default function ComunidadScreen({ navigation, route }) {
     cargarPublicaciones();
   }, []);
 
+  // Add a ref to track if alert has been shown
+  const alertShownRef = React.useRef(false);
+
   useFocusEffect(
     useCallback(() => {
-      console.log('ComunidadScreen focused, refreshing data...');
-      cargarPublicaciones();
+      const isFocused = navigation.isFocused();
+      console.log(`ComunidadScreen focus status: ${isFocused ? 'FOCUSED' : 'NOT FOCUSED'}`);
+      console.log('Route params:', route.params);
       
-      if (route.params?.refreshTimestamp) {
-        Alert.alert(
-          'Actualizado',
-          'Las publicaciones se han actualizado correctamente',
-          [{ text: 'OK' }]
-        );
-        navigation.setParams({ refreshTimestamp: null });
+      if (isFocused) {
+        console.log('ComunidadScreen focused, refreshing data...');
+        cargarPublicaciones();
+        
+        const hasRefreshParam = route.params?.refreshTimestamp;
+        const wasPublicationCreated = route.params?.publicacionCreada;
+        const shouldSkipAlert = route.params?.skipAlert === true;
+        
+        // Only show alert if we haven't shown it yet for these params
+        // and we're not explicitly skipping the alert
+        if (hasRefreshParam && !shouldSkipAlert && !alertShownRef.current) {
+          console.log(`Showing alert for timestamp: ${route.params.refreshTimestamp}`);
+          alertShownRef.current = true; // Mark alert as shown
+          
+          // If there's a publication created flag, show specific message
+          if (wasPublicationCreated) {
+            Alert.alert(
+              'Publicación Exitosa',
+              'Su publicación ha sido añadida a la comunidad'
+            );
+          } else {
+            // Generic refresh message
+            Alert.alert(
+              'Actualizado',
+              'Las publicaciones se han actualizado correctamente'
+            );
+          }
+        }
+        
+        // Clear parameters to avoid repeated alerts on future focuses
+        if (hasRefreshParam) {
+          // Set skipAlert to true to prevent showing alert again
+          navigation.setParams({ 
+            refreshTimestamp: null,
+            publicacionCreada: null,
+            skipAlert: true
+          });
+        }
+      } else {
+        // Reset the alert shown ref when screen is not focused
+        alertShownRef.current = false;
       }
-    }, [route.params?.refreshTimestamp])
+    }, [navigation.isFocused(), route.params?.refreshTimestamp, route.params?.publicacionCreada])
   );
 
   const cargarPublicaciones = async () => {
@@ -147,8 +185,16 @@ export default function ComunidadScreen({ navigation, route }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Comunidad</Text>
+        <Text style={styles.title}></Text>
         <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.misPublicacionesButton}
+            onPress={() => navigation.navigate('MisPublicaciones')}
+          >
+            <MaterialIcons name="person" size={20} color="#690B22" />
+            <Text style={styles.misPublicacionesText}>Mis Publicaciones</Text>
+          </TouchableOpacity>
+          
           <TouchableOpacity
             style={styles.newButton}
             onPress={handleNavigateToNewPublication}
@@ -328,5 +374,22 @@ const styles = StyleSheet.create({
   emptyButtonText: {
     color: 'white',
     fontWeight: 'bold',
-  }
+  },
+  misPublicacionesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1E3D3',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#690B22',
+  },
+  misPublicacionesText: {
+    color: '#690B22',
+    marginLeft: 4,
+    fontWeight: '500',
+    fontSize: 12,
+  },
 });

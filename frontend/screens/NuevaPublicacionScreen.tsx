@@ -24,7 +24,6 @@ export default function NuevaPublicacionScreen({ route, navigation }) {
   const [contenido, setContenido] = useState('');
   const [loading, setLoading] = useState(false);
   const [personaId, setPersonaId] = useState(personaIdFromRoute);
-  // Add the missing initializing state variable
   const [initializing, setInitializing] = useState(true);
   
   // Try to load personaId if not provided in route params
@@ -90,21 +89,33 @@ export default function NuevaPublicacionScreen({ route, navigation }) {
 
       await crearPublicacion(publicacionData);
       
-      Alert.alert(
-        'Éxito',
-        'Su publicación ha sido creada correctamente',
-        [{ 
-          text: 'OK', 
-          onPress: () => {
-            // Navigate back to Comunidad screen
-            if (navigation.getParent()) {
-              navigation.getParent().navigate('Comunidad', { refreshTimestamp: Date.now() });
-            } else {
-              navigation.navigate('Comunidad', { refreshTimestamp: Date.now() });
-            }
+      // Navigate without showing alert in NuevaPublicacionScreen
+      // We'll show the alert only in ComunidadScreen to avoid duplicates
+      console.log('Publication created successfully, navigating back');
+      
+      // Navigate with a success parameter that will trigger the alert in ComunidadScreen
+      if (Platform.OS === 'web') {
+        // Web requires special handling - create a direct navigation with no alert
+        console.log('Using web-specific navigation with direct success param');
+        navigation.navigate('Home', {
+          screen: 'Comunidad',
+          params: {
+            publicacionCreada: true,
+            refreshTimestamp: Date.now(),
+            skipAlert: false
           }
-        }]
-      );
+        });
+      } else {
+        // On mobile, we can use the normal navigation pattern
+        navigation.navigate('Home', {
+          screen: 'Comunidad',
+          params: {
+            publicacionCreada: true,
+            refreshTimestamp: Date.now(),
+            skipAlert: false
+          }
+        });
+      }
     } catch (error) {
       console.error('Error al crear la publicación:', error);
       Alert.alert('Error', 'No se pudo crear la publicación. Por favor, intente nuevamente.');
@@ -151,6 +162,9 @@ export default function NuevaPublicacionScreen({ route, navigation }) {
         keyboardVerticalOffset={100}
       >
         <ScrollView style={styles.scrollView}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Nueva Publicación</Text>
+          </View>
 
           <View style={styles.formContainer}>
             <Text style={styles.label}>Asunto *</Text>

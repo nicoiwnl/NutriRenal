@@ -52,7 +52,7 @@ export const getRoles = async () => {
  */
 export const vincularRol = async (personaId, rolId) => {
   try {
-    const response = await api.post('/usuario-roles/', {
+    const response = await api.post('/usuario-rol/', {
       id_persona: personaId,
       rol: rolId
     });
@@ -64,32 +64,43 @@ export const vincularRol = async (personaId, rolId) => {
 };
 
 /**
- * Get roles for a user from API
- * @param {string} personaId - The persona ID to check roles for
- * @returns {Promise<Array>} - List of roles
+ * Get roles for a specific user
+ * @param {string} personaId - The user's persona ID
+ * @returns {Promise<Array>} - Array of user roles
  */
 export const getUserRoles = async (personaId) => {
   try {
-    console.log(`🔍 ROLE CHECK: Fetching roles for personaId: ${personaId}`);
-    const url = `/usuario-roles/?id_persona=${personaId}`;
-    console.log(`🔍 ROLE CHECK: API URL: ${url}`);
-    
-    const response = await api.get(url);
-    
-    console.log(`🔍 ROLE CHECK: Received ${response.data?.length || 0} roles from API`);
-    console.log(`🔍 ROLE CHECK: Raw API response:`, JSON.stringify(response.data));
-    
-    if (!response.data || !Array.isArray(response.data) || response.data.length === 0) {
-      console.log('🔍 ROLE CHECK: No roles found in API response');
-      // If API returned no roles, try fallback detection methods
-      return await attemptRoleFallbackDetection(personaId);
-    }
-    
+    const response = await api.get(`/usuario-roles/?id_persona=${personaId}`);
+    console.log(`Retrieved ${response.data.length} roles for user ${personaId}`);
     return response.data;
   } catch (error) {
-    console.error('Error getting roles:', error);
-    // If API call failed, try fallback detection methods
-    return await attemptRoleFallbackDetection(personaId);
+    console.error('Error getting user roles:', error);
+    return [];
+  }
+};
+
+/**
+ * Assign a role to a user
+ * @param {string} personaId - The user's persona ID  
+ * @param {number} roleId - The role ID to assign
+ * @returns {Promise<Object>} - The created role association
+ */
+export const assignRoleToUser = async (personaId, roleId) => {
+  try {
+    console.log(`Assigning role ${roleId} to user ${personaId}`);
+    
+    // Fix: Use "usuario-rol" (singular) instead of "usuario-roles" (plural) to match backend URL config
+    const response = await api.post('/usuario-rol/', {
+      id_persona: personaId,
+      rol: roleId
+    });
+    
+    console.log('Role assignment successful:', response.data);
+    return response.data;
+  } catch (error) {
+    console.error('Error assigning role to user:', error);
+    console.error('Response data:', error.response?.data);
+    throw error;
   }
 };
 

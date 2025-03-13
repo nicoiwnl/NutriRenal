@@ -17,6 +17,7 @@ import { Card } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import api from '../api'; // Add this import for API requests
 import {
   getPublicacionById,
   getComentariosByPublicacion,
@@ -48,14 +49,17 @@ export default function PublicacionDetailScreen({ route, navigation }) {
           const parsed = JSON.parse(userData);
           setPersonaId(parsed.persona_id);
           
-          // Obtener foto de perfil e información adicional del usuario
+          // Fix the URL to use our API instance instead of direct fetch
           try {
-            const personaResponse = await fetch(`/api/personas/${parsed.persona_id}/`);
-            const personaData = await personaResponse.json();
+            const personaResponse = await api.get(`/personas/${parsed.persona_id}/`);
+            const personaData = personaResponse.data;
             setUserName(`${personaData.nombres} ${personaData.apellidos}`);
             setUserImage(personaData.foto_perfil);
           } catch (personaError) {
             console.error('Error obteniendo datos de la persona:', personaError);
+            // Set default values even when API call fails
+            setUserName("Usuario");
+            setUserImage("");
           }
         }
       } catch (error) {

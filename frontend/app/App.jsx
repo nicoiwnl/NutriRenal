@@ -23,6 +23,7 @@ import ConsejosCategoriaScreen from "../screens/ConsejosCategoriaScreen";
 import ConsejosPorCategoriaScreen from "../screens/ConsejosPorCategoriaScreen";
 import NuevaPublicacionScreen from '@/screens/NuevaPublicacionScreen';
 import PublicacionDetailScreen from '@/screens/PublicacionDetailScreen';
+import MisPublicacionesScreen from '@/screens/MisPublicacionesScreen';
 
 // New: Define the navigators
 const Stack = createNativeStackNavigator();
@@ -171,7 +172,12 @@ function RootStack() {
       <Stack.Screen 
         name="NuevaPublicacion" 
         component={NuevaPublicacionScreen} 
-        options={{ title: 'Nueva Publicación' }}
+        options={{ 
+          title: 'Nueva Publicación',
+          // Add this to improve navigation behavior
+          presentation: 'card',
+          animation: 'slide_from_right'
+        }}
       />
       <Stack.Screen 
         name="PublicacionDetail" 
@@ -198,6 +204,15 @@ function RootStack() {
         name="ConsejosPorCategoriaScreen" 
         component={ConsejosPorCategoriaScreen} 
         options={({ route }) => ({ title: route.params.categoria })}
+      />
+      <Stack.Screen 
+        name="MisPublicaciones" 
+        component={MisPublicacionesScreen} 
+        options={{ 
+          title: 'Mis Publicaciones',
+          presentation: 'card',
+          animation: 'slide_from_right'
+        }}
       />
     </Stack.Navigator>
   );

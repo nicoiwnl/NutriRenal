@@ -755,6 +755,111 @@ export default function FichaMedicaScreen({ navigation, route }) {
     setMostrarSelectorCondiciones(false);
   };
 
+  // Update the dialysis type selector component for better mobile display
+  const renderDialysisTypeSelector = () => {
+    return (
+      <View style={styles.formGroup}>
+        <Text style={styles.inputLabel}>Tipo de Diálisis</Text>
+        <View style={[
+          styles.dialysisTypeContainer,
+          Platform.OS !== 'web' && styles.mobileDialysisContainer
+        ]}>
+          <TouchableOpacity
+            style={[
+              styles.dialysisOption,
+              tipoDialisis === 'hemodialisis' && styles.dialysisOptionSelected,
+              Platform.OS !== 'web' && styles.mobileDialysisOption
+            ]}
+            onPress={() => setTipoDialisis('hemodialisis')}
+          >
+            <Text 
+              style={[
+                styles.dialysisOptionText,
+                tipoDialisis === 'hemodialisis' && styles.dialysisOptionTextSelected,
+                Platform.OS !== 'web' && styles.mobileDialysisOptionText
+              ]}
+              numberOfLines={1}
+            >
+              Hemodiálisis
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.dialysisOption,
+              tipoDialisis === 'dialisis_peritoneal' && styles.dialysisOptionSelected,
+              Platform.OS !== 'web' && styles.mobileDialysisOption
+            ]}
+            onPress={() => setTipoDialisis('dialisis_peritoneal')}
+          >
+            <Text 
+              style={[
+                styles.dialysisOptionText,
+                tipoDialisis === 'dialisis_peritoneal' && styles.dialysisOptionTextSelected,
+                Platform.OS !== 'web' && styles.mobileDialysisOptionText
+              ]}
+              numberOfLines={1}
+            >
+              Diálisis Peritoneal
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
+  // Update the action buttons to be more compact on mobile
+  const renderActionButtons = () => {
+    return (
+      <View style={[
+        styles.actionButtons,
+        Platform.OS !== 'web' && styles.mobileActionButtonsContainer
+      ]}>
+        <TouchableOpacity
+          style={[
+            styles.actionButton, 
+            styles.cancelButton,
+            Platform.OS !== 'web' && styles.mobileActionButton
+          ]}
+          onPress={() => setModoEdicion(false)}
+        >
+          <MaterialIcons 
+            name="close" 
+            size={Platform.OS === 'web' ? 24 : 18} 
+            color="#fff" 
+          />
+          <Text style={[
+            styles.actionButtonText,
+            Platform.OS !== 'web' && styles.mobileActionButtonText
+          ]}>
+            Cancelar
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[
+            styles.actionButton, 
+            styles.saveButton,
+            Platform.OS !== 'web' && styles.mobileActionButton
+          ]}
+          onPress={guardarEdicion}
+        >
+          <MaterialIcons 
+            name="check" 
+            size={Platform.OS === 'web' ? 24 : 18} 
+            color="#fff" 
+          />
+          <Text style={[
+            styles.actionButtonText,
+            Platform.OS !== 'web' && styles.mobileActionButtonText
+          ]}>
+            Guardar
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
@@ -2528,5 +2633,135 @@ const styles = StyleSheet.create({
   debugButtonText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  // Enhanced mobile dialysis container
+  dialysisTypeContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginVertical: 10,
+  },
+  
+  mobileDialysisContainer: {
+    flexDirection: 'column',  // Stack vertically on mobile
+    marginBottom: 15,
+  },
+  
+  dialysisOption: {
+    backgroundColor: '#f5f5f5',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    flex: Platform.OS === 'web' ? 0.48 : undefined,
+    width: Platform.OS === 'web' ? undefined : '100%',
+    alignItems: 'center',
+    marginBottom: Platform.OS === 'web' ? 0 : 8,
+  },
+  
+  mobileDialysisOption: {
+    padding: 10,  // Smaller padding
+    height: 44,   // Fixed height for consistency
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  
+  dialysisOptionSelected: {
+    backgroundColor: '#690B22',
+    borderColor: '#690B22',
+  },
+  
+  dialysisOptionText: {
+    color: '#1B4D3E',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  
+  mobileDialysisOptionText: {
+    fontSize: 14,  // Smaller font size for mobile
+  },
+  
+  dialysisOptionTextSelected: {
+    color: '#FFFFFF',
+  },
+  
+  // Enhanced mobile action buttons
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 10,
+  },
+  
+  mobileActionButtonsContainer: {
+    position: 'absolute',
+    bottom: 10,
+    left: 10,
+    right: 10,
+    paddingVertical: 5,
+    backgroundColor: 'rgba(241, 227, 211, 0.9)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    zIndex: 1000,
+  },
+  
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    borderRadius: 8,
+    width: '48%',
+  },
+  
+  mobileActionButton: {
+    padding: 8,  // Smaller padding
+    width: '48%',
+  },
+  
+  actionButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    marginLeft: 8,
+    fontSize: 16,
+  },
+  
+  mobileActionButtonText: {
+    fontSize: 12,  // Smaller font on mobile
+    marginLeft: 4,
+  },
+  
+  cancelButton: {
+    backgroundColor: '#888',
+  },
+  
+  saveButton: {
+    backgroundColor: '#690B22',
+  },
+  
+  // Improve input containers for mobile
+  inputRow: {
+    flexDirection: Platform.OS === 'web' ? 'row' : 'column',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  
+  inputContainer: {
+    width: Platform.OS === 'web' ? '48%' : '100%',
+    marginBottom: 10,
+  },
+  
+  input: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: Platform.OS === 'web' ? 12 : 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    fontSize: Platform.OS === 'web' ? 16 : 14,
+  },
+  
+  // Content container improvements for scrolling
+  contentContainer: {
+    paddingBottom: Platform.OS === 'web' ? 20 : 80, // Extra padding at bottom on mobile for action buttons
   },
 });

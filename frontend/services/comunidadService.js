@@ -48,6 +48,55 @@ export const crearPublicacion = async (publicacion) => {
 };
 
 /**
+ * Obtiene todas las publicaciones de un usuario específico
+ * @param {string} personaId - ID de la persona
+ * @returns {Promise<Array>} - Lista de publicaciones del usuario
+ */
+export const getPublicacionesByUsuario = async (personaId) => {
+  try {
+    const response = await api.get(`/publicaciones/?id_persona=${personaId}`);
+    return response.data;
+  } catch (error) {
+    console.error(`Error al obtener publicaciones del usuario ${personaId}:`, error);
+    throw error;
+  }
+};
+
+/**
+ * Elimina una publicación
+ * @param {string} publicacionId - ID de la publicación a eliminar
+ * @returns {Promise<Object>} - Respuesta de la API
+ */
+export const eliminarPublicacion = async (publicacionId) => {
+  try {
+    console.log(`Intentando eliminar publicación con ID: ${publicacionId}`);
+    
+    // Ensure the ID is properly formatted (string) and not undefined
+    if (!publicacionId) {
+      throw new Error('ID de publicación no válido');
+    }
+    
+    // Log the exact URL for debugging
+    const url = `/publicaciones/${publicacionId}/`;
+    console.log(`Sending DELETE request to: ${url}`);
+    
+    const response = await api.delete(url);
+    console.log('Respuesta de eliminación:', response.status, response.data);
+    
+    // Check if the response indicates success
+    if (response.status >= 200 && response.status < 300) {
+      return response.data || { success: true };
+    } else {
+      throw new Error(`Error del servidor: ${response.status}`);
+    }
+  } catch (error) {
+    console.error(`Error al eliminar publicación ${publicacionId}:`, error);
+    console.error('Detalles del error:', error.response?.data || error.message);
+    throw error;
+  }
+};
+
+/**
  * Obtiene comentarios para una publicación específica
  * @param {string} publicacionId - ID de la publicación
  * @returns {Promise<Array>} - Lista de comentarios
@@ -117,6 +166,8 @@ export default {
   getPublicaciones,
   getPublicacionById,
   crearPublicacion,
+  getPublicacionesByUsuario,
+  eliminarPublicacion,
   getComentariosByPublicacion,
   crearComentario,
   getRespuestasByComentario,

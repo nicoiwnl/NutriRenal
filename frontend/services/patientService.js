@@ -82,39 +82,83 @@ export const vincularCuidador = async (pacienteId, cuidadorId) => {
 };
 
 export const actualizarPerfilMedico = async (perfilId, data) => {
-  logApiRequest('PUT', `/perfil-medico/${perfilId}/`, data);
-  
   try {
-    // Get the complete current profile to include all required fields
-    const response = await api.get(`/perfil-medico/${perfilId}/`);
-    const currentProfile = response.data;
+    console.log(`Actualizando perfil médico ${perfilId} con:`, data);
     
-    // Create a complete update object that includes ALL required fields
-    // We start with the current profile data and then override with our updates
-    const updatedData = {
-      id_persona: currentProfile.id_persona,
-      peso: currentProfile.peso,
-      altura: currentProfile.altura,
-      tipo_dialisis: currentProfile.tipo_dialisis,
-      // Override with our new data values
-      ...data
-    };
+    // First, get the current profile to include required fields
+    const endpoint = `/perfiles-medicos/${perfilId}/`;
     
-    console.log('Sending profile update with complete data:', updatedData);
+    // Only proceed with the update if we have all required fields
+    let updatedData = { ...data };
     
-    const updateResponse = await api.put(`/perfil-medico/${perfilId}/`, updatedData);
-    logApiResponse('PUT', `/perfil-medico/${perfilId}/`, updateResponse.data);
-    return updateResponse.data;
-  } catch (error) {
-    console.error('Error updating perfil medico:', error);
-    
-    // More detailed error logging
-    if (error.response) {
-      console.error('Server responded with:', error.response.status);
-      console.error('Response data:', error.response.data);
-      logApiResponse('PUT', `/perfil-medico/${perfilId}/`, error.response, true);
+    // Check if we're missing peso or altura
+    if (!updatedData.peso || !updatedData.altura) {
+      try {
+        // Get the current medical profile
+        const currentProfile = await api.get(endpoint);
+        
+        // Add missing required fields from current profile
+        if (!updatedData.peso && currentProfile.data.peso) {
+          updatedData.peso = currentProfile.data.peso;
+          console.log(`Added peso=${updatedData.peso} from current profile`);
+        }
+        
+        if (!updatedData.altura && currentProfile.data.altura) {
+          updatedData.altura = currentProfile.data.altura;
+          console.log(`Added altura=${updatedData.altura} from current profile`);
+        }
+      } catch (fetchError) {
+        console.error('Error fetching current profile:', fetchError);
+        // Continue with the update attempt even if this fails
+      }
     }
     
+    // Check if we still don't have required fields
+    if (!updatedData.peso) {
+      console.warn('Warning: Missing peso in profile update data');
+    }
+    
+    if (!updatedData.altura) {
+      console.warn('Warning: Missing altura in profile update data');
+    }
+    
+    console.log('Sending updated data:', updatedData);
+    logApiRequest('PUT', endpoint, updatedData);
+    
+    const response = await api.put(endpoint, updatedData);
+    logApiResponse('PUT', endpoint, response.data);
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error updating perfil medico:', error);
+    console.error('Server responded with:', error.response?.status);
+    console.error('Response data:', error.response?.data);
+    
+    // Log with the correct endpoint
+    logApiResponse('PUT', `/perfiles-medicos/${perfilId}/`, error.response || error, true);
+    throw error;
+  }
+};
+
+export const obtenerPerfilMedico = async (personaId) => {
+  try {
+    // Fix: Use the correct plural endpoint
+    const endpoint = `/perfiles-medicos/?id_persona=${personaId}`;
+    
+    logApiRequest('GET', endpoint);
+    
+    const response = await api.get(endpoint);
+    logApiResponse('GET', endpoint, response.data);
+    
+    // If the endpoint returns an array, take the first element
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      return response.data[0];
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error obteniendo perfil médico:', error);
+    logApiResponse('GET', `/perfiles-medicos/?id_persona=${personaId}`, error.response || error, true);
     throw error;
   }
 };
@@ -123,7 +167,7 @@ export const actualizarPerfilMedico = async (perfilId, data) => {
 export const crearPerfilMedico = async (personaId, data) => {
   try {
     // Changed from axios to api
-    const response = await api.post(`/perfil-medico/`, {
+    const response = await api.post(`/perfiles-medicos/`, {
       ...data,
       id_persona: personaId
     });
@@ -138,7 +182,7 @@ export const crearPerfilMedico = async (personaId, data) => {
 export const verificarPerfilMedico = async (personaId) => {
   try {
     // Changed from axios to api and updated endpoint
-    const response = await api.get(`/perfil-medico/?id_persona=${personaId}`);
+    const response = await api.get(`/perfiles-medicos/?id_persona=${personaId}`);
     // Return the first perfil if found
     return response.data.length > 0 ? response.data[0] : null;
   } catch (error) {
@@ -206,6 +250,7 @@ export default {
   linkPatientWithCaregiver,
   vincularCuidador,
   actualizarPerfilMedico,
+  obtenerPerfilMedico,
   crearPerfilMedico, // Añadimos la nueva función
   verificarPerfilMedico,
   getCondicionesMedicas,

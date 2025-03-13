@@ -635,40 +635,47 @@ class UsuarioRolesView(APIView):
     def get(self, request, *args, **kwargs):
         persona_id = request.query_params.get('id_persona')
         if persona_id:
-            # CRITICAL FIX: The original filter is returning roles from different users
-            # Ensure we're using string comparison for UUID fields
-            print(f"API DEBUG: Original persona_id filter value: '{persona_id}'")
-            
-            # First, get all roles to check what might be wrong
+            # Get all roles to check what might be wrong
             all_roles = UsuarioRol.objects.all().select_related('rol')
             print(f"API DEBUG: Total roles in database: {all_roles.count()}")
             
-            # Log all roles for debugging
-            for role in all_roles:
-                print(f"API DEBUG: Role in DB - ID: {role.id}, Role ID: {role.rol.id}, " +
-                      f"Role Name: {role.rol.nombre}, Persona ID: {role.id_persona}")
-            
-            # Fix by using string comparison with str() and excluding roles with different persona_id
+            # Fix for UUID comparison issues - normalize both sides before comparison
             corrected_roles = []
             for role in all_roles:
-                role_persona_id_str = str(role.id_persona).strip()
-                requested_persona_id_str = str(persona_id).strip()
-                
-                if role_persona_id_str == requested_persona_id_str:
-                    print(f"API DEBUG: Match found - Role {role.id} belongs to persona {requested_persona_id_str}")
-                    corrected_roles.append(role)
-                else:
-                    print(f"API DEBUG: Excluding role {role.id} for persona {role_persona_id_str} - " +
-                          f"doesn't match requested {requested_persona_id_str}")
+                try:
+                    # Cast both IDs to string and normalize format (remove whitespace, hyphens, etc)
+                    role_persona_id_str = str(role.id_persona.id).strip().replace('-', '').lower()
+                    requested_persona_id_str = str(persona_id).strip().replace('-', '').lower()
+                    
+                    if role_persona_id_str == requested_persona_id_str:
+                        print(f"API DEBUG: Match found - Role {role.id} belongs to persona {role.id_persona}")
+                        corrected_roles.append(role)
+                    else:
+                        # Log more quietly - for debugging only
+                        print(f"API DEBUG: Role {role.id} for persona {role.id_persona} - not matching request {persona_id}")
+                except Exception as e:
+                    print(f"API DEBUG: Error comparing role {role.id}: {str(e)}")
             
             # Use the filtered roles
             queryset = corrected_roles
-            print(f"API DEBUG: Found {len(queryset)} roles for persona_id={persona_id} after filtering")
             
-            # Log the filtered roles
-            for role in queryset:
-                print(f"API DEBUG: Returning Role ID: {role.rol.id}, Name: {role.rol.nombre}, " +
-                      f"Person: {role.id_persona}")
+            # Log result summary without critical error messages
+            print(f"API DEBUG: Found {len(queryset)} roles for persona_id={persona_id}")
+            
+            # If no roles found, check if this is actually an error or just a user with no roles assigned
+            if len(queryset) == 0:
+                print(f"API DEBUG: No roles found for persona_id={persona_id} - this might be normal for new users")
+                
+                # Check if the persona_id is valid at all
+                try:
+                    from .models import Persona
+                    persona_exists = Persona.objects.filter(id=persona_id).exists()
+                    if persona_exists:
+                        print(f"API DEBUG: Persona {persona_id} exists but has no roles assigned")
+                    else:
+                        print(f"API DEBUG: Persona {persona_id} does not exist in the database")
+                except Exception as e:
+                    print(f"API DEBUG: Could not verify persona existence: {str(e)}")
         else:
             queryset = UsuarioRol.objects.all()
             print("API: Returning all roles (no persona_id filter)")

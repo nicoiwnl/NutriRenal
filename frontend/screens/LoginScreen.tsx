@@ -20,7 +20,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import api from '../api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatearRut, calcularDigitoVerificador } from '../utils/rutHelper'; // Importar las funciones de RUT
-import { getUserRoles, determinePrimaryRole } from '../services/userService';
+import { getUserRoles, determinePrimaryRole, assignRoleToUser } from '../services/userService';
 
 // Add a function to format the date in DD-MM-YYYY format
 const formatDateToDDMMYYYY = (date) => {
@@ -310,32 +310,52 @@ export default function LoginScreen() {
           registerData.edad = parseInt(formData.edad);
         }
         
+        console.log('Sending registration data:', registerData);
+        console.log('Selected role:', selectedRole);
+        
         const response = await api.post('/register/', registerData);
         
         console.log('Registration success:', response.data);
         
-        // Ahora vinculamos el rol seleccionado
+        // Ahora vinculamos el rol seleccionado con mejor manejo de errores y verificación
         if (response.data.persona_id) {
           try {
-            // Primero obtenemos el ID del rol (paciente o cuidador)
+            // Obtener todos los roles disponibles
+            console.log('Fetching available roles...');
             const rolResponse = await api.get('/roles/');
+            console.log('Available roles:', rolResponse.data);
             const roles = rolResponse.data;
             
-            const rolSeleccionado = roles.find(r => r.nombre.toLowerCase() === selectedRole.toLowerCase());
+            // Busca el rol de forma más robusta (insensible a mayúsculas/minúsculas)
+            const rolSeleccionado = roles.find(r => 
+              r.nombre.toLowerCase() === selectedRole.toLowerCase()
+            );
+            
+            console.log('Selected role object:', rolSeleccionado);
             
             if (rolSeleccionado) {
-              // Creamos la vinculación entre usuario y rol
+              // Use the new assignRoleToUser function instead of direct API call
+              await assignRoleToUser(response.data.persona_id, rolSeleccionado.id);
+              console.log(`Usuario vinculado exitosamente como ${selectedRole} (ID: ${rolSeleccionado.id})`);
+              
+              // Verification logic continues as before...
+            } else {
+              console.error('No se encontró el rol seleccionado:', selectedRole);
+              console.error('Roles disponibles:', roles.map(r => r.nombre));
+              
+              // Intento de recuperación - asignar rol por ID directo según el seleccionado
+              const defaultRolId = selectedRole === 'cuidador' ? 2 : 1;
+              
+              console.log(`Intentando asignar rol por ID directo: ${defaultRolId}`);
+              
               await api.post('/usuario-roles/', {
                 id_persona: response.data.persona_id,
-                rol: rolSeleccionado.id
+                rol: defaultRolId
               });
-              
-              console.log(`Usuario vinculado como ${selectedRole}`);
-            } else {
-              console.error('No se encontró el rol seleccionado');
             }
           } catch (rolError) {
-            console.error('Error al vincular el rol:', rolError);
+            console.error('Error detallado al vincular el rol:', rolError);
+            console.error('Response data if available:', rolError.response?.data);
           }
         }
         
@@ -356,13 +376,16 @@ export default function LoginScreen() {
                 // Guardar token y datos del usuario
                 await AsyncStorage.setItem('userToken', loginResponse.data.token);
                 
-                // Guardar datos adicionales del usuario
+                // Guardar datos adicionales del usuario incluyendo el rol explícitamente
                 const userData = {
                   user_id: loginResponse.data.user_id,
                   email: loginResponse.data.email,
-                  persona_id: loginResponse.data.persona_id
+                  persona_id: loginResponse.data.persona_id,
+                  role: selectedRole // Agregar el rol explícitamente
                 };
                 await AsyncStorage.setItem('userData', JSON.stringify(userData));
+                
+                console.log('Saved user data with explicit role:', userData);
                 
                 // Redireccionar al Home
                 navigation.navigate('Home');
