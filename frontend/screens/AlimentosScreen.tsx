@@ -67,7 +67,7 @@ export default function AlimentosScreen() {
       return (
         <TouchableOpacity
           style={styles.item}
-          onPress={() => navigation.navigate('AlimentoDetailScreen', { alimento: item })}>
+          onPress={() => navigation.navigate('AlimentoDetailScreen', { alimentoId: item.id })}>
           <Text style={styles.itemText}>{item.nombre}</Text>
         </TouchableOpacity>
       );
@@ -88,7 +88,7 @@ export default function AlimentosScreen() {
                   <TouchableOpacity
                     key={food.id}
                     style={styles.childItem}
-                    onPress={() => navigation.navigate('AlimentoDetailScreen', { alimento: food })}>
+                    onPress={() => navigation.navigate('AlimentoDetailScreen', { alimentoId: food.id })}>
                     <Text style={styles.childText}>{food.nombre}</Text>
                   </TouchableOpacity>
                 ))

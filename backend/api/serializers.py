@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
-    MinutaNutricional, ComidaDia, Receta, IngredienteReceta, DetalleMinuta, ImagenComida, RegistroComida, CentroMedico,
+    MinutaNutricional, ComidaDia, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
     User, Persona  # Make sure these imports match your actual models
 )
@@ -91,15 +91,14 @@ class DetalleMinutaSerializer(serializers.ModelSerializer):
         model = DetalleMinuta
         fields = '__all__'
 
-class ImagenComidaSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ImagenComida
-        fields = '__all__'
-
 class RegistroComidaSerializer(serializers.ModelSerializer):
+    id_persona = serializers.PrimaryKeyRelatedField(queryset=Persona.objects.all())
+    # Referencia directa al modelo UnidadMedida
+    unidad_medida = serializers.PrimaryKeyRelatedField(queryset=UnidadMedida.objects.all())
+    
     class Meta:
         model = RegistroComida
-        fields = '__all__'
+        fields = ['id', 'id_persona', 'alimento', 'unidad_medida', 'fecha_consumo', 'notas']
 
 class CentroMedicoSerializer(serializers.ModelSerializer):
     class Meta:

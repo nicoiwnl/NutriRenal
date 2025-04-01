@@ -3,7 +3,7 @@ from .models import (
     User, Persona, PerfilMedico, CondicionPrevia, UsuarioCondicion, 
     CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
     MinutaNutricional, ComidaDia, Receta, IngredienteReceta, 
-    DetalleMinuta, ImagenComida, RegistroComida, CentroMedico,
+    DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, 
     RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador
 )
@@ -27,7 +27,6 @@ admin.site.register(ComidaDia)
 admin.site.register(Receta)
 admin.site.register(IngredienteReceta)
 admin.site.register(DetalleMinuta)
-admin.site.register(ImagenComida)
 admin.site.register(RegistroComida)
 
 # Medical Centers

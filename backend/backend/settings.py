@@ -15,6 +15,7 @@ import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 # Quick-start development settings - unsuitable for production
@@ -26,7 +27,7 @@ SECRET_KEY = 'django-insecure-@b!j7+l224)2dug)23#x+ky+#yn#_0he&7y0#m(9oi&%z^443z
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.0.4", "192.168.1.100", "192.168.0.2", "192.168.0.9"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.0.4", "192.168.1.100", "192.168.0.2", "192.168.0.9","192.168.100.37","192.168.0.12","192.168.1.18"]
 
 
 # Application definition
@@ -131,12 +132,16 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'backend' , 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Si estás usando Django REST framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
     ],
@@ -152,5 +157,9 @@ CORS_ALLOWED_ORIGINS = [
     'http://192.168.0.2:8000',      # Backend usando IP de la PC
     'exp://192.168.0.2:8081',
     'exp://192.168.0.2:8082',
-    'http://127.0.0.1:8082',       # Frontend Expo
+    'exp://192.168.100.37:8081',
+    'http://127.0.0.1:8082',  
+    'exp://192.168.0.12:8081',
+    'exp://192.168.1.18:8081'
+       # Frontend Expo
 ]

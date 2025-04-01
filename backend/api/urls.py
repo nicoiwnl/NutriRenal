@@ -4,10 +4,10 @@ from .views import (
     register_user, login_user, paciente_dashboard, vincular_paciente_cuidador, listar_pacientes_cuidador,
     UserViewSet, PersonaViewSet, PerfilMedicoViewSet, CondicionPreviaViewSet, UsuarioCondicionViewSet,
     CategoriaAlimentoViewSet, UnidadMedidaViewSet, AlimentoViewSet, PorcionAlimentoViewSet, MinutaNutricionalViewSet,
-    ComidaDiaViewSet, RecetaViewSet, IngredienteRecetaViewSet, DetalleMinutaViewSet, ImagenComidaViewSet,
+    ComidaDiaViewSet, RecetaViewSet, IngredienteRecetaViewSet, DetalleMinutaViewSet,
     RegistroComidaViewSet, CentroMedicoViewSet, ConsejoNutricionalViewSet, RolViewSet,
     UsuarioRolViewSet, UsuarioRolesView, PublicacionViewSet, ComentarioViewSet, RespuestaComentarioViewSet,
-    AnalisisImagenViewSet, VinculoPacienteCuidadorViewSet, PacientesCuidadorView
+    AnalisisImagenViewSet, VinculoPacienteCuidadorViewSet, PacientesCuidadorView, ActualizarFotoPerfilView
 )
 
 router = DefaultRouter()
@@ -25,7 +25,6 @@ router.register(r'comidas-dia', ComidaDiaViewSet)
 router.register(r'recetas', RecetaViewSet)
 router.register(r'ingredientes-receta', IngredienteRecetaViewSet)
 router.register(r'detalles-minuta', DetalleMinutaViewSet)
-router.register(r'imagenes-comida', ImagenComidaViewSet)
 router.register(r'registros-comida', RegistroComidaViewSet)
 router.register(r'centros-medicos', CentroMedicoViewSet)
 router.register(r'consejos-nutricionales', ConsejoNutricionalViewSet)
@@ -46,4 +45,5 @@ urlpatterns = [
     path('pacientes-cuidador/<uuid:cuidador_id>/', listar_pacientes_cuidador, name='pacientes_cuidador'),
     path('usuario-roles/', UsuarioRolesView.as_view(), name='usuario_roles'),
     path('pacientes-por-cuidador/<uuid:persona_id>/', PacientesCuidadorView.as_view(), name='pacientes_por_cuidador'),
+    path('actualizar-foto-perfil/', ActualizarFotoPerfilView.as_view(), name='actualizar-foto-perfil'),
 ]

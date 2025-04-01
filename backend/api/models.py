@@ -182,9 +182,23 @@ class CategoriaAlimento(models.Model):
 class UnidadMedida(models.Model):
     id = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50, unique=True)
+    # New fields for conversion factors
+    equivalencia_ml = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Equivalencia en mililitros (ml)")
+    equivalencia_g = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True, help_text="Equivalencia en gramos (g)")
+    es_volumen = models.BooleanField(default=True, help_text="Indica si es una medida de volumen (ml) o de masa (g)")
 
     def __str__(self):
         return self.nombre
+    
+    def factor_conversion(self, para_volumen=True):
+        """
+        Devuelve el factor de conversión adecuado según si queremos calcular para volumen o masa
+        """
+        if para_volumen and self.equivalencia_ml:
+            return self.equivalencia_ml / 100  # Factor para convertir desde valores por 100ml
+        elif not para_volumen and self.equivalencia_g:
+            return self.equivalencia_g / 100  # Factor para convertir desde valores por 100g
+        return 0.01  # Valor por defecto: 1/100 (para manejar casos donde falta el factor)
 
 class Alimento(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -258,11 +272,25 @@ class ComidaDia(models.Model):
         return self.nombre
 
 class Receta(models.Model):
+
+    TIPO_RECETA_CHOICES = [
+        ('entrada', 'Entrada'),
+        ('plato_principal', 'Plato Principal'),
+        ('plato_fondo', 'Plato de Fondo'),
+        ('postres_colaciones', 'Postres y Colaciones'),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    url_imagen = models.CharField(max_length=255, blank=True, null=True)
     nombre = models.CharField(max_length=100)
     preparacion = models.TextField()
-    informacion_nutricional = models.TextField(blank=True, null=True)
-
+    materiales = models.TextField(blank = True, null = True)
+    bajo_en_sodio = models.BooleanField(default=False)
+    bajo_en_potasio = models.BooleanField(default=False)
+    bajo_en_fosforo = models.BooleanField(default=False)
+    bajo_en_proteinas = models.BooleanField(default=False)
+    tipo_receta = models.CharField(max_length=50, choices=TIPO_RECETA_CHOICES, default='plato_principal')
+    activo = models.BooleanField(default=True)
     def __str__(self):
         return self.nombre
 
@@ -285,19 +313,11 @@ class DetalleMinuta(models.Model):
     def __str__(self):
         return f"{self.minuta.id_persona.email} - {self.comida.nombre}"
 
-class ImagenComida(models.Model):
-    id = models.AutoField(primary_key=True)
-    receta = models.ForeignKey(Receta, on_delete=models.CASCADE, related_name="imagenes")
-    url_imagen = models.CharField(max_length=255)
-
-    def __str__(self):
-        return self.receta.nombre
-
 class RegistroComida(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="registros_comida", null=True, blank=True)
     alimento = models.ForeignKey(Alimento, on_delete=models.SET_NULL, null=True, blank=True)
-    porcion = models.ForeignKey(PorcionAlimento, on_delete=models.SET_NULL, null=True, blank=True)
+    unidad_medida = models.ForeignKey(UnidadMedida, on_delete=models.SET_NULL, null=True, blank=True)
     fecha_consumo = models.DateTimeField(auto_now_add=True)
     notas = models.TextField(blank=True, null=True)
 
@@ -325,6 +345,7 @@ class CentroMedico(models.Model):
     longitud = models.DecimalField(max_digits=11, decimal_places=8)
     tipo_centro = models.CharField(max_length=50, blank=True, null=True)
     telefono = models.CharField(max_length=20, blank=True, null=True)
+    comuna = models.CharField(max_length=50, blank=True, null=True)
     horario = models.TextField(blank=True, null=True)
     servicio_dialisis = models.BooleanField(default=False)
     activo = models.BooleanField(default=True)

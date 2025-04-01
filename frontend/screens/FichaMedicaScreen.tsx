@@ -11,12 +11,17 @@ import {
   Alert,
   TextInput,
   Platform,
-  FlatList
+  FlatList,
+  ActionSheetIOS,
+  Modal
 } from 'react-native';
-import { Card } from 'react-native-paper';
+import { Card, Portal, Button, Provider } from 'react-native-paper';
 import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import * as FileSystem from 'expo-file-system';
+import api from '../api'; // Add this import at the top of the file
 import { getPacienteDashboard, actualizarPerfilMedico, crearPerfilMedico, verificarPerfilMedico, 
   getCondicionesMedicas, vincularCondicionMedica, eliminarCondicionMedica, crearCondicionMedica } from '../services/patientService';
 import { formatearRut } from '../utils/rutHelper';
@@ -77,6 +82,26 @@ export default function FichaMedicaScreen({ navigation, route }) {
   const [linkingError, setLinkingError] = useState('');
   const [linkingSuccess, setLinkingSuccess] = useState('');
   
+  // New state variables for nutritional statistics
+  const [registrosAlimenticios, setRegistrosAlimenticios] = useState([]);
+  const [estadisticasNutricionales, setEstadisticasNutricionales] = useState({
+    caloriasDiarias: 0,
+    sodioPromedio: 0,
+    potasioPromedio: 0,
+    fosforoPromedio: 0,
+  });
+
+  // Nuevos estados para la funcionalidad de imagen de perfil
+  const [showPhotoOptions, setShowPhotoOptions] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
+
+  // New state for recent foods
+  const [recentFoods, setRecentFoods] = useState([]);
+
+  // Añadir estado para unidades de medida
+  const [unidadesMedida, setUnidadesMedida] = useState<any[]>([]);
+
   // Function to get user role from AsyncStorage
   const getUserRole = async () => {
     try {
@@ -365,6 +390,10 @@ export default function FichaMedicaScreen({ navigation, route }) {
       }
       
       setPacienteData(data);
+      
+      // Cargar los alimentos recientes (añadir esta línea)
+      await fetchAlimentosRecientes(personaId);
+      
       return data;  // Retornar los datos para uso en otras funciones
     } catch (err) {
       console.error('Error al cargar datos del paciente:', err);
@@ -860,6 +889,330 @@ export default function FichaMedicaScreen({ navigation, route }) {
     );
   };
 
+  // Función para cargar los registros alimenticios recientes - Versión mejorada con mejor manejo de errores
+const fetchAlimentosRecientes = async (personaId) => {
+  try {
+    console.log('🍽️ Cargando registros alimenticios para persona:', personaId);
+    
+    // Verificar que tenemos un ID válido antes de hacer la llamada
+    if (!personaId) {
+      console.error('Error: ID de persona no disponible para cargar alimentos');
+      return;
+    }
+
+    // Remove the dynamic import and use the imported api directly
+    
+    // Obtener los últimos registros alimenticios del usuario
+    const response = await api.get(`/registros-comida/?id_persona=${personaId}`);
+    console.log('📊 Registros obtenidos:', response.data?.length || 0);
+    
+    if (response.data && Array.isArray(response.data)) {
+      // Procesar cada registro para asegurar que tenemos datos completos
+      const registrosProcesados = await Promise.all(response.data.slice(0, 10).map(async (registro) => {
+        // Si el registro solo tiene ID de alimento pero no el objeto expandido
+        if (registro.alimento && (typeof registro.alimento === 'string' || typeof registro.alimento === 'number')) {
+          try {
+            console.log(`🔍 Cargando detalles para alimento ID: ${registro.alimento}`);
+            // Obtener datos completos del alimento
+            const alimentoResponse = await api.get(`/alimentos/${registro.alimento}/`);
+            
+            // Si tenemos categoría como ID, intentar cargarla también
+            let alimentoConCategoria = alimentoResponse.data;
+            if (alimentoConCategoria.categoria && (typeof alimentoConCategoria.categoria === 'string' || typeof alimentoConCategoria.categoria === 'number')) {
+              try {
+                const categoriaResponse = await api.get(`/categorias-alimento/${alimentoConCategoria.categoria}/`);
+                if (categoriaResponse.data && categoriaResponse.data.nombre) {
+                  alimentoConCategoria.categoria = categoriaResponse.data;
+                }
+              } catch (catError) {
+                console.error(`Error al cargar categoría del alimento ${registro.alimento}:`, catError);
+              }
+            }
+            
+            return {
+              ...registro,
+              alimento: alimentoConCategoria
+            };
+          } catch (error) {
+            console.error(`Error al cargar detalles del alimento ${registro.alimento}:`, error);
+            return registro;
+          }
+        }
+        return registro;
+      }));
+      
+      console.log('✅ Registros procesados correctamente');
+      setRegistrosAlimenticios(registrosProcesados);
+      
+      // Calcular estadísticas nutricionales
+      calcularEstadisticasNutricionales(registrosProcesados);
+    } else {
+      console.log('⚠️ No se encontraron registros o el formato de respuesta es incorrecto');
+      setRegistrosAlimenticios([]);
+    }
+  } catch (error) {
+    console.error('❌ Error al obtener registros alimenticios:', error);
+    // Manejar el error específicamente
+    if (error.response) {
+      console.error('Detalles del error:', error.response.status, error.response.data);
+    }
+    setRegistrosAlimenticios([]);
+  }
+};
+
+  // Función para calcular estadísticas nutricionales
+  const calcularEstadisticasNutricionales = (registros) => {
+    if (!registros || registros.length === 0) return;
+    
+    // Agrupar por fecha para calcular promedios diarios
+    const registrosPorFecha = registros.reduce((acc, registro) => {
+      // Extraer solo la fecha (sin hora)
+      const fecha = registro.fecha_consumo.split('T')[0];
+      if (!acc[fecha]) acc[fecha] = [];
+      acc[fecha].push(registro);
+      return acc;
+    }, {});
+    
+    const fechas = Object.keys(registrosPorFecha);
+    const cantidadDias = Math.min(fechas.length, 7); // Máximo 7 días
+    
+    // Inicializar acumuladores
+    let totalCalorias = 0;
+    let totalSodio = 0;
+    let totalPotasio = 0;
+    let totalFosforo = 0;
+    
+    // Calcular totales
+    fechas.slice(0, 7).forEach(fecha => {
+      const registrosDia = registrosPorFecha[fecha];
+      
+      registrosDia.forEach(registro => {
+        if (registro.alimento) {
+          const alimento = typeof registro.alimento === 'object' 
+            ? registro.alimento 
+            : { energia: 0, sodio: 0, potasio: 0, fosforo: 0 };
+          
+          totalCalorias += alimento.energia || 0;
+          totalSodio += alimento.sodio || 0;
+          totalPotasio += alimento.potasio || 0;
+          totalFosforo += alimento.fosforo || 0;
+        }
+      });
+    });
+    
+    // Calcular promedios diarios
+    setEstadisticasNutricionales({
+      caloriasDiarias: cantidadDias > 0 ? Math.round(totalCalorias / cantidadDias) : 0,
+      sodioPromedio: cantidadDias > 0 ? Math.round(totalSodio / cantidadDias) : 0,
+      potasioPromedio: cantidadDias > 0 ? Math.round(totalPotasio / cantidadDias) : 0,
+      fosforoPromedio: cantidadDias > 0 ? Math.round(totalFosforo / cantidadDias) : 0,
+    });
+  };
+
+  // Función para nivel de nutriente 
+  const getNivelNutriente = (valor, tipo) => {
+    if (tipo === 'sodio') {
+      if (valor < 1000) return { nivel: 'Bajo', color: '#4CAF50' }; // Verde
+      if (valor < 2000) return { nivel: 'Medio', color: '#FFC107' }; // Amarillo
+      return { nivel: 'Alto', color: '#F44336' }; // Rojo
+    }
+    if (tipo === 'potasio') {
+      if (valor < 2000) return { nivel: 'Bajo', color: '#4CAF50' }; // Verde
+      if (valor < 3000) return { nivel: 'Medio', color: '#FFC107' }; // Amarillo
+      return { nivel: 'Alto', color: '#F44336' }; // Rojo
+    }
+    if (tipo === 'fosforo') {
+      if (valor < 700) return { nivel: 'Bajo', color: '#4CAF50' }; // Verde
+      if (valor < 1000) return { nivel: 'Medio', color: '#FFC107' }; // Amarillo
+      return { nivel: 'Alto', color: '#F44336' }; // Rojo
+    }
+    return { nivel: 'Normal', color: '#4CAF50' }; // Por defecto
+  };
+
+  // Helper para calcular valores ajustados según la unidad de medida
+  const computeAdjustedValues = (alimento: any, unidadId: number | null) => {
+    if (!alimento) return { energia: 0, sodio: 0, potasio: 0, fosforo: 0 };
+    
+    // Buscar la unidad de medida en el estado
+    const unidad = unidadesMedida.find(u => u.id === unidadId);
+    
+    let factor = 1;
+    if (unidad) {
+      if (unidad.es_volumen && unidad.equivalencia_ml) {
+        factor = Number(unidad.equivalencia_ml) / 100;
+      } else if (!unidad.es_volumen && unidad.equivalencia_g) {
+        factor = Number(unidad.equivalencia_g) / 100;
+      }
+    }
+    
+    return {
+      energia: alimento.energia ? Math.round(alimento.energia * factor) : 0,
+      sodio: alimento.sodio ? Math.round(alimento.sodio * factor) : 0,
+      potasio: alimento.potasio ? Math.round(alimento.potasio * factor) : 0,
+      fosforo: alimento.fosforo ? Math.round(alimento.fosforo * factor) : 0,
+    };
+  };
+
+  // Efecto para cargar las unidades de medida
+  useEffect(() => {
+    const fetchUnidades = async () => {
+      try {
+        const response = await api.get('/unidades-medida/');
+        const units = response.data.map((unit: any) => ({
+           ...unit,
+           id: typeof unit.id === 'string' ? parseInt(unit.id, 10) : unit.id,
+        }));
+        setUnidadesMedida(units);
+      } catch (error) {
+        console.error('Error fetching unidades de medida:', error);
+      }
+    };
+    fetchUnidades();
+  }, []);
+
+  // Función para manejar la selección de imagen de la galería
+  const handleSelectImage = async () => {
+    try {
+      // Solicitar permisos de acceso a la galería
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Necesitamos permisos para acceder a tus fotos.');
+        return;
+      }
+      
+      // Lanzar el selector de imágenes
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Mostrar vista previa y comenzar la carga
+        setPhotoPreview(result.assets[0].uri);
+        setShowPhotoOptions(false);
+        uploadProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error seleccionando imagen:', error);
+      Alert.alert('Error', 'No se pudo seleccionar la imagen. Intente nuevamente.');
+    }
+  };
+  
+  // Función para manejar la captura de imagen con la cámara
+  const handleTakePhoto = async () => {
+    try {
+      // Solicitar permisos de cámara
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        Alert.alert('Permiso denegado', 'Necesitamos permisos para usar la cámara.');
+        return;
+      }
+      
+      // Lanzar la cámara
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Mostrar vista previa y comenzar la carga
+        setPhotoPreview(result.assets[0].uri);
+        setShowPhotoOptions(false);
+        uploadProfileImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error tomando foto:', error);
+      Alert.alert('Error', 'No se pudo tomar la foto. Intente nuevamente.');
+    }
+  };
+  
+  // Función mejorada para subir la imagen al servidor
+const uploadProfileImage = async (imageUri) => {
+  if (!pacienteData?.paciente?.id) {
+    Alert.alert('Error', 'No se pudo identificar al usuario.');
+    return;
+  }
+  // Verificar que la imagen seleccionada es un archivo local
+  if (!imageUri.startsWith('file://')) {
+    Alert.alert("Imagen inválida", "Seleccione una imagen válida diferente a la predeterminada.");
+    return;
+  }
+  try {
+    setUploadingPhoto(true);
+    
+    // Asegurarse de tener el token CSRF antes de continuar (opcional)
+    // await fetchCsrfToken();  // Descomentar si implementamos la función fetchCsrfToken
+    
+    // Leer el archivo como base64
+    const base64Image = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    
+    // Crear datos para la solicitud
+    const imageData = {
+      id_persona: pacienteData.paciente.id,
+      imagen: `data:image/jpeg;base64,${base64Image}`
+    };
+    
+    console.log('Enviando imagen al servidor...');
+    
+    // Usar el cliente API configurado que ya maneja los tokens de autenticación y CSRF
+    const response = await api.post('/actualizar-foto-perfil/', imageData);
+    
+    console.log('Respuesta del servidor:', response.data);
+    
+    // Recargar datos del paciente para mostrar la nueva imagen
+    await cargarDatosPaciente();
+    
+    Alert.alert('Éxito', 'La foto de perfil se ha actualizado correctamente.');
+  } catch (error) {
+    console.error('Error al subir la imagen:', error);
+    
+    if (error.response) {
+      console.log('Estado de error:', error.response.status);
+      console.log('Datos de error:', error.response.data);
+      
+      // Mensajes de error específicos según el código de respuesta
+      if (error.response.status === 403) {
+        Alert.alert('Error de permisos', 'No tiene autorización para cambiar esta foto de perfil.');
+      } else if (error.response.status === 401) {
+        Alert.alert('Sesión expirada', 'Por favor, inicie sesión nuevamente.');
+      } else {
+        Alert.alert('Error', error.response.data.error || 'No se pudo actualizar la foto de perfil.');
+      }
+    } else {
+      Alert.alert('Error de conexión', 'No se pudo conectar con el servidor. Verifique su conexión a internet.');
+    }
+  } finally {
+    setUploadingPhoto(false);
+  }
+};
+  
+  // Función para mostrar opciones de foto (específica por plataforma)
+  const showPhotoOptionsMenu = () => {
+    if (Platform.OS === 'ios') {
+      // En iOS, usamos ActionSheetIOS
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ['Cancelar', 'Tomar foto', 'Seleccionar de la galería'],
+          cancelButtonIndex: 0,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 1) handleTakePhoto();
+          else if (buttonIndex === 2) handleSelectImage();
+        }
+      );
+    } else {
+      // En Android y Web, usamos nuestro propio modal
+      setShowPhotoOptions(true);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.loaderContainer}>
@@ -978,7 +1331,7 @@ export default function FichaMedicaScreen({ navigation, route }) {
               </Text>
 
               {/* Form to link new patient */}
-              <View style={styles.patientCodeInputContainer}>
+              <View style={styles.patientLinkContainer}>
                 <TextInput
                   style={styles.patientCodeInput}
                   placeholder="Ingrese código de paciente"
@@ -1214,80 +1567,116 @@ export default function FichaMedicaScreen({ navigation, route }) {
                 </Card.Content>
               </Card>
 
-              {/* Nutrition stats - Read-only for caregiver */}
+              {/* Food records - Read-only for caregiver, versión mobile */}
               <Card style={styles.card}>
                 <Card.Title 
-                  title="Estadísticas Nutricionales" 
-                  subtitle="Basado en los últimos 7 registros" 
+                  title="Alimentos Recientes" 
                   titleStyle={styles.cardTitle}
+                  subtitle="Últimos registros alimenticios" 
+                  subtitleStyle={styles.cardSubtitle} 
                 />
                 <Card.Content>
-                  {pacienteData?.estadisticas ? (
-                    <>
-                      <View style={styles.statContainer}>
-                        <View style={styles.statItem}>
-                          <Text style={styles.statValue}>
-                            {pacienteData.estadisticas.sodio_total.toFixed(0)}
-                          </Text>
-                          <Text style={styles.statLabel}>Sodio (mg)</Text>
-                        </View>
-                        <View style={styles.statItem}>
-                          <Text style={styles.statValue}>
-                            {pacienteData.estadisticas.potasio_total.toFixed(0)}
-                          </Text>
-                          <Text style={styles.statLabel}>Potasio (mg)</Text>
-                        </View>
-                      </View>
-                      <View style={styles.statContainer}>
-                        <View style={styles.statItem}>
-                          <Text style={styles.statValue}>
-                            {pacienteData.estadisticas.fosforo_total ? 
-                              pacienteData.estadisticas.fosforo_total.toFixed(0) : 
-                              '0'}
-                          </Text>
-                          <Text style={styles.statLabel}>Fósforo (mg)</Text>
-                        </View>
-                      </View>
-                    </>
-                  ) : (
-                    <Text style={styles.emptyText}>
-                      No hay suficientes datos para mostrar estadísticas
-                    </Text>
-                  )}
-                </Card.Content>
-              </Card>
-
-              {/* Food records - Read-only for caregiver */}
-              <Card style={styles.card}>
-                <Card.Title title="Alimentos Recientes" titleStyle={styles.cardTitle} />
-                <Card.Content>
-                  {pacienteData?.registros_comida && pacienteData.registros_comida.length > 0 ? (
-                    pacienteData.registros_comida.map((registro, index) => (
-                      <View key={index} style={styles.alimentoItem}>
-                        <View style={styles.alimentoHeader}>
-                          <Text style={styles.alimentoNombre}>{registro.alimento.nombre}</Text>
-                          <Text style={styles.alimentoFecha}>
-                            {new Date(registro.fecha_consumo).toLocaleDateString('es-ES')}
-                          </Text>
-                        </View>
-                        <View style={styles.alimentoInfo}>
-                          <Text style={styles.alimentoInfoText}>
-                            {registro.porcion ? `${registro.porcion.cantidad} ${registro.porcion.unidad}` : '1 porción'}
-                          </Text>
-                          <Text style={styles.alimentoInfoText}>
-                            {registro.alimento.energia} kcal | {registro.alimento.proteinas} g proteína
-                          </Text>
-                          {registro.alimento.categoria && (
-                            <View style={styles.categoriaBadge}>
-                              <Text style={styles.categoriaText}>{registro.alimento.categoria}</Text>
+                  {registrosAlimenticios.length > 0 ? (
+                    <View style={styles.alimentosRecientesContainer}>
+                      {registrosAlimenticios.slice(0, 5).map((registro, index) => {
+                        const alimento = typeof registro.alimento === 'object' 
+                          ? registro.alimento 
+                          : { nombre: 'Alimento no disponible', energia: 0, sodio: 0, fosforo: 0 };
+                        
+                        const fecha = new Date(registro.fecha_consumo);
+                        const nivelSodio = getNivelNutriente(alimento.sodio || 0, 'sodio');
+                        
+                        return (
+                          <TouchableOpacity
+                            key={registro.id || index}
+                            style={styles.alimentoItemCard}
+                            onPress={() => alimento.id && navigation.navigate('AlimentoDetailScreen', { alimentoId: alimento.id })}
+                          >
+                            <View style={styles.alimentoItemHeader}>
+                              <Text style={styles.alimentoItemNombre} numberOfLines={1}>
+                                {alimento.nombre}
+                              </Text>
+                              <MaterialIcons 
+                                name="chevron-right" 
+                                size={20} 
+                                color="#690B22" 
+                                style={{opacity: 0.7}}
+                              />
                             </View>
-                          )}
-                        </View>
-                        {registro.notas && <Text style={styles.notasText}>Notas: {registro.notas}</Text>}
-                      </View>
-                    ))
+                            
+                            <View style={styles.alimentoItemInfo}>
+                              <View style={styles.alimentoItemTime}>
+                                <MaterialIcons name="schedule" size={14} color="#666" />
+                                <Text style={styles.alimentoItemTimeText}>
+                                  {fecha.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                                </Text>
+                                <Text style={styles.alimentoItemDateText}>
+                                  {fecha.toLocaleDateString('es-ES', {day: 'numeric', month: 'short'})}
+                                </Text>
+                              </View>
+                              
+                              <View style={styles.alimentoItemNutrients}>
+                                {/* Mostramos calorías */}
+                                <View style={styles.nutrientBadge}>
+                                  <Text style={styles.nutrientBadgeValue}>
+                                    {Math.round(alimento.energia || 0)}
+                                  </Text>
+                                  <Text style={styles.nutrientBadgeLabel}>kcal</Text>
+                                </View>
+                                
+                                {/* Mostramos fósforo en lugar de categoría */}
+                                <View style={styles.nutrientBadge}>
+                                  <Text style={styles.nutrientBadgeValue}>
+                                    {Math.round(alimento.fosforo || 0)}
+                                  </Text>
+                                  <Text style={styles.nutrientBadgeLabel}>
+                                    P (mg)
+                                  </Text>
+                                </View>
+                                
+                                {/* Mostramos sodio */}
+                                <View style={styles.nutrientBadge}>
+                                  <Text style={styles.nutrientBadgeValue}>
+                                    {Math.round(alimento.sodio || 0)}
+                                  </Text>
+                                  <Text style={styles.nutrientBadgeLabel}>
+                                    Na (mg)
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                            
+                            {registro.notas && (
+                              <View style={styles.notasContainer}>
+                                <MaterialIcons name="notes" size={14} color="#666" />
+                                <Text style={styles.notasText} numberOfLines={1}>
+                                  {registro.notas}
+                                </Text>
+                              </View>
+                            )}
+                          </TouchableOpacity>
+                        );
+                      })}
+                      
+                      <TouchableOpacity 
+                        style={styles.verMasButton}
+                        onPress={() => navigation.navigate('MisRegistros')}
+                      >
+                        <Text style={styles.verMasButtonText}>Ver todos mis registros</Text>
+                        <MaterialIcons name="arrow-forward" size={16} color="#690B22" />
+                      </TouchableOpacity>
+                    </View>
                   ) : (
-                    <Text style={styles.emptyText}>No hay registros de alimentos</Text>
+                    <View style={styles.noAlimentosContainer}>
+                      <MaterialIcons name="no-food" size={48} color="#690B22" opacity={0.6} />
+                      <Text style={styles.noAlimentosText}>No hay registros alimenticios recientes</Text>
+                      <TouchableOpacity 
+                        style={styles.registrarButton}
+                        onPress={() => navigation.navigate('Home', { screen: 'Alimentos' })}
+                      >
+                        <Text style={styles.registrarButtonText}>Registrar alimento</Text>
+                      </TouchableOpacity>
+                    </View>
                   )}
                 </Card.Content>
               </Card>
@@ -1300,597 +1689,705 @@ export default function FichaMedicaScreen({ navigation, route }) {
 
   // Default UI (for patients or for caregivers viewing a patient)
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView 
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Cabecera del Paciente - Información personal destacada */}
-        <Card style={styles.headerCard}>
-          <View style={styles.headerRow}>
-            <Image 
-              source={{ 
-                uri: getImageUrl(
-                  pacienteData?.paciente?.foto_perfil,
-                  'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
-                )
-              }}
-              style={styles.profileImage}
-              resizeMode="cover"
-              onError={(e) => console.log('Error cargando imagen:', e.nativeEvent.error)}
-            />
-            <View style={styles.headerInfo}>
-              {/* RUT destacado */}
-              <View style={styles.rutContainer}>
-                <Text style={styles.rutLabel}>RUT</Text>
-                <Text style={styles.rutValue}>
-                  {pacienteData?.paciente?.rut ? 
-                    formatearRut(pacienteData.paciente.rut) : 
+    <Provider>
+      <SafeAreaView style={styles.container}>
+        <ScrollView 
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {/* Cabecera del Paciente - Información personal destacada */}
+          <Card style={styles.headerCard}>
+            <View style={styles.headerRow}>
+              {/* Hacemos la imagen pulsable solo para el propio usuario, no para cuidadores viendo pacientes */}
+              {!selectedPatientId && userRole === 'paciente' ? (
+                <TouchableOpacity 
+                  style={styles.profileImageContainer}
+                  onPress={showPhotoOptionsMenu}
+                  disabled={uploadingPhoto}
+                >
+                  {uploadingPhoto ? (
+                    <View style={[styles.profileImage, styles.uploadingContainer]}>
+                      <ActivityIndicator size="large" color="#690B22" />
+                      <Text style={styles.uploadingText}>Subiendo...</Text>
+                    </View>
+                  ) : (
+                    <>
+                      <Image 
+                        source={{ 
+                          uri: photoPreview || getImageUrl(
+                            pacienteData?.paciente?.foto_perfil,
+                            'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+                          )
+                        }}
+                        style={styles.profileImage}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.cameraIconContainer}>
+                        <MaterialIcons name="photo-camera" size={20} color="#FFFFFF" />
+                      </View>
+                    </>
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <Image 
+                  source={{ 
+                    uri: getImageUrl(
+                      pacienteData?.paciente?.foto_perfil,
+                      'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png'
+                    )
+                  }}
+                  style={styles.profileImage}
+                  resizeMode="cover"
+                />
+              )}
+              
+              <View style={styles.headerInfo}>
+                {/* RUT destacado */}
+                <View style={styles.rutContainer}>
+                  <Text style={styles.rutLabel}>RUT</Text>
+                  <Text style={styles.rutValue}>
+                    {pacienteData?.paciente?.rut ? 
+                      formatearRut(pacienteData.paciente.rut) : 
+                      'No disponible'}
+                  </Text>
+                </View>
+                
+                {/* Nombres y apellidos destacados */}
+                <Text style={styles.nombreLabel}>Nombres:</Text>
+                <Text style={styles.nombreValue}>{pacienteData?.paciente?.nombres || 'No disponible'}</Text>
+                
+                <Text style={styles.nombreLabel}>Apellidos:</Text>
+                <Text style={styles.nombreValue}>{pacienteData?.paciente?.apellidos || 'No disponible'}</Text>
+                
+                {/* Estado del paciente */}
+                <View style={[styles.statusBadge, {backgroundColor: pacienteData?.paciente?.activo ? '#4CAF50' : '#F44336'}]}>
+                  <Text style={styles.statusText}>{pacienteData?.paciente?.activo ? 'Activo' : 'Inactivo'}</Text>
+                </View>
+              </View>
+            </View>
+          </Card>
+
+          {/* Rest of the patient UI */}
+          <Card style={styles.card}>
+            <Card.Title title="Datos Personales" titleStyle={styles.cardTitle} />
+            <Card.Content>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Fecha de nacimiento:</Text>
+                <Text style={styles.infoValue}>
+                  {pacienteData?.paciente?.fecha_nacimiento ? 
+                    new Date(pacienteData.paciente.fecha_nacimiento).toLocaleDateString('es-ES') : 
                     'No disponible'}
                 </Text>
               </View>
-              
-              {/* Nombres y apellidos destacados */}
-              <Text style={styles.nombreLabel}>Nombres:</Text>
-              <Text style={styles.nombreValue}>{pacienteData?.paciente?.nombres || 'No disponible'}</Text>
-              
-              <Text style={styles.nombreLabel}>Apellidos:</Text>
-              <Text style={styles.nombreValue}>{pacienteData?.paciente?.apellidos || 'No disponible'}</Text>
-              
-              {/* Estado del paciente */}
-              <View style={[styles.statusBadge, {backgroundColor: pacienteData?.paciente?.activo ? '#4CAF50' : '#F44336'}]}>
-                <Text style={styles.statusText}>{pacienteData?.paciente?.activo ? 'Activo' : 'Inactivo'}</Text>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Edad:</Text>
+                <Text style={styles.infoValue}>{pacienteData?.paciente?.edad} años</Text>
               </View>
-            </View>
-          </View>
-        </Card>
-
-        {/* Rest of the patient UI */}
-        <Card style={styles.card}>
-          <Card.Title title="Datos Personales" titleStyle={styles.cardTitle} />
-          <Card.Content>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Fecha de nacimiento:</Text>
-              <Text style={styles.infoValue}>
-                {pacienteData?.paciente?.fecha_nacimiento ? 
-                  new Date(pacienteData.paciente.fecha_nacimiento).toLocaleDateString('es-ES') : 
-                  'No disponible'}
-              </Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Edad:</Text>
-              <Text style={styles.infoValue}>{pacienteData?.paciente?.edad} años</Text>
-            </View>
-            <View style={styles.infoRow}>
-              <Text style={styles.infoLabel}>Género:</Text>
-              <Text style={styles.infoValue}>{pacienteData?.paciente?.genero || 'No especificado'}</Text>
-            </View>
-          </Card.Content>
-        </Card>
-
-        {/* Mostrar prominentemente la sección para crear perfil médico si no existe */}
-        {!pacienteData?.perfil_medico && (
-          <Card style={[styles.card, styles.createProfileCard]}>
-            <Card.Title title="Crear Perfil Médico" titleStyle={styles.createProfileTitle} />
-            <Card.Content>
-              <Text style={styles.createProfileText}>
-                Para acceder a todas las funcionalidades y recibir recomendaciones personalizadas,
-                es necesario completar su perfil médico con la siguiente información básica:
-              </Text>
-              
-              <View style={styles.initialProfileFields}>
-                <Text style={styles.fieldHeader}>Tipo de diálisis:</Text>
-                <View style={styles.optionsContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      tempValues.tipo_dialisis === 'hemodialisis' && styles.optionButtonSelected
-                    ]}
-                    onPress={() => setTempValues(prev => ({ ...prev, tipo_dialisis: 'hemodialisis' }))}
-                  >
-                    <Text style={tempValues.tipo_dialisis === 'hemodialisis' ? styles.optionTextSelected : styles.optionText}>
-                      Hemodiálisis
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[
-                      styles.optionButton,
-                      tempValues.tipo_dialisis === 'dialisis_peritoneal' && styles.optionButtonSelected
-                    ]}
-                    onPress={() => setTempValues(prev => ({ ...prev, tipo_dialisis: 'dialisis_peritoneal' }))}
-                  >
-                    <Text style={tempValues.tipo_dialisis === 'dialisis_peritoneal' ? styles.optionTextSelected : styles.optionText}>
-                      Diálisis Peritoneal
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                
-                <Text style={styles.fieldHeader}>Peso (kg):</Text>
-                <TextInput
-                  style={styles.createProfileInput}
-                  placeholder="Ingrese su peso en kg"
-                  value={tempValues.peso}
-                  onChangeText={(text) => setTempValues(prev => ({ ...prev, peso: text }))}
-                  keyboardType="numeric"
-                />
-                
-                <Text style={styles.fieldHeader}>Altura (m):</Text>
-                <TextInput
-                  style={styles.createProfileInput}
-                  placeholder="Ingrese su altura en metros (ej: 1.70)"
-                  value={tempValues.altura}
-                  onChangeText={(text) => {
-                    const normalizedText = normalizarDecimal(text);
-                    setTempValues(prev => ({ ...prev, altura: normalizedText }))
-                  }}
-                  keyboardType="numeric"
-                />
-                
-                <TouchableOpacity 
-                  style={[styles.actionButton, styles.fullWidthButton]}
-                  onPress={() => {
-                    // Verificar datos antes de crear el perfil
-                    if (!tempValues.tipo_dialisis) {
-                      setTempValues(prev => ({
-                        ...prev, 
-                        tipo_dialisis: 'hemodialisis'
-                      }));
-                    }
-                    
-                    if (!tempValues.peso || !tempValues.altura) {
-                      Alert.alert('Datos incompletos', 'Por favor ingrese su peso y altura para continuar');
-                      return;
-                    }
-                    
-                    // Crear el perfil con los datos ingresados
-                    guardarEdicion('tipo_dialisis');
-                  }}
-                >
-                  <Text style={styles.actionButtonText}>Guardar Perfil Médico</Text>
-                </TouchableOpacity>
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Género:</Text>
+                <Text style={styles.infoValue}>{pacienteData?.paciente?.genero || 'No especificado'}</Text>
               </View>
             </Card.Content>
           </Card>
-        )}
 
-        {/* Información Médica - Versión simplificada cuando no hay perfil */}
-        <Card style={styles.card}>
-          <Card.Title title="Información Médica" titleStyle={styles.cardTitle} />
-          <Card.Content>
-            {pacienteData?.perfil_medico && typeof pacienteData.perfil_medico === 'object' && 'id' in pacienteData.perfil_medico ? (
-              // Si existe perfil médico con ID válido, mostrar todos los datos
-              <>
-                {console.log('Renderizando perfil médico con ID:', pacienteData.perfil_medico.id)}
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Tipo de diálisis:</Text>
-                  {editMode.tipo_dialisis ? (
-                    <View style={styles.editableValueContainer}>
-                      <View style={styles.optionsContainer}>
-                        <TouchableOpacity
-                          style={[
-                            styles.optionButton,
-                            tempValues.tipo_dialisis === 'hemodialisis' && styles.optionButtonSelected
-                          ]}
-                          onPress={() => setTempValues(prev => ({ ...prev, tipo_dialisis: 'hemodialisis' }))}
-                        >
-                          <Text style={tempValues.tipo_dialisis === 'hemodialisis' ? styles.optionTextSelected : styles.optionText}>
-                            Hemodiálisis
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.optionButton,
-                            tempValues.tipo_dialisis === 'dialisis_peritoneal' && styles.optionButtonSelected
-                          ]}
-                          onPress={() => setTempValues(prev => ({ ...prev, tipo_dialisis: 'dialisis_peritoneal' }))}
-                        >
-                          <Text style={tempValues.tipo_dialisis === 'dialisis_peritoneal' ? styles.optionTextSelected : styles.optionText}>
-                            Diálisis Peritoneal
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                      <View style={styles.editActionsContainer}>
-                        <TouchableOpacity 
-                          style={[styles.editActionButton, styles.saveButton]}
-                          onPress={() => guardarEdicion('tipo_dialisis')}
-                        >
-                          <MaterialIcons name="check" size={18} color="white" />
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={[styles.editActionButton, styles.cancelButton]}
-                          onPress={() => cancelarEdicion('tipo_dialisis')}
-                        >
-                          <MaterialIcons name="close" size={18} color="white" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <>
-                      <Text style={styles.infoValue}>
-                        {pacienteData?.perfil_medico?.tipo_dialisis === 'hemodialisis' ? 'Hemodiálisis' : 'Diálisis Peritoneal'}
+          {/* Mostrar prominentemente la sección para crear perfil médico si no existe */}
+          {!pacienteData?.perfil_medico && (
+            <Card style={[styles.card, styles.createProfileCard]}>
+              <Card.Title title="Crear Perfil Médico" titleStyle={styles.createProfileTitle} />
+              <Card.Content>
+                <Text style={styles.createProfileText}>
+                  Para acceder a todas las funcionalidades y recibir recomendaciones personalizadas,
+                  es necesario completar su perfil médico con la siguiente información básica:
+                </Text>
+                
+                <View style={styles.initialProfileFields}>
+                  <Text style={styles.fieldHeader}>Tipo de diálisis:</Text>
+                  <View style={styles.optionsContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.optionButton,
+                        tempValues.tipo_dialisis === 'hemodialisis' && styles.optionButtonSelected
+                      ]}
+                      onPress={() => setTempValues(prev => ({ ...prev, tipo_dialisis: 'hemodialisis' }))}
+                    >
+                      <Text style={tempValues.tipo_dialisis === 'hemodialisis' ? styles.optionTextSelected : styles.optionText}>
+                        Hemodiálisis
                       </Text>
-                      <TouchableOpacity 
-                        style={styles.editButton}
-                        onPress={() => activarEdicion('tipo_dialisis')}
-                      >
-                        <MaterialIcons name="edit" size={18} color="#690B22" />
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Peso:</Text>
-                  {editMode.peso ? (
-                    <View style={styles.editableValueContainer}>
-                      <TextInput
-                        style={styles.editableInput}
-                        value={tempValues.peso}
-                        onChangeText={(text) => setTempValues(prev => ({ ...prev, peso: text }))}
-                        keyboardType="numeric"
-                        autoFocus
-                      />
-                      <Text style={styles.unitText}>kg</Text>
-                      <View style={styles.editActionsContainer}>
-                        <TouchableOpacity 
-                          style={[styles.editActionButton, styles.saveButton]}
-                          onPress={() => guardarEdicion('peso')}
-                        >
-                          <MaterialIcons name="check" size={18} color="white" />
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={[styles.editActionButton, styles.cancelButton]}
-                          onPress={() => cancelarEdicion('peso')}
-                        >
-                          <MaterialIcons name="close" size={18} color="white" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <>
-                      <Text style={styles.infoValue}>
-                        {`${pacienteData.perfil_medico.peso} kg`}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.optionButton,
+                        tempValues.tipo_dialisis === 'dialisis_peritoneal' && styles.optionButtonSelected
+                      ]}
+                      onPress={() => setTempValues(prev => ({ ...prev, tipo_dialisis: 'dialisis_peritoneal' }))}
+                    >
+                      <Text style={tempValues.tipo_dialisis === 'dialisis_peritoneal' ? styles.optionTextSelected : styles.optionText}>
+                        Diálisis Peritoneal
                       </Text>
-                      <TouchableOpacity 
-                        style={styles.editButton}
-                        onPress={() => activarEdicion('peso')}
-                      >
-                        <MaterialIcons name="edit" size={18} color="#690B22" />
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Altura:</Text>
-                  {editMode.altura ? (
-                    <View style={styles.editableValueContainer}>
-                      <TextInput
-                        style={styles.editableInput}
-                        value={tempValues.altura}
-                        onChangeText={(text) => {
-                          const normalizedText = normalizarDecimal(text);
-                          setTempValues(prev => ({ ...prev, altura: normalizedText }))
-                        }}
-                        keyboardType="numeric"
-                        autoFocus
-                      />
-                      <Text style={styles.unitText}>m</Text>
-                      <View style={styles.editActionsContainer}>
-                        <TouchableOpacity 
-                          style={[styles.editActionButton, styles.saveButton]}
-                          onPress={() => guardarEdicion('altura')}
-                        >
-                          <MaterialIcons name="check" size={18} color="white" />
-                        </TouchableOpacity>
-                        <TouchableOpacity 
-                          style={[styles.editActionButton, styles.cancelButton]}
-                          onPress={() => cancelarEdicion('altura')}
-                        >
-                          <MaterialIcons name="close" size={18} color="white" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  ) : (
-                    <>
-                      <Text style={styles.infoValue}>
-                        {`${formatearAltura(pacienteData.perfil_medico.altura)} m`}
-                      </Text>
-                      <TouchableOpacity 
-                        style={styles.editButton}
-                        onPress={() => activarEdicion('altura')}
-                      >
-                        <MaterialIcons name="edit" size={18} color="#690B22" />
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
-
-                {/* Los campos calculados automáticamente resaltan los valores calculados */}
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>IMC:</Text>
-                  <Text style={[
-                    styles.infoValue,
-                    pacienteData?.perfil_medico?.imc ? styles.calculatedValue : styles.placeholderValue
-                  ]}>
-                    {pacienteData?.perfil_medico?.imc && pacienteData.perfil_medico.imc > 0 ? 
-                      `${pacienteData.perfil_medico.imc} kg/m²` : 
-                      'Calculando...'}
-                  </Text>
-                  <View style={styles.autoCalcIcon}>
-                    <MaterialIcons name="calculate" size={18} color="#888" />
+                    </TouchableOpacity>
                   </View>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Nivel de Actividad:</Text>
-                  <Text style={[
-                    styles.infoValue,
-                    pacienteData?.perfil_medico?.nivel_actividad ? styles.calculatedValue : styles.placeholderValue
-                  ]}>
-                    {pacienteData?.perfil_medico?.nivel_actividad ? 
-                      pacienteData.perfil_medico.nivel_actividad.charAt(0).toUpperCase() + 
-                      pacienteData.perfil_medico.nivel_actividad.slice(1) : 
-                      'Calculando...'}
-                  </Text>
-                  <View style={styles.autoCalcIcon}>
-                    <MaterialIcons name="calculate" size={18} color="#888" />
-                  </View>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Calorías diarias:</Text>
-                  <Text style={[
-                    styles.infoValue,
-                    pacienteData?.perfil_medico?.calorias_diarias ? styles.calculatedValue : styles.placeholderValue
-                  ]}>
-                    {pacienteData?.perfil_medico?.calorias_diarias && pacienteData.perfil_medico.calorias_diarias > 0 ? 
-                      `${Math.round(pacienteData.perfil_medico.calorias_diarias)} kcal` : 
-                      'Calculando...'}
-                  </Text>
-                  <View style={styles.autoCalcIcon}>
-                    <MaterialIcons name="calculate" size={18} color="#888" />
-                  </View>
-                </View>
-              </>
-            ) : (
-              // Si no existe perfil médico o no tiene ID válido
-              <>
-                {console.log('No hay perfil médico válido para renderizar:', pacienteData?.perfil_medico)}
-                <View style={styles.noProfileContainer}>
-                  <MaterialIcons name="warning" size={40} color="#E07A5F" style={styles.warningIcon} />
-                  <Text style={styles.noProfileText}>
-                    No se ha encontrado información médica. 
-                    Por favor, complete su perfil médico para poder visualizar y gestionar su información.
-                  </Text>
+                  
+                  <Text style={styles.fieldHeader}>Peso (kg):</Text>
+                  <TextInput
+                    style={styles.createProfileInput}
+                    placeholder="Ingrese su peso en kg"
+                    value={tempValues.peso}
+                    onChangeText={(text) => setTempValues(prev => ({ ...prev, peso: text }))}
+                    keyboardType="numeric"
+                  />
+                  
+                  <Text style={styles.fieldHeader}>Altura (m):</Text>
+                  <TextInput
+                    style={styles.createProfileInput}
+                    placeholder="Ingrese su altura en metros (ej: 1.70)"
+                    value={tempValues.altura}
+                    onChangeText={(text) => {
+                      const normalizedText = normalizarDecimal(text);
+                      setTempValues(prev => ({ ...prev, altura: normalizedText }))
+                    }}
+                    keyboardType="numeric"
+                  />
+                  
                   <TouchableOpacity 
-                    style={styles.scrollToCreateButton}
+                    style={[styles.actionButton, styles.fullWidthButton]}
                     onPress={() => {
-                      // Check if running in web environment before using window.scrollTo
-                      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-                        // Find element with createProfileCard class and scroll to it
-                        const element = document.querySelector('.createProfileCard');
-                        if (element) {
-                          element.scrollIntoView({ behavior: 'smooth' });
-                        }
+                      // Verificar datos antes de crear el perfil
+                      if (!tempValues.tipo_dialisis) {
+                        setTempValues(prev => ({
+                          ...prev, 
+                          tipo_dialisis: 'hemodialisis'
+                        }));
                       }
+                      
+                      if (!tempValues.peso || !tempValues.altura) {
+                        Alert.alert('Datos incompletos', 'Por favor ingrese su peso y altura para continuar');
+                        return;
+                      }
+                      
+                      // Crear el perfil con los datos ingresados
+                      guardarEdicion('tipo_dialisis');
                     }}
                   >
-                    <Text style={styles.scrollToCreateButtonText}>Ir a Crear Perfil</Text>
+                    <Text style={styles.actionButtonText}>Guardar Perfil Médico</Text>
                   </TouchableOpacity>
                 </View>
-              </>
-            )}
-          </Card.Content>
-        </Card>
+              </Card.Content>
+            </Card>
+          )}
 
-        {/* Condiciones Médicas */}
-        <Card style={styles.card}>
-          <Card.Title title="Condiciones Médicas" titleStyle={styles.cardTitle} />
-          <Card.Content>
-            {pacienteData?.condiciones && pacienteData.condiciones.length > 0 ? (
-              <>
-                <View style={styles.condicionesContainer}>
-                  {pacienteData.condiciones.map((condicion, index) => (
-                    <View key={index} style={styles.condicionBadge}>
-                      <Text style={styles.condicionText}>{condicion.nombre}</Text>
-                    </View>
-                  ))}
-                </View>
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => setMostrarSelectorCondiciones(true)}
-                >
-                  <Text style={styles.actionButtonText}>Editar condiciones</Text>
-                </TouchableOpacity>
-              </>
-            ) : (
-              <View style={styles.noCondicionesContainer}>
-                <MaterialIcons name="medical-information" size={40} color="#E07A5F" style={styles.warningIcon} />
-                <Text style={styles.noCondicionesText}>
-                  No hay condiciones médicas registradas. Agregar sus condiciones médicas ayudará a personalizar mejor sus recomendaciones nutricionales.
-                </Text>
-                <TouchableOpacity 
-                  style={styles.actionButton}
-                  onPress={() => {
-                    setMostrarSelectorCondiciones(true);
-                    setCondicionesSeleccionadas([]); // Reset selecciones
-                  }}
-                >
-                  <Text style={styles.actionButtonText}>Agregar condiciones</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {/* Selector de Condiciones Médicas */}
-            {mostrarSelectorCondiciones && (
-              <View style={styles.selectorCondiciones}>
-                <Text style={styles.selectorTitle}>Seleccione sus condiciones médicas:</Text>
-                
-                {condicionesDisponibles.length > 0 ? (
-                  condicionesDisponibles.map(condicion => (
-                    <TouchableOpacity
-                      key={condicion.id}
-                      style={[
-                        styles.condicionOption,
-                        nuevasCondicionesSeleccionadas.some(c => c.id === condicion.id) && 
-                        styles.condicionOptionSelected
-                      ]}
-                      onPress={() => toggleCondicionMedica(condicion)}
-                    >
-                      <Text style={[
-                        styles.condicionOptionText,
-                        nuevasCondicionesSeleccionadas.some(c => c.id === condicion.id) && 
-                        styles.condicionOptionTextSelected
-                      ]}>
-                        {condicion.nombre}
-                      </Text>
-                      {nuevasCondicionesSeleccionadas.some(c => c.id === condicion.id) && (
-                        <MaterialIcons name="check" size={20} color="white" />
-                      )}
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <View style={styles.emptyCondicionesContainer}>
-                    <Text style={styles.emptyText}>No hay condiciones médicas disponibles.</Text>
-                    <Text style={styles.emptySubText}>Contacte con el equipo médico para añadir nuevas condiciones.</Text>
-                  </View>
-                )}
-                
-                <View style={styles.selectorButtons}>
-                  <TouchableOpacity 
-                    style={[styles.actionButton, styles.cancelButton]}
-                    onPress={cancelarSeleccionCondiciones}
-                  >
-                    <Text style={styles.actionButtonText}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity 
-                    style={[styles.actionButton, styles.saveButton]}
-                    onPress={guardarCondicionesMedicas}
-                  >
-                    <Text style={styles.actionButtonText}>Guardar</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            )}
-          </Card.Content>
-        </Card>
-
-        {/* Estadísticas Nutricionales */}
-        <Card style={styles.card}>
-          <Card.Title 
-            title="Estadísticas Nutricionales" 
-            subtitle="Basado en los últimos 7 registros" 
-            titleStyle={styles.cardTitle}
-          />
-          <Card.Content>
-            {pacienteData?.estadisticas ? (
-              <>
-                <View style={styles.statContainer}>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{pacienteData.estadisticas.sodio_total.toFixed(0)}</Text>
-                    <Text style={styles.statLabel}>Sodio (mg)</Text>
-                  </View>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{pacienteData.estadisticas.potasio_total.toFixed(0)}</Text>
-                    <Text style={styles.statLabel}>Potasio (mg)</Text>
-                  </View>
-                </View>
-                <View style={styles.statContainer}>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{pacienteData.estadisticas.fosforo_total ? pacienteData.estadisticas.fosforo_total.toFixed(0) : '0'}</Text>
-                    <Text style={styles.statLabel}>Fósforo (mg)</Text>
-                  </View>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Total de registros:</Text>
-                  <Text style={styles.infoValue}>{pacienteData.estadisticas.registros_totales}</Text>
-                </View>
-              </>
-            ) : (
-              <Text style={styles.emptyText}>No hay suficientes datos para mostrar estadísticas</Text>
-            )}
-          </Card.Content>
-        </Card>
-
-        {/* Registros de Comida Recientes */}
-        <Card style={styles.card}>
-          <Card.Title title="Alimentos Recientes" titleStyle={styles.cardTitle} />
-          <Card.Content>
-            {pacienteData?.registros_comida && pacienteData.registros_comida.length > 0 ? (
-              pacienteData.registros_comida.map((registro, index) => (
-                <View key={index} style={styles.alimentoItem}>
-                  <View style={styles.alimentoHeader}>
-                    <Text style={styles.alimentoNombre}>{registro.alimento.nombre}</Text>
-                    <Text style={styles.alimentoFecha}>
-                      {new Date(registro.fecha_consumo).toLocaleDateString('es-ES')}
-                    </Text>
-                  </View>
-                  <View style={styles.alimentoInfo}>
-                    <Text style={styles.alimentoInfoText}>
-                      {registro.porcion ? `${registro.porcion.cantidad} ${registro.porcion.unidad}` : '1 porción'}
-                    </Text>
-                    <Text style={styles.alimentoInfoText}>
-                      {registro.alimento.energia} kcal | {registro.alimento.proteinas} g proteína
-                    </Text>
-                    {registro.alimento.categoria && (
-                      <View style={styles.categoriaBadge}>
-                        <Text style={styles.categoriaText}>{registro.alimento.categoria}</Text>
+          {/* Información Médica - Versión simplificada cuando no hay perfil */}
+          <Card style={styles.card}>
+            <Card.Title title="Información Médica" titleStyle={styles.cardTitle} />
+            <Card.Content>
+              {pacienteData?.perfil_medico && typeof pacienteData.perfil_medico === 'object' && 'id' in pacienteData.perfil_medico ? (
+                // Si existe perfil médico con ID válido, mostrar todos los datos
+                <>
+                  {console.log('Renderizando perfil médico con ID:', pacienteData.perfil_medico.id)}
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Tipo de diálisis:</Text>
+                    {editMode.tipo_dialisis ? (
+                      <View style={styles.editableValueContainer}>
+                        <View style={styles.optionsContainer}>
+                          <TouchableOpacity
+                            style={[
+                              styles.optionButton,
+                              tempValues.tipo_dialisis === 'hemodialisis' && styles.optionButtonSelected
+                            ]}
+                            onPress={() => setTempValues(prev => ({ ...prev, tipo_dialisis: 'hemodialisis' }))}
+                          >
+                            <Text style={tempValues.tipo_dialisis === 'hemodialisis' ? styles.optionTextSelected : styles.optionText}>
+                              Hemodiálisis
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            style={[
+                              styles.optionButton,
+                              tempValues.tipo_dialisis === 'dialisis_peritoneal' && styles.optionButtonSelected
+                            ]}
+                            onPress={() => setTempValues(prev => ({ ...prev, tipo_dialisis: 'dialisis_peritoneal' }))}
+                          >
+                            <Text style={tempValues.tipo_dialisis === 'dialisis_peritoneal' ? styles.optionTextSelected : styles.optionText}>
+                              Diálisis Peritoneal
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.editActionsContainer}>
+                          <TouchableOpacity 
+                            style={[styles.editActionButton, styles.saveButton]}
+                            onPress={() => guardarEdicion('tipo_dialisis')}
+                          >
+                            <MaterialIcons name="check" size={18} color="white" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={[styles.editActionButton, styles.cancelButton]}
+                            onPress={() => cancelarEdicion('tipo_dialisis')}
+                          >
+                            <MaterialIcons name="close" size={18} color="white" />
+                          </TouchableOpacity>
+                        </View>
                       </View>
+                    ) : (
+                      <>
+                        <Text style={styles.infoValue}>
+                          {pacienteData?.perfil_medico?.tipo_dialisis === 'hemodialisis' ? 'Hemodiálisis' : 'Diálisis Peritoneal'}
+                        </Text>
+                        <TouchableOpacity 
+                          style={styles.editButton}
+                          onPress={() => activarEdicion('tipo_dialisis')}
+                        >
+                          <MaterialIcons name="edit" size={18} color="#690B22" />
+                        </TouchableOpacity>
+                      </>
                     )}
                   </View>
-                  {registro.notas && <Text style={styles.notasText}>Notas: {registro.notas}</Text>}
-                </View>
-              ))
-            ) : (
-              <Text style={styles.emptyText}>No hay registros de alimentos</Text>
-            )}
-          </Card.Content>
-          <Card.Actions>
-            <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={() => navigation.navigate('Alimentos')}
-            >
-              <Text style={styles.actionButtonText}>Registrar Comida</Text>
-            </TouchableOpacity>
-          </Card.Actions>
-        </Card>
 
-        {/* Cuidadores - Only show for patient role */}
-        <Card style={styles.card}>
-          <Card.Title title="Cuidadores" titleStyle={styles.cardTitle} />
-          <Card.Content>
-            <View style={styles.patientCodeContainer}>
-              <Text style={styles.patientCodeTitle}>Tu código de paciente:</Text>
-              <View style={styles.codeBox}>
-                <Text style={styles.patientCodeValue}>{currentPersonaId}</Text>
-              </View>
-              <Text style={styles.patientCodeInstructions}>
-                Comparte este código con una persona de confianza o quien te ayude para que puedan acceder
-                a tu información médica.
-              </Text>
-              
-              {/* Botón para copiar al portapapeles en plataformas que lo soportan */}
-              {Platform.OS === 'web' && (
-                <TouchableOpacity
-                  style={styles.copyButton}
-                  onPress={() => {
-                    navigator.clipboard.writeText(currentPersonaId);
-                    Alert.alert('Copiado', 'Código copiado al portapapeles');
-                  }}
-                >
-                  <MaterialIcons name="content-copy" size={18} color="#FFFFFF" />
-                  <Text style={styles.copyButtonText}>Copiar código</Text>
-                </TouchableOpacity>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Peso:</Text>
+                    {editMode.peso ? (
+                      <View style={styles.editableValueContainer}>
+                        <TextInput
+                          style={styles.editableInput}
+                          value={tempValues.peso}
+                          onChangeText={(text) => setTempValues(prev => ({ ...prev, peso: text }))}
+                          keyboardType="numeric"
+                          autoFocus
+                        />
+                        <Text style={styles.unitText}>kg</Text>
+                        <View style={styles.editActionsContainer}>
+                          <TouchableOpacity 
+                            style={[styles.editActionButton, styles.saveButton]}
+                            onPress={() => guardarEdicion('peso')}
+                          >
+                            <MaterialIcons name="check" size={18} color="white" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={[styles.editActionButton, styles.cancelButton]}
+                            onPress={() => cancelarEdicion('peso')}
+                          >
+                            <MaterialIcons name="close" size={18} color="white" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <>
+                        <Text style={styles.infoValue}>
+                          {`${pacienteData.perfil_medico.peso} kg`}
+                        </Text>
+                        <TouchableOpacity 
+                          style={styles.editButton}
+                          onPress={() => activarEdicion('peso')}
+                        >
+                          <MaterialIcons name="edit" size={18} color="#690B22" />
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Altura:</Text>
+                    {editMode.altura ? (
+                      <View style={styles.editableValueContainer}>
+                        <TextInput
+                          style={styles.editableInput}
+                          value={tempValues.altura}
+                          onChangeText={(text) => {
+                            const normalizedText = normalizarDecimal(text);
+                            setTempValues(prev => ({ ...prev, altura: normalizedText }))
+                          }}
+                          keyboardType="numeric"
+                          autoFocus
+                        />
+                        <Text style={styles.unitText}>m</Text>
+                        <View style={styles.editActionsContainer}>
+                          <TouchableOpacity 
+                            style={[styles.editActionButton, styles.saveButton]}
+                            onPress={() => guardarEdicion('altura')}
+                          >
+                            <MaterialIcons name="check" size={18} color="white" />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={[styles.editActionButton, styles.cancelButton]}
+                            onPress={() => cancelarEdicion('altura')}
+                          >
+                            <MaterialIcons name="close" size={18} color="white" />
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <>
+                        <Text style={styles.infoValue}>
+                          {`${formatearAltura(pacienteData.perfil_medico.altura)} m`}
+                        </Text>
+                        <TouchableOpacity 
+                          style={styles.editButton}
+                          onPress={() => activarEdicion('altura')}
+                        >
+                          <MaterialIcons name="edit" size={18} color="#690B22" />
+                        </TouchableOpacity>
+                      </>
+                    )}
+                  </View>
+
+                  {/* Los campos calculados automáticamente resaltan los valores calculados */}
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>IMC:</Text>
+                    <Text style={[
+                      styles.infoValue,
+                      pacienteData?.perfil_medico?.imc ? styles.calculatedValue : styles.placeholderValue
+                    ]}>
+                      {pacienteData?.perfil_medico?.imc && pacienteData.perfil_medico.imc > 0 ? 
+                        `${pacienteData.perfil_medico.imc} kg/m²` : 
+                        'Calculando...'}
+                    </Text>
+                    <View style={styles.autoCalcIcon}>
+                      <MaterialIcons name="calculate" size={18} color="#888" />
+                    </View>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Nivel de Actividad:</Text>
+                    <Text style={[
+                      styles.infoValue,
+                      pacienteData?.perfil_medico?.nivel_actividad ? styles.calculatedValue : styles.placeholderValue
+                    ]}>
+                      {pacienteData?.perfil_medico?.nivel_actividad ? 
+                        pacienteData.perfil_medico.nivel_actividad.charAt(0).toUpperCase() + 
+                        pacienteData.perfil_medico.nivel_actividad.slice(1) : 
+                        'Calculando...'}
+                    </Text>
+                    <View style={styles.autoCalcIcon}>
+                      <MaterialIcons name="calculate" size={18} color="#888" />
+                    </View>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Calorías diarias:</Text>
+                    <Text style={[
+                      styles.infoValue,
+                      pacienteData?.perfil_medico?.calorias_diarias ? styles.calculatedValue : styles.placeholderValue
+                    ]}>
+                      {pacienteData?.perfil_medico?.calorias_diarias && pacienteData.perfil_medico.calorias_diarias > 0 ? 
+                        `${Math.round(pacienteData.perfil_medico.calorias_diarias)} kcal` : 
+                        'Calculando...'}
+                    </Text>
+                    <View style={styles.autoCalcIcon}>
+                      <MaterialIcons name="calculate" size={18} color="#888" />
+                    </View>
+                  </View>
+                </>
+              ) : (
+                // Si no existe perfil médico o no tiene ID válido
+                <>
+                  {console.log('No hay perfil médico válido para renderizar:', pacienteData?.perfil_medico)}
+                  <View style={styles.noProfileContainer}>
+                    <MaterialIcons name="warning" size={40} color="#E07A5F" style={styles.warningIcon} />
+                    <Text style={styles.noProfileText}>
+                      No se ha encontrado información médica. 
+                      Por favor, complete su perfil médico para poder visualizar y gestionar su información.
+                    </Text>
+                    <TouchableOpacity 
+                      style={styles.scrollToCreateButton}
+                      onPress={() => {
+                        // Check if running in web environment before using window.scrollTo
+                        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                          // Find element with createProfileCard class and scroll to it
+                          const element = document.querySelector('.createProfileCard');
+                          if (element) {
+                            element.scrollIntoView({ behavior: 'smooth' });
+                          }
+                        }
+                      }}
+                    >
+                      <Text style={styles.scrollToCreateButtonText}>Ir a Crear Perfil</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
               )}
-            </View>
-          </Card.Content>
-        </Card>
+            </Card.Content>
+          </Card>
 
-      </ScrollView>
-    </SafeAreaView>
+          {/* Condiciones Médicas */}
+          <Card style={styles.card}>
+            <Card.Title title="Condiciones Médicas" titleStyle={styles.cardTitle} />
+            <Card.Content>
+              {pacienteData?.condiciones && pacienteData.condiciones.length > 0 ? (
+                <>
+                  <View style={styles.condicionesContainer}>
+                    {pacienteData.condiciones.map((condicion, index) => (
+                      <View key={index} style={styles.condicionBadge}>
+                        <Text style={styles.condicionText}>{condicion.nombre}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.editCondicionesButton}
+                    onPress={() => setMostrarSelectorCondiciones(true)}
+                  >
+                    <MaterialIcons name="edit" size={18} color="#FFFFFF" />
+                    <Text style={styles.editCondicionesButtonText}>Editar condiciones</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <View style={styles.noCondicionesContainer}>
+                  <MaterialIcons name="medical-information" size={40} color="#E07A5F" style={styles.warningIcon} />
+                  <Text style={styles.noCondicionesText}>
+                    No hay condiciones médicas registradas. Agregar sus condiciones médicas ayudará a personalizar mejor sus recomendaciones nutricionales.
+                  </Text>
+                  <TouchableOpacity 
+                    style={styles.editCondicionesButton}
+                    onPress={() => {
+                      setMostrarSelectorCondiciones(true);
+                      setCondicionesSeleccionadas([]); // Reset selecciones
+                    }}
+                  >
+                    <MaterialIcons name="add" size={18} color="#FFFFFF" />
+                    <Text style={styles.editCondicionesButtonText}>Agregar condiciones</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* Selector de Condiciones Médicas */}
+              {mostrarSelectorCondiciones && (
+                <View style={styles.selectorCondiciones}>
+                  <Text style={styles.selectorTitle}>Seleccione sus condiciones médicas:</Text>
+                  
+                  {condicionesDisponibles.length > 0 ? (
+                    condicionesDisponibles.map(condicion => (
+                      <TouchableOpacity
+                        key={condicion.id}
+                        style={[
+                          styles.condicionOption,
+                          nuevasCondicionesSeleccionadas.some(c => c.id === condicion.id) && 
+                          styles.condicionOptionSelected
+                        ]}
+                        onPress={() => toggleCondicionMedica(condicion)}
+                      >
+                        <Text style={[
+                          styles.condicionOptionText,
+                          nuevasCondicionesSeleccionadas.some(c => c.id === condicion.id) && 
+                          styles.condicionOptionTextSelected
+                        ]}>
+                          {condicion.nombre}
+                        </Text>
+                        {nuevasCondicionesSeleccionadas.some(c => c.id === condicion.id) && (
+                          <MaterialIcons name="check" size={20} color="white" />
+                        )}
+                      </TouchableOpacity>
+                    ))
+                  ) : (
+                    <View style={styles.emptyCondicionesContainer}>
+                      <Text style={styles.emptyText}>No hay condiciones médicas disponibles.</Text>
+                      <Text style={styles.emptySubText}>Contacte con el equipo médico para añadir nuevas condiciones.</Text>
+                    </View>
+                  )}
+                  
+                  <View style={styles.selectorButtons}>
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.cancelButton]}
+                      onPress={cancelarSeleccionCondiciones}
+                    >
+                      <Text style={styles.actionButtonText}>Cancelar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.actionButton, styles.saveButton]}
+                      onPress={guardarCondicionesMedicas}
+                    >
+                      <Text style={styles.actionButtonText}>Guardar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+            </Card.Content>
+          </Card>
+
+          {/* Registros de Comida Recientes */}
+          <Card style={styles.card}>
+            <Card.Title 
+              title="Alimentos Recientes" 
+              titleStyle={styles.cardTitle}
+              subtitle="Últimos registros alimenticios"
+              subtitleStyle={styles.cardSubtitle} 
+            />
+            <Card.Content>
+              {registrosAlimenticios.length > 0 ? (
+                <View style={styles.alimentosRecientesContainer}>
+                  {registrosAlimenticios.slice(0, 5).map((registro, index) => {
+                    const alimento = typeof registro.alimento === 'object' 
+                      ? registro.alimento 
+                      : { nombre: 'Alimento no disponible', energia: 0, sodio: 0, fosforo: 0 };
+                    
+                    const fecha = new Date(registro.fecha_consumo);
+                    const nivelSodio = getNivelNutriente(alimento.sodio || 0, 'sodio');
+                    
+                    return (
+                      <TouchableOpacity
+                        key={registro.id || index}
+                        style={styles.alimentoItemCard}
+                        onPress={() => alimento.id && navigation.navigate('AlimentoDetailScreen', { alimentoId: alimento.id })}
+                      >
+                        <View style={styles.alimentoItemHeader}>
+                          <Text style={styles.alimentoItemNombre} numberOfLines={1}>
+                            {alimento.nombre}
+                          </Text>
+                          <MaterialIcons 
+                            name="chevron-right" 
+                            size={20} 
+                            color="#690B22" 
+                            style={{opacity: 0.7}}
+                          />
+                        </View>
+                        
+                        <View style={styles.alimentoItemInfo}>
+                          <View style={styles.alimentoItemTime}>
+                            <MaterialIcons name="schedule" size={14} color="#666" />
+                            <Text style={styles.alimentoItemTimeText}>
+                              {fecha.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}
+                            </Text>
+                            <Text style={styles.alimentoItemDateText}>
+                              {fecha.toLocaleDateString('es-ES', {day: 'numeric', month: 'short'})}
+                            </Text>
+                          </View>
+                          
+                          <View style={styles.alimentoItemNutrients}>
+                            {/* Mostramos calorías */}
+                            <View style={styles.nutrientBadge}>
+                              <Text style={styles.nutrientBadgeValue}>
+                                {Math.round(alimento.energia || 0)}
+                              </Text>
+                              <Text style={styles.nutrientBadgeLabel}>kcal</Text>
+                            </View>
+                            
+                            {/* Mostramos fósforo en lugar de categoría */}
+                            <View style={styles.nutrientBadge}>
+                              <Text style={styles.nutrientBadgeValue}>
+                                {Math.round(alimento.fosforo || 0)}
+                              </Text>
+                              <Text style={styles.nutrientBadgeLabel}>
+                                P (mg)
+                              </Text>
+                            </View>
+                            
+                            {/* Mostramos sodio */}
+                            <View style={styles.nutrientBadge}>
+                              <Text style={styles.nutrientBadgeValue}>
+                                {Math.round(alimento.sodio || 0)}
+                              </Text>
+                              <Text style={styles.nutrientBadgeLabel}>
+                                Na (mg)
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                        
+                        {registro.notas && (
+                          <View style={styles.notasContainer}>
+                            <MaterialIcons name="notes" size={14} color="#666" />
+                            <Text style={styles.notasText} numberOfLines={1}>
+                              {registro.notas}
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                  
+                  <TouchableOpacity 
+                    style={styles.verMasButton}
+                    onPress={() => navigation.navigate('MisRegistros')}
+                  >
+                    <Text style={styles.verMasButtonText}>Ver todos mis registros</Text>
+                    <MaterialIcons name="arrow-forward" size={16} color="#690B22" />
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.noAlimentosContainer}>
+                  <MaterialIcons name="no-food" size={48} color="#690B22" opacity={0.6} />
+                  <Text style={styles.noAlimentosText}>No hay registros alimenticios recientes</Text>
+                  <TouchableOpacity 
+                    style={styles.registrarButton}
+                    onPress={() => navigation.navigate('Home', { screen: 'Alimentos' })}
+                  >
+                    <Text style={styles.registrarButtonText}>Registrar alimento</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </Card.Content>
+          </Card>
+
+          {/* Cuidadores - Only show for patient role */}
+          <Card style={styles.card}>
+            <Card.Title title="Cuidadores" titleStyle={styles.cardTitle} />
+            <Card.Content>
+              <View style={styles.patientCodeContainer}>
+                <Text style={styles.patientCodeTitle}>Tu código de paciente:</Text>
+                <View style={styles.codeBox}>
+                  <Text style={styles.patientCodeValue}>{currentPersonaId}</Text>
+                </View>
+                <Text style={styles.patientCodeInstructions}>
+                  Comparte este código con una persona de confianza o quien te ayude para que puedan acceder
+                  a tu información médica.
+                </Text>
+                
+                {/* Botón para copiar al portapapeles en plataformas que lo soportan */}
+                {Platform.OS === 'web' && (
+                  <TouchableOpacity
+                    style={styles.copyButton}
+                    onPress={() => {
+                      navigator.clipboard.writeText(currentPersonaId);
+                      Alert.alert('Copiado', 'Código copiado al portapapeles');
+                    }}
+                  >
+                    <MaterialIcons name="content-copy" size={18} color="#FFFFFF" />
+                    <Text style={styles.copyButtonText}>Copiar código</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </Card.Content>
+          </Card>
+
+        </ScrollView>
+        
+        {/* Modal para opciones de foto en Android y Web */}
+        <Portal>
+          <Modal
+            visible={showPhotoOptions}
+            onDismiss={() => setShowPhotoOptions(false)}
+            transparent={true}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.photoOptionsContainer}>
+                <Text style={styles.photoOptionsTitle}>Foto de perfil</Text>
+                
+                <TouchableOpacity 
+                  style={styles.photoOption}
+                  onPress={handleTakePhoto}
+                >
+                  <MaterialIcons name="camera-alt" size={24} color="#690B22" />
+                  <Text style={styles.photoOptionText}>Tomar foto</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.photoOption}
+                  onPress={handleSelectImage}
+                >
+                  <MaterialIcons name="photo-library" size={24} color="#690B22" />
+                  <Text style={styles.photoOptionText}>Seleccionar de la galería</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.photoOption, styles.cancelOption]}
+                  onPress={() => setShowPhotoOptions(false)}
+                >
+                  <Text style={styles.cancelText}>Cancelar</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+        </Portal>
+      </SafeAreaView>
+    </Provider>
   );
 }
 
@@ -2456,43 +2953,28 @@ const styles = StyleSheet.create({
     elevation: 2,
     backgroundColor: 'white',
   },
-  caregiverCardTitle: {
-    color: '#690B22',
-    fontWeight: 'bold',
-    fontSize: 24,
-  },
-  caregiverInstructions: {
+  linkingErrorText: {
     fontSize: 16,
+    color: '#F44336',
+    marginBottom: 15,
+  },
+  linkedPatientsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#1B4D3E',
-    marginBottom: 20,
-    lineHeight: 22,
+    marginBottom: 15,
+    marginLeft: 8,
+    fontWeight: '500',
   },
-  patientCodeInputContainer: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  patientCodeInput: {
-    flex: 1,
-    backgroundColor: '#F1E3D3',
+  // New styles for caregiver functionality
+  caregiverHeaderCard: {
+    margin: 8,
     borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    marginRight: 10,
-  },
-  linkButton: {
-    backgroundColor: '#690B22',
-    borderRadius: 8,
-    padding: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 100,
-  },
-  linkButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
+    elevation: 2,
+    backgroundColor: 'white',
   },
   linkingErrorText: {
+    fontSize: 16,
     color: '#F44336',
     marginBottom: 15,
   },
@@ -2764,4 +3246,425 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingBottom: Platform.OS === 'web' ? 20 : 80, // Extra padding at bottom on mobile for action buttons
   },
+  // Estilos para estadísticas nutricionales
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  statItem: {
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    width: '30%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 4,
+  },
+  statNivel: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginTop: 2,
+  },
+  
+  // Estilos para alimentos recientes
+  alimentosRecientesContainer: {
+    marginTop: 10,
+  },
+  alimentoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  alimentoInfo: {
+    flex: 1,
+  },
+  alimentoNombre: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#1B4D3E',
+    marginBottom: 2,
+  },
+  alimentoFecha: {
+    fontSize: 12,
+    color: '#666666',
+  },
+  alimentoStats: {
+    marginRight: 12,
+    alignItems: 'flex-end',
+  },
+  alimentoEnergia: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333333',
+  },
+  alimentoSodio: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  verMasButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+    padding: 8,
+  },
+  verMasButtonText: {
+    fontSize: 14,
+    color: '#690B22',
+    fontWeight: '500',
+    marginRight: 4,
+  },
+  noAlimentosContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 20,
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  noAlimentosText: {
+    fontSize: 15,
+    color: '#666666',
+    marginTop: 10,
+    marginBottom: 16,
+  },
+  registrarButton: {
+    backgroundColor: '#690B22',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+  },
+  registrarButtonText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  sectionSubtitle: {
+    fontSize: 13,
+    color: '#666666',
+    marginTop: 2,
+    fontStyle: 'italic',
+  },
+  
+  // Estilos mejorados para alimentos recientes
+  cardSubtitle: {
+    color: '#666666',
+    fontSize: 12,
+  },
+  
+  alimentosRecientesContainer: {
+    marginTop: 5,
+  },
+  
+  alimentoItemCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderLeftWidth: 4,
+    borderLeftColor: '#690B22',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  
+  alimentoItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  
+  alimentoItemNombre: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+    flex: 1,
+    marginRight: 10,
+  },
+  
+  alimentoItemInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  
+  alimentoItemTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  alimentoItemTimeText: {
+    fontSize: 14,
+    color: '#333333',
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  
+  alimentoItemDateText: {
+    fontSize: 13,
+    color: '#666666',
+    marginLeft: 10,
+  },
+  
+  alimentoItemNutrients: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  
+  nutrientBadge: {
+    backgroundColor: '#F1E3D3',
+    borderRadius: 6,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    marginLeft: 8,
+    alignItems: 'center',
+    minWidth: 55,
+  },
+  
+  nutrientBadgeValue: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+  },
+  
+  nutrientBadgeLabel: {
+    fontSize: 10,
+    color: '#666666',
+  },
+  
+  categoriaBadge: {
+    backgroundColor: '#FFECB3',
+    borderRadius: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    marginLeft: 8,
+    maxWidth: 100,
+  },
+  
+  categoriaBadgeText: {
+    fontSize: 11,
+    color: '#FF8F00',
+  },
+  
+  notasContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 5,
+    backgroundColor: '#F8F8F8',
+    padding: 6,
+    borderRadius: 4,
+  },
+  
+  notasText: {
+    fontSize: 12,
+    color: '#666666',
+    fontStyle: 'italic',
+    marginLeft: 6,
+    flex: 1,
+  },
+  
+  verMasButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    marginTop: 5,
+  },
+  
+  verMasButtonText: {
+    fontSize: 15,
+    color: '#690B22',
+    fontWeight: '500',
+    marginRight: 8,
+  },
+  
+  // Enhanced button for editing conditions
+  editCondicionesButton: {
+    backgroundColor: '#690B22',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginTop: 12,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 3,
+  },
+  editCondicionesButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  
+  // Estilos para la funcionalidad de imagen de perfil
+  profileImageContainer: {
+    position: 'relative',
+    marginRight: 16,
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: 'rgba(105, 11, 34, 0.7)',
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadingContainer: {
+    backgroundColor: 'rgba(240, 240, 240, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  uploadingText: {
+    color: '#690B22',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoOptionsContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    width: '80%',
+    maxWidth: 350,
+  },
+  photoOptionsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  photoOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  photoOptionText: {
+    fontSize: 16,
+    color: '#1B4D3E',
+    marginLeft: 15,
+  },
+  cancelOption: {
+    justifyContent: 'center',
+    marginTop: 10,
+    borderBottomWidth: 0,
+  },
+  cancelText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+  },
+  
+  // ...existing code...
+  vinculacionButton: {
+    backgroundColor: '#690B22',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vinculacionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  alimentoItemMobile: {
+    backgroundColor: '#fafafa',
+    padding: 12,
+    borderRadius: 8,
+    marginRight: 10,
+    width: 200, // Ajusta el ancho según sea necesario
+  },
+  patientLinkContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 10,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  patientCodeInput: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 4,
+    marginRight: 10,
+    fontSize: 16,
+    color: '#333',
+  },
+  linkButton: {
+    backgroundColor: '#690B22',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+  },
+  linkButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  unidadContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  
+  unidadText: {
+    fontSize: 13,
+    color: '#690B22',
+    marginLeft: 4,
+    fontStyle: 'italic',
+  },
+  
+  // ...existing code...
 });

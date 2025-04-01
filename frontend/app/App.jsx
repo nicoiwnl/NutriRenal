@@ -21,9 +21,16 @@ import ConsejosScreen from "../screens/ConsejosScreen";
 import AlimentosCategoriaScreen from "../screens/AlimentosCategoriaScreen";
 import ConsejosCategoriaScreen from "../screens/ConsejosCategoriaScreen";
 import ConsejosPorCategoriaScreen from "../screens/ConsejosPorCategoriaScreen";
-import NuevaPublicacionScreen from '@/screens/NuevaPublicacionScreen';
-import PublicacionDetailScreen from '@/screens/PublicacionDetailScreen';
-import MisPublicacionesScreen from '@/screens/MisPublicacionesScreen';
+import NuevaPublicacionScreen from '../screens/NuevaPublicacionScreen';
+import PublicacionDetailScreen from '../screens/PublicacionDetailScreen';
+import MisPublicacionesScreen from '../screens/MisPublicacionesScreen';
+
+import MinutaScreen from '../screens/MinutaScreen';
+import RecetasScreen from '../screens/RecetasScreen';
+import CentrosMedicosScreen from '../screens/CentrosMedicosScreen';
+import MisRegistrosScreen from '../screens/MisRegistrosScreen';
+import RecetaDetailScreen from '../screens/RecetaDetailScreen';
+import IngredientesAlimentosScreen from '../screens/IngredientesAlimentosScreen';
 
 // New: Define the navigators
 const Stack = createNativeStackNavigator();
@@ -46,20 +53,99 @@ function HeaderRight({ navigation }) {
     });
   };
 
+  // Función auxiliar para navegar al tab correcto
+  const navigateToTab = (tabName) => {
+    navigation.navigate('Home', { screen: tabName });
+  };
+
   return (
     <Menu>
-      <MenuTrigger>
+      <MenuTrigger customStyles={{
+        triggerWrapper: {
+          padding: 5,
+        }
+      }}>
         <MaterialIcons name="more-vert" size={28} color="#690B22" />
       </MenuTrigger>
-      <MenuOptions>
-        <MenuOption onSelect={() => alert('Opción 1')}>
-          <Text style={{ padding: 10 }}>Opción 1</Text>
+      <MenuOptions customStyles={{
+        optionsContainer: {
+          borderRadius: 8,
+          padding: 5,
+          width: 220,
+          backgroundColor: 'white',
+          ...Platform.select({
+            ios: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.25,
+              shadowRadius: 3.84,
+            },
+            android: {
+              elevation: 5,
+            },
+            web: {
+              boxShadow: '0px 3px 5px rgba(0,0,0,0.2)',
+            },
+          }),
+        },
+        optionWrapper: {
+          padding: 0,
+        },
+      }}>
+        <MenuOption onSelect={() => navigateToTab('FichaMedica')}>
+          <View style={styles.menuItem}>
+            <MaterialIcons name="description" size={20} color="#690B22" />
+            <Text style={styles.menuText}>Ficha Médica</Text>
+          </View>
         </MenuOption>
-        <MenuOption onSelect={() => alert('Opción 2')}>
-          <Text style={{ padding: 10 }}>Opción 2</Text>
+        <MenuOption onSelect={() => navigateToTab('Alimentos')}>
+          <View style={styles.menuItem}>
+            <MaterialIcons name="restaurant" size={20} color="#690B22" />
+            <Text style={styles.menuText}>Alimentos</Text>
+          </View>
         </MenuOption>
+        <MenuOption onSelect={() => navigation.navigate('Minuta')}>
+          <View style={styles.menuItem}>
+            <MaterialIcons name="event-note" size={20} color="#690B22" />
+            <Text style={styles.menuText}>Minuta</Text>
+          </View>
+        </MenuOption>
+        <MenuOption onSelect={() => navigation.navigate('Recetas')}>
+          <View style={styles.menuItem}>
+            <MaterialIcons name="menu-book" size={20} color="#690B22" />
+            <Text style={styles.menuText}>Recetas</Text>
+          </View>
+        </MenuOption>
+        <MenuOption onSelect={() => navigation.navigate('CentrosMedicos')}>
+          <View style={styles.menuItem}>
+            <MaterialIcons name="local-hospital" size={20} color="#690B22" />
+            <Text style={styles.menuText}>Centros Médicos</Text>
+          </View>
+        </MenuOption>
+        <MenuOption onSelect={() => navigation.navigate('MisRegistros')}>
+          <View style={styles.menuItem}>
+            <MaterialIcons name="history" size={20} color="#690B22" />
+            <Text style={styles.menuText}>Mis Registros</Text>
+          </View>
+        </MenuOption>
+        <MenuOption onSelect={() => navigation.navigate('IngredientesAlimentos')}>
+          <View style={styles.menuItem}>
+            <MaterialIcons name="food-bank" size={20} color="#690B22" />
+            <Text style={styles.menuText}>Qué como</Text>
+          </View>
+        </MenuOption>
+        <MenuOption onSelect={() => navigateToTab('Consejos')}>
+          <View style={styles.menuItem}>
+            <MaterialIcons name="lightbulb" size={20} color="#690B22" />
+            <Text style={styles.menuText}>Consejos</Text>
+          </View>
+        </MenuOption>
+        <View style={styles.menuDivider} />
         <MenuOption onSelect={handleLogout}>
-          <Text style={{ padding: 10 }}>Cerrar Sesión</Text>
+          <View style={styles.menuItem}>
+            <MaterialIcons name="logout" size={20} color="#F44336" />
+            <Text style={[styles.menuText, { color: '#F44336' }]}>Cerrar Sesión</Text>
+          </View>
         </MenuOption>
       </MenuOptions>
     </Menu>
@@ -214,6 +300,37 @@ function RootStack() {
           animation: 'slide_from_right'
         }}
       />
+      {/* Nuevas pantallas */}
+      <Stack.Screen 
+        name="Minuta" 
+        component={MinutaScreen} 
+        options={{ title: 'Mi Minuta Nutricional' }}
+      />
+      <Stack.Screen 
+        name="Recetas" 
+        component={RecetasScreen} 
+        options={{ title: 'Recetas Recomendadas' }}
+      />
+      <Stack.Screen 
+        name="RecetaDetail" 
+        component={RecetaDetailScreen} 
+        options={{ title: 'Detalle de Receta' }}
+      />
+      <Stack.Screen 
+        name="CentrosMedicos" 
+        component={CentrosMedicosScreen} 
+        options={{ title: 'Centros Médicos' }}
+      />
+      <Stack.Screen 
+        name="MisRegistros" 
+        component={MisRegistrosScreen} 
+        options={{ title: 'Mis Registros Alimenticios' }}
+      />
+      <Stack.Screen
+        name="IngredientesAlimentos"
+        component={IngredientesAlimentosScreen}
+        options={{ title: 'Qué como' }}
+      />
     </Stack.Navigator>
   );
 }
@@ -232,5 +349,24 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1
-  }
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+  },
+  
+  menuText: {
+    fontSize: 16,
+    color: '#333333',
+    marginLeft: 15,
+  },
+  
+  menuDivider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 4,
+    marginHorizontal: 10,
+  },
 });

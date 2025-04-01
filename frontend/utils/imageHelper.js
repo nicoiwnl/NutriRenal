@@ -1,41 +1,64 @@
 import { Platform } from 'react-native';
 
-// Configuración de URLs base según la plataforma
-// IMPORTANTE: Ajusta esta IP a la IP de tu máquina en la red local
+// Set the correct base URLs for accessing the backend
 const WEB_BASE_URL = 'http://127.0.0.1:8000';
-const MOBILE_BASE_URL = 'http://192.168.0.2:8000'; // CAMBIA ESTA IP por la IP de tu computadora en la red
+const MOBILE_BASE_URL = 'http://192.168.1.18:8000'; // Update this with your actual IP address
 
 /**
- * Construye la URL correcta para imágenes según la plataforma
- * @param {string} imageUrl - URL de la imagen (puede ser completa o relativa)
- * @param {string} defaultImage - URL de imagen por defecto si la principal no existe
- * @returns {string} - URL procesada según la plataforma
+ * Gets the correct URL for an image stored on the backend
+ * @param {string} imagePath - The path or filename of the image
+ * @param {string} defaultImage - URL to use if image path is invalid
+ * @returns {string} - Complete URL to access the image
  */
-export const getImageUrl = (imageUrl, defaultImage = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png') => {
-  console.log('Procesando URL de imagen:', imageUrl);
-  
-  // Si no hay URL o es vacía, usar la imagen por defecto
-  if (!imageUrl || imageUrl.trim() === '') {
-    console.log('URL vacía, usando imagen por defecto');
+export const getImageUrl = (imagePath, defaultImage = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png') => {
+  // Return default image if path is undefined, null or empty
+  if (!imagePath || imagePath.trim() === '') {
     return defaultImage;
   }
   
-  // Si ya es una URL externa completa (comienza con http:// o https://)
-  if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
-    console.log('Es una URL completa, usándola directamente');
-    return imageUrl;
+  // If it's already a complete URL, return it as is
+  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    return imagePath;
   }
-
-  // Determinar la URL base según la plataforma
+  
+  // Choose the appropriate base URL based on platform
   const baseUrl = Platform.OS === 'web' ? WEB_BASE_URL : MOBILE_BASE_URL;
-  console.log('Plataforma:', Platform.OS, 'usando baseURL:', baseUrl);
   
-  // Limpiar la ruta para evitar dobles barras
-  const cleanPath = imageUrl.startsWith('/') ? imageUrl.substring(1) : imageUrl;
+  // Clean the path - remove any leading slashes and normalize directory separators
+  let cleanPath = imagePath.replace(/^\//, '').replace(/\\/g, '/');
   
-  // Construir la URL completa
-  const fullUrl = `${baseUrl}/${cleanPath}`;
-  console.log('URL final:', fullUrl);
+  // If the path includes "fotos" but not "media", add the media prefix
+  if ((cleanPath.includes('fotos/') || cleanPath.startsWith('fotos')) && !cleanPath.includes('media/')) {
+    cleanPath = `media/${cleanPath}`;
+  } 
+  // If it's just a filename (no slashes), assume it's in media/fotos
+  else if (!cleanPath.includes('/')) {
+    cleanPath = `media/fotos/${cleanPath}`;
+  }
+  // If we don't have media prefix, add it
+  else if (!cleanPath.startsWith('media/')) {
+    cleanPath = `media/${cleanPath}`;
+  }
   
-  return fullUrl;
+  // Construct and return the full URL
+  return `${baseUrl}/${cleanPath}`;
+};
+
+/**
+ * Special helper specifically for profile photos 
+ * @param {string} photoName - Profile photo filename or path
+ * @param {string} defaultImage - Default image URL to use if no photo is provided
+ * @returns {string} - Complete URL to access the profile photo
+ */
+export const getProfileImageUrl = (photoName, defaultImage = 'https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png') => {
+  if (!photoName) return defaultImage;
+  
+  // Extract just the filename if a path is provided
+  const filename = photoName.split('/').pop().split('\\').pop();
+  
+  // Get the appropriate base URL
+  const baseUrl = Platform.OS === 'web' ? WEB_BASE_URL : MOBILE_BASE_URL;
+  
+  // Always use the consistent media/fotos path for profile photos
+  return `${baseUrl}/media/fotos/${filename}`;
 };

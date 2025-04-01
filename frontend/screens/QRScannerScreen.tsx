@@ -1,22 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   Text,
   View,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Platform,
-  Alert,
+  Image,
+  Dimensions
 } from 'react-native';
-import { Camera, CameraType } from 'expo-camera';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 
 export const options = {
   title: 'Escanear'
 };
 
+// Una versión simple para dispositivos web
 function QRScannerWeb() {
   return (
     <SafeAreaView style={styles.webContainer}>
@@ -25,120 +26,155 @@ function QRScannerWeb() {
   );
 }
 
+// La versión para dispositivos móviles - ahora con funcionalidad directa de cámara
 function QRScannerApp() {
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
-  const [type, setType] = useState(CameraType.back);
-  const [flash, setFlash] = useState(Camera.Constants.FlashMode.off);
-  const [photo, setPhoto] = useState<any>(null);
-  const cameraRef = useRef<Camera>(null);
-
-  useEffect(() => {
-    (async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync();
-      setHasPermission(status === 'granted');
-    })();
-  }, []);
-
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.8,
-          base64: true,
-        });
-        setPhoto(photo);
-      } catch (error) {
-        Alert.alert('Error', 'No se pudo tomar la foto');
+  const navigation = useNavigation();
+  // Nuevo estado para manejar la imagen capturada
+  const [capturedImage, setCapturedImage] = useState(null);
+  
+  // Función para abrir la cámara directamente
+  const handleOpenCamera = async () => {
+    try {
+      // Solicitar permisos de cámara
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      
+      if (status !== 'granted') {
+        alert('Se necesitan permisos de cámara para esta función');
+        return;
       }
+      
+      // Lanzar la cámara
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Guardar la imagen capturada en el estado
+        setCapturedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error al acceder a la cámara:', error);
+      alert('No se pudo abrir la cámara. Por favor, inténtelo de nuevo.');
+    }
+  };
+  
+  // Función para abrir la galería
+  const handleOpenGallery = async () => {
+    try {
+      // Solicitar permisos de galería
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (status !== 'granted') {
+        alert('Se necesitan permisos de galería para esta función');
+        return;
+      }
+      
+      // Lanzar el selector de imágenes
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Guardar la imagen seleccionada en el estado
+        setCapturedImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error al acceder a la galería:', error);
+      alert('No se pudo abrir la galería. Por favor, inténtelo de nuevo.');
     }
   };
 
-  const retakePicture = () => {
-    setPhoto(null);
+  // Función para procesar la imagen (actualmente sin funcionalidad real)
+  const handleProcessImage = () => {
+    alert('Esta función procesará la imagen con IA en el futuro.');
+    // Aquí iría el código para enviar la imagen a la API de IA
   };
 
-  const toggleCameraType = () => {
-    setType(current => (
-      current === CameraType.back ? CameraType.front : CameraType.back
-    ));
+  // Función para eliminar la imagen capturada
+  const handleDeleteImage = () => {
+    setCapturedImage(null);
   };
-
-  const toggleFlash = () => {
-    setFlash(current => (
-      current === Camera.Constants.FlashMode.off
-        ? Camera.Constants.FlashMode.on
-        : Camera.Constants.FlashMode.off
-    ));
-  };
-
-  if (hasPermission === null) {
-    return <View />;
-  }
-  if (hasPermission === false) {
+  
+  // Si ya hay una imagen capturada, mostrar la vista previa con botones
+  if (capturedImage) {
     return (
-      <View style={styles.permissionContainer}>
-        <Text style={styles.permissionText}>No hay acceso a la cámara</Text>
-      </View>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {photo ? (
-        <View style={styles.previewContainer}>
-          <Image source={{ uri: photo.uri }} style={styles.preview} />
-          <View style={styles.previewActions}>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.imagePreviewContainer}>
+          <Image 
+            source={{ uri: capturedImage }} 
+            style={styles.previewImage}
+            resizeMode="contain"
+          />
+          
+          <View style={styles.previewButtonsContainer}>
             <TouchableOpacity
-              style={[styles.button, styles.retakeButton]}
-              onPress={retakePicture}>
-              <MaterialIcons name="replay" size={28} color="#F1E3D3" />
-              <Text style={styles.buttonText}>Volver a tomar</Text>
+              style={[styles.previewButton, styles.processButton]}
+              onPress={handleProcessImage}
+            >
+              <MaterialIcons name="check-circle" size={24} color="#FFFFFF" />
+              <Text style={styles.previewButtonText}>Procesar</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity
-              style={[styles.button, styles.saveButton]}
-              onPress={() => Alert.alert('Éxito', 'Foto guardada')}>
-              <MaterialIcons name="check" size={28} color="#F1E3D3" />
-              <Text style={styles.buttonText}>Guardar</Text>
+              style={[styles.previewButton, styles.deleteButton]}
+              onPress={handleDeleteImage}
+            >
+              <MaterialIcons name="delete" size={24} color="#FFFFFF" />
+              <Text style={styles.previewButtonText}>Eliminar</Text>
             </TouchableOpacity>
           </View>
         </View>
-      ) : (
-        <View style={styles.cameraContainer}>
-          <Camera
-            ref={cameraRef}
-            style={styles.camera}
-            type={type}
-            flashMode={flash}>
-            <LinearGradient
-              colors={['rgba(0,0,0,0.7)', 'transparent', 'rgba(0,0,0,0.7)']}
-              style={styles.gradient}>
-              <View style={styles.topControls}>
-                <TouchableOpacity
-                  style={styles.controlButton}
-                  onPress={toggleFlash}>
-                  <MaterialIcons
-                    name={flash === Camera.Constants.FlashMode.on ? 'flash-on' : 'flash-off'}
-                    size={28}
-                    color="#F1E3D3"
-                  />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.controlButton}
-                  onPress={toggleCameraType}>
-                  <MaterialIcons name="flip-camera-ios" size={28} color="#F1E3D3" />
-                </TouchableOpacity>
-              </View>
-              <View style={styles.bottomControls}>
-                <TouchableOpacity
-                  style={styles.captureButton}
-                  onPress={takePicture}>
-                  <View style={styles.captureInner} />
-                </TouchableOpacity>
-              </View>
-            </LinearGradient>
-          </Camera>
+      </SafeAreaView>
+    );
+  }
+  
+  // Vista normal para seleccionar cámara o galería
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Escaneo de alimentos</Text>
+        
+        <Text style={styles.instructions}>
+          Toca la cámara para tomar una foto o selecciona una imagen de tu galería.
+        </Text>
+        
+        <View style={styles.actionButtons}>
+          {/* Botón de la cámara */}
+          <TouchableOpacity
+            style={styles.cameraButton}
+            onPress={handleOpenCamera}
+          >
+            <View style={styles.iconCircle}>
+              <MaterialIcons name="camera-alt" size={50} color="#690B22" />
+            </View>
+            <Text style={styles.buttonLabel}>Tomar foto</Text>
+          </TouchableOpacity>
+          
+          {/* Botón de la galería */}
+          <TouchableOpacity
+            style={styles.galleryButton}
+            onPress={handleOpenGallery}
+          >
+            <View style={styles.iconCircle}>
+              <MaterialIcons name="photo-library" size={45} color="#1B4D3E" />
+            </View>
+            <Text style={styles.buttonLabel}>Galería</Text>
+          </TouchableOpacity>
         </View>
-      )}
+        
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => navigation.goBack()}
+        >
+          <MaterialIcons name="arrow-back" size={24} color="#FFF" />
+          <Text style={styles.backButtonText}>Volver</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -148,11 +184,11 @@ export default Platform.OS === 'web' ? QRScannerWeb : QRScannerApp;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#F8E8D8',
   },
   webContainer: {
     flex: 1,
-    backgroundColor: '#F1E3D3',
+    backgroundColor: '#F8E8D8',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -162,89 +198,123 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginHorizontal: 20,
   },
-  permissionContainer: {
+  content: {
     flex: 1,
-    backgroundColor: '#F1E3D3',
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  permissionText: {
-    color: '#690B22',
-    fontSize: 18,
-    textAlign: 'center',
-    marginHorizontal: 20,
-  },
-  cameraContainer: {
-    flex: 1,
-  },
-  camera: {
-    flex: 1,
-  },
-  gradient: {
-    flex: 1,
-    justifyContent: 'space-between',
     padding: 20,
   },
-  topControls: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'ios' ? 0 : 20,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+    marginBottom: 20,
+    textAlign: 'center',
   },
-  bottomControls: {
-    alignItems: 'center',
-    marginBottom: Platform.OS === 'ios' ? 20 : 40,
+  instructions: {
+    fontSize: 16,
+    textAlign: 'center',
+    color: '#333',
+    marginBottom: 30,
+    lineHeight: 24,
   },
-  controlButton: {
-    padding: 10,
-    borderRadius: 30,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  captureButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  captureInner: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#F1E3D3',
-    borderWidth: 2,
-    borderColor: '#690B22',
-  },
-  previewContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  preview: {
-    flex: 1,
-  },
-  previewActions: {
+  actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    padding: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    width: '100%',
+    marginBottom: 40,
   },
-  button: {
+  cameraButton: {
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 10,
+  },
+  galleryButton: {
+    alignItems: 'center',
+    flex: 1,
+    marginHorizontal: 10,
+  },
+  iconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 5,
+    marginBottom: 10,
+  },
+  buttonLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+    marginTop: 8,
+  },
+  backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 15,
-    borderRadius: 25,
-    minWidth: 150,
-    justifyContent: 'center',
-  },
-  retakeButton: {
-    backgroundColor: '#1B4D3E',
-  },
-  saveButton: {
     backgroundColor: '#690B22',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    position: 'absolute',
+    bottom: 30,
   },
-  buttonText: {
-    color: '#F1E3D3',
+  backButtonText: {
+    color: '#FFF',
     marginLeft: 8,
+    fontWeight: 'bold',
+  },
+  // Nuevos estilos para la vista previa de la imagen
+  imagePreviewContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  previewImage: {
+    width: Dimensions.get('window').width * 0.9,
+    height: Dimensions.get('window').width * 0.9,
+    borderRadius: 12,
+    marginBottom: 20,
+    backgroundColor: '#FFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  previewButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    marginTop: 20,
+  },
+  previewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 10,
+    minWidth: 150,
+  },
+  processButton: {
+    backgroundColor: '#4CAF50',
+    marginRight: 10,
+  },
+  deleteButton: {
+    backgroundColor: '#F44336',
+    marginLeft: 10,
+  },
+  previewButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
     fontSize: 16,
+    marginLeft: 8,
   },
 });

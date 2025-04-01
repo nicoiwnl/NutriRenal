@@ -3,13 +3,13 @@ from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import (
     User, Persona, PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
-    MinutaNutricional, ComidaDia, Receta, IngredienteReceta, DetalleMinuta, ImagenComida, RegistroComida, CentroMedico,
+    MinutaNutricional, ComidaDia, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador
 )
 from .serializers import (
     UserSerializer, PersonaSerializer, PerfilMedicoSerializer, CondicionPreviaSerializer, UsuarioCondicionSerializer, CategoriaAlimentoSerializer,
     UnidadMedidaSerializer, AlimentoSerializer, PorcionAlimentoSerializer, MinutaNutricionalSerializer, ComidaDiaSerializer,
-    RecetaSerializer, IngredienteRecetaSerializer, DetalleMinutaSerializer, ImagenComidaSerializer, RegistroComidaSerializer,
+    RecetaSerializer, IngredienteRecetaSerializer, DetalleMinutaSerializer, RegistroComidaSerializer,
     CentroMedicoSerializer, ConsejoNutricionalSerializer, RolSerializer, UsuarioRolSerializer, PublicacionSerializer,
     ComentarioSerializer, RespuestaComentarioSerializer, AnalisisImagenSerializer, VinculoPacienteCuidadorSerializer
 )
@@ -21,6 +21,11 @@ from django.contrib.auth.hashers import make_password
 from datetime import datetime
 from django.db.models import Prefetch, Count, F, Sum
 from rest_framework.views import APIView
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.core.files.base import ContentFile
+import base64
+import uuid
+from django.conf import settings
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -177,7 +182,7 @@ def paciente_dashboard(request, persona_id):
             'perfil_medico',
             Prefetch('condiciones', queryset=UsuarioCondicion.objects.select_related('condicion')),
             Prefetch('registros_comida', 
-                     queryset=RegistroComida.objects.select_related('alimento', 'porcion')
+                     queryset=RegistroComida.objects.select_related('alimento', 'unidad_medida')
                      .order_by('-fecha_consumo')),  # Eliminado el [:10] que causaba el error
             Prefetch('cuidadores', 
                      queryset=VinculoPacienteCuidador.objects.select_related('cuidador'))
@@ -266,10 +271,12 @@ def paciente_dashboard(request, persona_id):
                 }
                 
                 porcion_data = None
-                if reg.porcion:
+                if reg.unidad_medida:
+                    equivalencia = reg.unidad_medida.equivalencia_ml if reg.unidad_medida.es_volumen else reg.unidad_medida.equivalencia_g
                     porcion_data = {
-                        'cantidad': float(reg.porcion.cantidad),
-                        'unidad': reg.porcion.unidad.nombre if reg.porcion.unidad else 'unidad'
+                        'cantidad': 1,  # Se usa valor predeterminado, ya que 'porcion' ya no existe
+                        'unidad': reg.unidad_medida.nombre,
+                        'equivalencia': equivalencia
                     }
                 
                 registros_comida.append({
@@ -435,6 +442,88 @@ def listar_pacientes_cuidador(request, cuidador_id):
         return Response({'error': f'Error al listar pacientes: {str(e)}'}, 
                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Requiere autenticación
+def actualizar_foto_perfil(request):
+    """
+    Actualiza la foto de perfil de un usuario.
+    Espera un JSON con:
+    - id_persona: ID de la persona
+    - imagen: string base64 de la imagen
+    """
+    try:
+        id_persona = request.data.get('id_persona')
+        imagen_base64 = request.data.get('imagen')
+        
+        # Verificar que se proporcionaron los datos necesarios
+        if not id_persona or not imagen_base64:
+            return Response(
+                {"error": "Se requiere id_persona e imagen"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Obtener la persona
+        try:
+            persona = Persona.objects.get(id=id_persona)
+        except Persona.DoesNotExist:
+            return Response(
+                {"error": "Persona no encontrada"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Verificar permiso: solo el propio usuario o un administrador pueden actualizar
+        if str(request.user.id_persona.id) != str(id_persona):
+            # Verificar si es un cuidador autorizado
+            es_cuidador = VinculoPacienteCuidador.objects.filter(
+                paciente_id=id_persona,
+                cuidador_id=request.user.id_persona.id
+            ).exists()
+            
+            if not es_cuidador:
+                return Response(
+                    {"error": "No tiene permiso para actualizar esta foto de perfil"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        # Procesar la imagen base64
+        try:
+            # Extraer la información del formato y los datos
+            if (';base64,' in imagen_base64):
+                formato, imgstr = imagen_base64.split(';base64,')
+                ext = formato.split('/')[-1]
+            else:
+                # Manejar caso donde el formato podría no estar incluido
+                imgstr = imagen_base64
+                ext = 'jpg'  # Por defecto jpg
+            
+            # Crear un nombre de archivo único
+            nombre_archivo = f"perfil_{uuid.uuid4()}.{ext}"
+            
+            # Crear el objeto de archivo desde el string base64
+            data = ContentFile(base64.b64decode(imgstr))
+            
+            # Actualizar el campo de foto_perfil
+            persona.foto_perfil.save(nombre_archivo, data, save=True)
+            
+            return Response({
+                "mensaje": "Foto de perfil actualizada correctamente",
+                "foto_url": persona.foto_perfil.url if persona.foto_perfil else None
+            })
+            
+        except Exception as e:
+            print(f"Error al procesar la imagen: {str(e)}")
+            return Response(
+                {"error": f"Error al procesar la imagen: {str(e)}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+    except Exception as e:
+        print(f"Error inesperado: {str(e)}")
+        return Response(
+            {"error": f"Error inesperado: {str(e)}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
@@ -539,15 +628,17 @@ class DetalleMinutaViewSet(viewsets.ModelViewSet):
     serializer_class = DetalleMinutaSerializer
     permission_classes = [AllowAny]
 
-class ImagenComidaViewSet(viewsets.ModelViewSet):
-    queryset = ImagenComida.objects.all()
-    serializer_class = ImagenComidaSerializer
-    permission_classes = [AllowAny]
-
 class RegistroComidaViewSet(viewsets.ModelViewSet):
-    queryset = RegistroComida.objects.all()
+    queryset = RegistroComida.objects.select_related('id_persona', 'alimento', 'unidad_medida').all()
     serializer_class = RegistroComidaSerializer
     permission_classes = [AllowAny]
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        persona_id = self.request.query_params.get('id_persona')
+        if persona_id:
+            qs = qs.filter(id_persona__id=persona_id)
+        return qs
 
 class CentroMedicoViewSet(viewsets.ModelViewSet):
     queryset = CentroMedico.objects.all()
@@ -692,3 +783,81 @@ class PacientesCuidadorView(APIView):
         vinculos = VinculoPacienteCuidador.objects.filter(cuidador__id=persona_id)
         serializer = VinculoPacienteCuidadorSerializer(vinculos, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+import base64, uuid
+from django.core.files.base import ContentFile
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from .models import Persona
+# Opcional: si usas settings para MEDIA_ROOT
+from django.conf import settings
+import os
+
+class ActualizarFotoPerfilView(APIView):
+    def post(self, request, format=None):
+        id_persona = request.data.get('id_persona')
+        imagen_data = request.data.get('imagen')
+        if not id_persona or not imagen_data:
+            return Response({'error': 'Faltan campos requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            persona = Persona.objects.get(id=id_persona)
+        except Persona.DoesNotExist:
+            return Response({'error': 'Persona no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            # Se espera un string en formato “data:image/jpeg;base64,...”
+            header, base64_data = imagen_data.split(';base64,')
+            ext = header.split('/')[-1]  # Extrae extensión (ejemplo: jpeg)
+            # Decode del string base64
+            decoded_file = base64.b64decode(base64_data)
+            # Crear un nombre único
+            file_name = f"{uuid.uuid4()}.{ext}"
+            # Opcional: Guardar en MEDIA_ROOT/fotos/
+            file_path = os.path.join(settings.MEDIA_ROOT, 'fotos', file_name)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, 'wb') as f:
+                f.write(decoded_file)
+            # Actualiza el campo de foto_perfil (almacena la URL o path)
+            persona.foto_perfil = os.path.join('fotos', file_name)
+            persona.save()
+            return Response({'success': 'Foto actualizada correctamente.', 'foto_url': persona.foto_perfil}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+from django.core.files.base import ContentFile
+import base64, uuid, os
+
+class ActualizarFotoPerfilView(APIView):
+    def post(self, request, format=None):
+        id_persona = request.data.get('id_persona')
+        imagen_data = request.data.get('imagen')
+        if not id_persona or not imagen_data:
+            return Response({"error": "Se requiere id_persona e imagen."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            persona = Persona.objects.get(id=id_persona)
+        except Persona.DoesNotExist:
+            return Response({"error": "Persona no encontrada."}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            # Espera que imagen_data tenga el formato "data:image/jpeg;base64,...."
+            format_str, imgstr = imagen_data.split(';base64,')
+            ext = format_str.split('/')[-1]
+            filename = f"{uuid.uuid4()}.{ext}"
+            decoded_file = base64.b64decode(imgstr)
+            data = ContentFile(decoded_file, name=filename)
+            
+            # Definir la ruta relativo y absoluta para guardar la imagen
+            relative_path = os.path.join("fotos", filename)
+            full_dir = os.path.join(settings.MEDIA_ROOT, "fotos")
+            if not os.path.exists(full_dir):
+                os.makedirs(full_dir)
+            full_path = os.path.join(full_dir, filename)
+            with open(full_path, "wb") as f:
+                f.write(data.read())
+            
+            # Actualizar el campo foto_perfil con la ruta relativa
+            persona.foto_perfil = relative_path
+            persona.save()
+            
+            return Response({"success": "Foto de perfil actualizada", "foto_perfil": relative_path}, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

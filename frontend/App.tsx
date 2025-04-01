@@ -197,6 +197,7 @@ export default function App() {
               component={RoleDiagnosticScreen} 
               options={{ title: 'Diagnóstico de Roles' }} 
             />
+            
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>
