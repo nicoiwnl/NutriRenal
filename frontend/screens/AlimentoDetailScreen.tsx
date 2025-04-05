@@ -40,6 +40,7 @@ import RegistroButton from '../modules/alimentos/components/RegistroButton';
 import UnitSelectorModal from '../modules/alimentos/components/UnitSelectorModal';
 import NutritionalInfoModal from '../modules/alimentos/components/NutritionalInfoModal';
 import useAlimentoDetail from '../modules/alimentos/hooks/useAlimentoDetail';
+import RegistroModal from '../modules/alimentos/components/RegistroModal';
 
 export default function AlimentoDetailScreen({ route, navigation }) {
   const { alimentoId } = route.params;
@@ -51,13 +52,14 @@ export default function AlimentoDetailScreen({ route, navigation }) {
     unidadesMedida,
     selectedUnit,
     setSelectedUnit,
+    selectedPortion, // Make sure this is destructured
+    setSelectedPortion,
     currentValues,
     categoryName,
     showNutritionalInfo,
     setShowNutritionalInfo,
     showUnitSelector,
     setShowUnitSelector,
-    setSelectedPortion,
     showRegistroModal,
     setShowRegistroModal,
     formatNumber,
@@ -147,9 +149,7 @@ export default function AlimentoDetailScreen({ route, navigation }) {
               <RegistroButton
                 onPress={() => {
                   // Al abrir el modal, establecer la porción seleccionada actual
-                  if (selectedUnit) {
-                    setSelectedPortion(selectedUnit);
-                  }
+                  setSelectedPortion(selectedUnit); // No need for the conditional check
                   setShowRegistroModal(true);
                 }}
               />
@@ -221,8 +221,19 @@ export default function AlimentoDetailScreen({ route, navigation }) {
           formatNumber={formatNumber}
         />
 
-        {/* Aquí van los demás modales (registro de consumo, información de referencia) */}
-        {/* Se pueden implementar como componentes separados similares a los anteriores */}
+        <RegistroModal
+          visible={showRegistroModal}
+          onDismiss={() => setShowRegistroModal(false)}
+          alimento={alimento}
+          selectedUnit={selectedPortion || selectedUnit} // This will now work
+          onSuccess={() => {
+            // Si deseas hacer algo después de registrar, como recargar datos
+            if (typeof window !== 'undefined') {
+              window.scrollTo(0, 0);
+            }
+          }}
+          unidadesMedida={unidadesMedida}
+        />
       </SafeAreaView>
     </Provider>
   );

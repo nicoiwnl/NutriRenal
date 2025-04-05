@@ -1,78 +1,53 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import api from '../api';
+import React from 'react';
+import { View, FlatList, Text } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
+// Importar componentes y hooks modularizados
+import CategoriaItem from '../modules/consejos/components/CategoriaItem';
+import LoadingView from '../modules/consejos/components/LoadingView';
+import useConsejosCategoria from '../modules/consejos/hooks/useConsejosCategoria';
+import styles from '../modules/consejos/styles/consejosCategoriaStyles';
+
 export default function ConsejosCategoriaScreen() {
-  const [categorias, setCategorias] = useState([]);
-  const [loading, setLoading] = useState(true);
   const navigation = useNavigation();
+  
+  // Usar el hook personalizado para la lógica
+  const {
+    categorias,
+    loading,
+    error,
+    handleCategoryPress
+  } = useConsejosCategoria(navigation);
 
-  useEffect(() => {
-    api.get('/consejos-nutricionales/')
-      .then(response => {
-        const consejos = response.data;
-        const categoriasUnicas = [...new Set(consejos.map(c => c.categoria))];
-        setCategorias(categoriasUnicas);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Error fetching categories:', error);
-        setLoading(false);
-      });
-  }, []);
+  // Renderizar pantalla de carga
+  if (loading) {
+    return <LoadingView message="Cargando categorías..." />;
+  }
 
-  const handleCategoryPress = (categoria) => {
-    navigation.navigate('ConsejosPorCategoriaScreen', { categoria });
-  };
-
-  const renderCategoria = ({ item }) => (
-    <TouchableOpacity style={styles.categoriaContainer} onPress={() => handleCategoryPress(item)}>
-      <Text style={styles.categoriaText}>{item}</Text>
-    </TouchableOpacity>
-  );
+  // Renderizar mensaje de error si es necesario
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text>{error}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      {loading ? (
-        <Text>Cargando...</Text>
-      ) : (
-        <FlatList
-          data={categorias}
-          renderItem={renderCategoria}
-          keyExtractor={item => item}
-          contentContainerStyle={styles.list}
-        />
-      )}
+      <FlatList
+        data={categorias}
+        renderItem={({ item }) => (
+          <CategoriaItem 
+            item={item} 
+            onPress={handleCategoryPress} 
+          />
+        )}
+        keyExtractor={item => item}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        initialNumToRender={10}
+      />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#F1E3D3',
-    padding: 20,
-  },
-  list: {
-    paddingVertical: 20,
-  },
-  categoriaContainer: {
-    backgroundColor: '#FFF',
-    padding: 15,
-    borderRadius: 10,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.16,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  categoriaText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#690B22',
-  },
-});
