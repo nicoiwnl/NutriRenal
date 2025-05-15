@@ -7,7 +7,7 @@ const ConsejoCard = ({ item, inCategory = false }) => {
   // URL base para las imágenes según la plataforma
   const BASE_URL = Platform.OS === 'web' 
     ? 'http://127.0.0.1:8000' 
-    : 'http://192.168.1.27:8000'; // Ajustar según la configuración de tu API
+    : 'http://192.168.1.146:8000'; // Ajustar según la configuración de tu API
 
   // Usar estilos diferentes según si está en la pantalla principal o en categoría
   const containerStyle = inCategory 

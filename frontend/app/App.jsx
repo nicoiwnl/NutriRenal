@@ -24,6 +24,7 @@ import ConsejosPorCategoriaScreen from "../screens/ConsejosPorCategoriaScreen";
 import NuevaPublicacionScreen from '../screens/NuevaPublicacionScreen';
 import PublicacionDetailScreen from '../screens/PublicacionDetailScreen';
 import MisPublicacionesScreen from '../screens/MisPublicacionesScreen';
+import ForosScreen from '../screens/ForosScreen'; // Add the import for ForosScreen
 
 import MinutaScreen from '../screens/MinutaScreen';
 import RecetasScreen from '../screens/RecetasScreen';
@@ -330,6 +331,11 @@ function RootStack() {
         name="IngredientesAlimentos"
         component={IngredientesAlimentosScreen}
         options={{ title: 'Qué como' }}
+      />
+      <Stack.Screen 
+        name="Foro" 
+        component={ForosScreen} 
+        options={{ title: 'Foros de la Comunidad' }}
       />
     </Stack.Navigator>
   );

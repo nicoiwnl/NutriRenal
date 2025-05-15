@@ -101,6 +101,7 @@ export default StyleSheet.create({
   },
   loadingText: {
     marginTop: 10,
+    fontSize: 16,
     color: '#690B22',
   },
   emptyContainer: {
@@ -110,10 +111,10 @@ export default StyleSheet.create({
     padding: 20,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1B4D3E',
     marginTop: 20,
+    fontSize: 16,
+    color: '#666666',
+    textAlign: 'center',
   },
   emptySubText: {
     fontSize: 14,
@@ -152,5 +153,212 @@ export default StyleSheet.create({
   backButton: {
     padding: 8,
     marginRight: 10,
+  },
+  // Nuevos estilos para foros
+  foroHeaderContainer: {
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    marginBottom: 10,
+    borderRadius: 8,
+  },
+  foroHeaderText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+    marginBottom: 4,
+  },
+  foroDescriptionText: {
+    fontSize: 14,
+    color: '#666666',
+  },
+  foroCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    padding: 16,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  foroImage: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: 16,
+  },
+  foroContent: {
+    flex: 1,
+  },
+  foroName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+    marginBottom: 4,
+  },
+  foroDesc: {
+    fontSize: 14,
+    color: '#666',
+  },
+  generalBadge: {
+    backgroundColor: '#690B22',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  generalBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  suscribeButton: {
+    marginLeft: 'auto',
+    backgroundColor: '#690B22',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  suscribeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#690B22',
+    borderRadius: 50,
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 5,
+    zIndex: 10,
+  },
+  // Add these styles to your existing styles
+  // Styles for the floating "New Publication" button
+  newPublicationButton: {
+    position: 'absolute',
+    bottom: 100, // Aumentado de 80 a 100 para ubicarlo más abajo
+    right: 16,
+    backgroundColor: '#690B22',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 30,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    zIndex: 100,
+  },
+  newPublicationText: {
+    color: 'white',
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  // Forum selector modal styles
+  foroSelectorModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  foroSelectorModalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    width: '100%',
+    maxWidth: 500,
+    maxHeight: '80%',
+    overflow: 'hidden',
+  },
+  foroSelectorModalHeader: {
+    backgroundColor: '#690B22',
+    padding: 15,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  foroSelectorModalTitle: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  foroItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1E3D3',
+  },
+  foroItemSelected: {
+    backgroundColor: '#690B22',
+  },
+  foroItemText: {
+    fontSize: 16,
+    marginLeft: 10,
+    color: '#1B4D3E',
+    flex: 1,
+  },
+  foroItemTextSelected: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#666',
+    marginBottom: 15,
+  },
+  emptyButton: {
+    backgroundColor: '#690B22',
+    padding: 10,
+    borderRadius: 5,
+  },
+  emptyButtonText: {
+    color: '#FFFFFF',
+    fontWeight: 'bold',
+  },
+  // Floating Action Button (FAB) - Simple plus button
+  fabButton: {
+    position: 'absolute',
+    bottom: 110, // Aumentado de 80 a 110 para ubicarlo más abajo
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#690B22',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    zIndex: 100,
+  },
+  // Headers for ForosScreen
+  headerContainer: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#690B22',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 4,
   },
 });

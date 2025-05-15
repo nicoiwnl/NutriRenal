@@ -2,12 +2,55 @@ import api from '../api';
 
 /**
  * Obtiene todas las publicaciones de la comunidad
+ * @param {string} foroId - ID del foro (opcional)
  * @returns {Promise<Array>} - Lista de publicaciones
  */
-export const getPublicaciones = async () => {
+export const getPublicaciones = async (foroId = null) => {
   try {
-    const response = await api.get('/publicaciones/');
-    return response.data;
+    let url = '/publicaciones/';
+    // Si se proporciona un ID de foro, agregar el parámetro de consulta
+    if (foroId) {
+      url += `?foro=${foroId}`;
+      console.log(`Solicitando publicaciones para foro específico: ${foroId}`);
+    }
+    
+    console.log(`Consultando API: ${url}`);
+    const response = await api.get(url);
+    const publicaciones = response.data;
+    
+    // Enriquecer los datos con información adicional si es necesario
+    if (publicaciones.length > 0) {
+      console.log(`Recibidas ${publicaciones.length} publicaciones del servidor`);
+      
+      try {
+        // Obtener todos los foros para mapear IDs a nombres
+        const forosResponse = await api.get('/foros/');
+        const foros = forosResponse.data || [];
+        
+        if (foros.length > 0) {
+          // Crear mapa de ID a nombre
+          const forosMap = {};
+          foros.forEach(foro => {
+            forosMap[foro.id] = foro.nombre;
+          });
+          
+          // Enriquecer cada publicación con el nombre del foro
+          const enriquecidas = publicaciones.map(pub => {
+            const foroId = pub.foro || pub.id_foro;
+            return {
+              ...pub,
+              foro_nombre: forosMap[foroId] || 'General'
+            };
+          });
+          
+          return enriquecidas;
+        }
+      } catch (e) {
+        console.error('Error al obtener información de foros:', e);
+      }
+    }
+    
+    return publicaciones;
   } catch (error) {
     console.error('Error al obtener publicaciones:', error);
     throw error;
@@ -35,10 +78,16 @@ export const getPublicacionById = async (id) => {
  * @param {string} publicacion.asunto - Asunto de la publicación
  * @param {string} publicacion.contenido - Contenido de la publicación
  * @param {string} publicacion.id_persona - ID de la persona que publica
+ * @param {string} publicacion.foro - ID del foro
  * @returns {Promise<Object>} - Publicación creada
  */
 export const crearPublicacion = async (publicacion) => {
   try {
+    // Asegurarse de que hay un foro seleccionado
+    if (!publicacion.foro) {
+      throw new Error('Se requiere seleccionar un foro');
+    }
+    
     const response = await api.post('/publicaciones/', publicacion);
     return response.data;
   } catch (error) {

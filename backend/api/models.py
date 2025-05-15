@@ -76,7 +76,7 @@ class PerfilMedico(models.Model):
         ]
 
     def __str__(self):
-        return self.id_persona.email
+        return self.id_persona.nombres if self.id_persona else "Sin persona"
 
     def calcular_imc(self):
         try:
@@ -262,7 +262,42 @@ class MinutaNutricional(models.Model):
     estado = models.CharField(max_length=20, default='activa')
 
     def __str__(self):
-        return f"{self.id_persona.email} - {self.fecha_creacion}"
+        return f"{self.id_persona.nombre if self.id_persona else 'Sin persona'} - {self.fecha_creacion}"
+
+class NutrienteMinuta(models.Model):
+    id = models.AutoField(primary_key=True)
+    codigo = models.CharField(max_length=50, unique=True)
+    nombre = models.CharField(max_length=100, unique=True)
+    unidad = models.ForeignKey(UnidadMedida, on_delete=models.SET_NULL, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.nombre} ({self.codigo})"
+
+class RestriccionAlimentos(models.Model):
+    id = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return self.nombre
+
+class RestriccionMinutaNutriente(models.Model):
+    id = models.AutoField(primary_key=True)
+    restriccion_id = models.ForeignKey(RestriccionAlimentos, on_delete=models.CASCADE, related_name="restricciones_nutrientes")
+    nutriente_id = models.ForeignKey(NutrienteMinuta, on_delete=models.CASCADE, related_name="restricciones_nutrientes")
+    valor_minimo = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
+    valor_maximo = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.restriccion_id.nombre} - {self.nutriente_id.nombre} (Min: {self.valor_minimo}, Max: {self.valor_maximo})"
+
+class MinutasRestricciones(models.Model):
+    id = models.AutoField(primary_key=True)
+    minuta = models.ForeignKey(MinutaNutricional, on_delete=models.CASCADE, related_name="restricciones")
+    restriccion = models.ForeignKey(RestriccionAlimentos, on_delete=models.CASCADE, related_name="minutas_restricciones")
+
+    def __str__(self):
+        return f"{self.minuta.id_persona.nombre} - {self.restriccion.nombre}"
 
 class ComidaDia(models.Model):
     id = models.AutoField(primary_key=True)
@@ -306,12 +341,16 @@ class IngredienteReceta(models.Model):
 
 class DetalleMinuta(models.Model):
     id = models.AutoField(primary_key=True)
-    minuta = models.ForeignKey(MinutaNutricional, on_delete=models.CASCADE, related_name="detalles")
-    comida = models.ForeignKey(ComidaDia, on_delete=models.CASCADE)
-    receta = models.ForeignKey(Receta, on_delete=models.CASCADE)
+    minuta_id = models.ForeignKey(MinutaNutricional, on_delete=models.CASCADE, related_name="detalles", null =True, blank=True)
+    dia_semana = models.CharField(max_length=20),
+    comida_dia = models.ForeignKey(ComidaDia, on_delete=models.CASCADE, related_name="detalles", null=True, blank=True)
+    comida_tipo = models.CharField(max_length=50),
+    nombre_comida = models.CharField(max_length=100, null=True, blank=True)
+    descripcion = models.TextField(blank=True, null=True)
+    imagen_url = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
-        return f"{self.minuta.id_persona.email} - {self.comida.nombre}"
+        return f"{self.minuta.id_persona.nombre} - {self.comida.nombre}"
 
 class RegistroComida(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -322,7 +361,7 @@ class RegistroComida(models.Model):
     notas = models.TextField(blank=True, null=True)
 
     def __str__(self):
-        return f"{self.id_persona.email} - {self.fecha_consumo}"
+        return f"{self.id_persona.nombres if self.id_persona else 'Sin persona'} - {self.fecha_consumo}"
 
 class AnalisisImagen(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -366,9 +405,28 @@ class ConsejoNutricional(models.Model):
         return self.titulo
 # Fin Seccion de Ayudas
 # Inicio Seccion Comunidad
+
+class Foro(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField(blank=True, null=True)
+    imagen = models.CharField(max_length=255, blank=True, null=True)
+    es_general = models.BooleanField(default=False)
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.nombre
+    
+    class Meta:
+        verbose_name = "Foro"
+        verbose_name_plural = "Foros"
+
 class Publicacion(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name='publicaciones')
+    foro = models.ForeignKey(Foro, on_delete=models.CASCADE, related_name='publicaciones', null=True, blank=True)
+    imagen = models.CharField(max_length=255, blank=True, null=True)
     asunto = models.CharField(max_length=100)
     contenido = models.TextField()
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -405,6 +463,7 @@ class Comentario(models.Model):
 class RespuestaComentario(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     comentario = models.ForeignKey(Comentario, on_delete=models.CASCADE, related_name='respuestas')
+    respuesta_padre = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='respuestas_anidadas')
     id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name='respuestas_comentario')
     contenido = models.TextField()
     fecha_creacion = models.DateTimeField(auto_now_add=True)
@@ -412,10 +471,31 @@ class RespuestaComentario(models.Model):
     activo = models.BooleanField(default=True)
 
     def __str__(self):
+        if self.respuesta_padre:
+            return f"Respuesta por {self.id_persona} a respuesta de {self.respuesta_padre.id_persona}"
         return f"Respuesta por {self.id_persona} a comentario de {self.comentario.id_persona}"
     
     class Meta:
         verbose_name = "Respuesta a Comentario"
         verbose_name_plural = "Respuestas a Comentarios"
         ordering = ['fecha_creacion']
+
+class ForoPersona(models.Model):
+    """
+    Modelo para representar la suscripción de un usuario a un foro específico.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    foro = models.ForeignKey(Foro, on_delete=models.CASCADE, related_name='suscriptores')
+    persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name='foros_suscritos')
+    fecha_suscripcion = models.DateTimeField(auto_now_add=True)
+    notificaciones = models.BooleanField(default=True, help_text="Indica si el usuario recibirá notificaciones de este foro")
+    
+    class Meta:
+        unique_together = ('foro', 'persona')
+        verbose_name = "Suscripción a Foro"
+        verbose_name_plural = "Suscripciones a Foros"
+    
+    def __str__(self):
+        return f"{self.persona.nombres} {self.persona.apellidos} - {self.foro.nombre}"
+
 # Fin Seccion Comunidad

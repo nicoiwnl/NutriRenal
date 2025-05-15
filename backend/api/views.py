@@ -4,14 +4,17 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import (
     User, Persona, PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
     MinutaNutricional, ComidaDia, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
-    ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador
+    ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
+    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, ForoPersona
 )
 from .serializers import (
     UserSerializer, PersonaSerializer, PerfilMedicoSerializer, CondicionPreviaSerializer, UsuarioCondicionSerializer, CategoriaAlimentoSerializer,
     UnidadMedidaSerializer, AlimentoSerializer, PorcionAlimentoSerializer, MinutaNutricionalSerializer, ComidaDiaSerializer,
     RecetaSerializer, IngredienteRecetaSerializer, DetalleMinutaSerializer, RegistroComidaSerializer,
     CentroMedicoSerializer, ConsejoNutricionalSerializer, RolSerializer, UsuarioRolSerializer, PublicacionSerializer,
-    ComentarioSerializer, RespuestaComentarioSerializer, AnalisisImagenSerializer, VinculoPacienteCuidadorSerializer
+    ComentarioSerializer, RespuestaComentarioSerializer, AnalisisImagenSerializer, VinculoPacienteCuidadorSerializer,
+    NutrienteMinutaSerializer, RestriccionAlimentosSerializer, RestriccionMinutaNutrienteSerializer, MinutasRestriccionesSerializer, ForoSerializer,
+    ForoPersonaSerializer
 )
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -671,6 +674,9 @@ class PublicacionViewSet(viewsets.ModelViewSet):
         persona_id = self.request.query_params.get('id_persona')
         if persona_id:
             queryset = queryset.filter(id_persona=persona_id)
+        foro_id = self.request.query_params.get('foro')
+        if foro_id:
+            queryset = queryset.filter(foro=foro_id)
         return queryset
     
     def perform_create(self, serializer):
@@ -696,20 +702,29 @@ class ComentarioViewSet(viewsets.ModelViewSet):
         return queryset
 
 class RespuestaComentarioViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint para manejar respuestas a comentarios, incluyendo respuestas anidadas.
+    """
     queryset = RespuestaComentario.objects.all()
     serializer_class = RespuestaComentarioSerializer
     permission_classes = [AllowAny]
     
     def get_queryset(self):
-        """Allow filtering responses by comment or persona_id"""
         queryset = RespuestaComentario.objects.filter(activo=True).order_by('fecha_creacion')
-        comentario_id = self.request.query_params.get('comentario')
-        persona_id = self.request.query_params.get('id_persona')
         
+        # Filtrar por comentario
+        comentario_id = self.request.query_params.get('comentario')
         if comentario_id:
             queryset = queryset.filter(comentario=comentario_id)
-        if persona_id:
-            queryset = queryset.filter(id_persona=persona_id)
+            
+        # Filtrar por respuesta padre (para respuestas anidadas)
+        respuesta_padre_id = self.request.query_params.get('respuesta_padre')
+        if respuesta_padre_id:
+            queryset = queryset.filter(respuesta_padre=respuesta_padre_id)
+        elif comentario_id:
+            # Si se especifica comentario pero no respuesta_padre, devolver respuestas de primer nivel
+            queryset = queryset.filter(respuesta_padre__isnull=True)
+            
         return queryset
 
 class AnalisisImagenViewSet(viewsets.ModelViewSet):
@@ -861,3 +876,125 @@ class ActualizarFotoPerfilView(APIView):
             return Response({"success": "Foto de perfil actualizada", "foto_perfil": relative_path}, status=status.HTTP_200_OK)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class NutrienteMinutaViewSet(viewsets.ModelViewSet):
+    queryset = NutrienteMinuta.objects.all()
+    serializer_class = NutrienteMinutaSerializer
+
+class RestriccionAlimentosViewSet(viewsets.ModelViewSet):
+    queryset = RestriccionAlimentos.objects.all()
+    serializer_class = RestriccionAlimentosSerializer
+
+class RestriccionMinutaNutrienteViewSet(viewsets.ModelViewSet):
+    queryset = RestriccionMinutaNutriente.objects.all()
+    serializer_class = RestriccionMinutaNutrienteSerializer
+
+class MinutasRestriccionesViewSet(viewsets.ModelViewSet):
+    queryset = MinutasRestricciones.objects.all()
+    serializer_class = MinutasRestriccionesSerializer
+
+class ForoViewSet(viewsets.ModelViewSet):
+    queryset = Foro.objects.all()
+    serializer_class = ForoSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        queryset = Foro.objects.filter(activo=True).order_by('-fecha_creacion')
+        return queryset
+
+class ForoPersonaViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para manejar suscripciones de usuarios a foros.
+    """
+    queryset = ForoPersona.objects.all()
+    serializer_class = ForoPersonaSerializer
+    permission_classes = [AllowAny]  # Cambia a IsAuthenticated en producción
+    
+    def get_queryset(self):
+        queryset = ForoPersona.objects.all()
+        
+        # Filtrar por foro
+        foro_id = self.request.query_params.get('foro')
+        if foro_id:
+            queryset = queryset.filter(foro=foro_id)
+        
+        # Filtrar por persona
+        persona_id = self.request.query_params.get('persona')
+        if persona_id:
+            queryset = queryset.filter(persona=persona_id)
+        
+        return queryset
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Cambia a IsAuthenticated en producción
+def suscribir_a_foro(request):
+    """
+    Endpoint para suscribir a un usuario a un foro específico.
+    """
+    try:
+        data = request.data
+        foro_id = data.get('foro_id')
+        persona_id = data.get('persona_id')
+        
+        # Validar datos requeridos
+        if not foro_id or not persona_id:
+            return Response({'error': 'Se requiere foro_id y persona_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Verificar si los objetos existen
+        try:
+            foro = Foro.objects.get(id=foro_id)
+            persona = Persona.objects.get(id=persona_id)
+        except (Foro.DoesNotExist, Persona.DoesNotExist):
+            return Response({'error': 'Foro o Persona no encontrados'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Verificar si ya existe la suscripción
+        suscripcion_existente = ForoPersona.objects.filter(foro=foro, persona=persona).first()
+        if suscripcion_existente:
+            return Response({'message': 'Ya estás suscrito a este foro', 'suscripcion': ForoPersonaSerializer(suscripcion_existente).data}, 
+                           status=status.HTTP_200_OK)
+        
+        # Crear nueva suscripción
+        notificaciones = data.get('notificaciones', True)
+        nueva_suscripcion = ForoPersona.objects.create(
+            foro=foro,
+            persona=persona,
+            notificaciones=notificaciones
+        )
+        
+        return Response({
+            'message': 'Suscripción creada exitosamente',
+            'suscripcion': ForoPersonaSerializer(nueva_suscripcion).data
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        return Response({'error': f'Error al procesar la suscripción: {str(e)}'}, 
+                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['DELETE'])
+@permission_classes([AllowAny])  # Cambia a IsAuthenticated en producción
+def desuscribir_de_foro(request):
+    """
+    Endpoint para cancelar la suscripción de un usuario a un foro.
+    """
+    try:
+        foro_id = request.query_params.get('foro_id')
+        persona_id = request.query_params.get('persona_id')
+        
+        # Validar datos requeridos
+        if not foro_id or not persona_id:
+            return Response({'error': 'Se requiere foro_id y persona_id'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Buscar la suscripción
+        try:
+            suscripcion = ForoPersona.objects.get(foro_id=foro_id, persona_id=persona_id)
+        except ForoPersona.DoesNotExist:
+            return Response({'error': 'No se encontró la suscripción'}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Eliminar la suscripción
+        suscripcion.delete()
+        
+        return Response({'message': 'Suscripción cancelada exitosamente'}, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({'error': f'Error al cancelar la suscripción: {str(e)}'}, 
+                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)

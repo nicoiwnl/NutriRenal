@@ -10,7 +10,7 @@ const WelcomeHeader = ({ userName, userRole }) => {
         <Text style={styles.welcomeText}>
           Bienvenido{userName ? `, ${userName}` : ''}
         </Text>
-        <Text style={styles.appName}>SafetyIRC</Text>
+        <Text style={styles.appName}>NutriRenal</Text>
         {userRole && (
           <View style={styles.roleBadge}>
             <MaterialIcons 

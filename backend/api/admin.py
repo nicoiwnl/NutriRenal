@@ -5,7 +5,9 @@ from .models import (
     MinutaNutricional, ComidaDia, Receta, IngredienteReceta, 
     DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, 
-    RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador
+    RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
+    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones,
+    Foro  # Añadimos la importación de Foro
 )
 
 # User & Authentication
@@ -28,6 +30,10 @@ admin.site.register(Receta)
 admin.site.register(IngredienteReceta)
 admin.site.register(DetalleMinuta)
 admin.site.register(RegistroComida)
+admin.site.register(NutrienteMinuta)
+admin.site.register(RestriccionAlimentos)
+admin.site.register(RestriccionMinutaNutriente)
+admin.site.register(MinutasRestricciones)
 
 # Medical Centers
 admin.site.register(CentroMedico)
@@ -58,10 +64,17 @@ class RespuestaInline(admin.TabularInline):
     fields = ('id_persona', 'contenido', 'fecha_creacion', 'activo')
     readonly_fields = ('fecha_creacion',)
 
+@admin.register(Foro)
+class ForoAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'es_general', 'activo', 'fecha_creacion')
+    list_filter = ('activo', 'es_general')
+    search_fields = ('nombre', 'descripcion')
+    readonly_fields = ('fecha_creacion',)
+
 @admin.register(Publicacion)
 class PublicacionAdmin(admin.ModelAdmin):
-    list_display = ('asunto', 'id_persona', 'fecha_creacion', 'comentarios_count', 'activo')
-    list_filter = ('activo', 'fecha_creacion')
+    list_display = ('asunto', 'id_persona', 'foro', 'fecha_creacion', 'comentarios_count', 'activo')
+    list_filter = ('activo', 'fecha_creacion', 'foro')
     search_fields = ('asunto', 'contenido', 'id_persona__nombres', 'id_persona__apellidos')
     inlines = [ComentarioInline]
     readonly_fields = ('fecha_creacion', 'fecha_actualizacion')

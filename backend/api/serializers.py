@@ -3,7 +3,7 @@ from .models import (
     PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
     MinutaNutricional, ComidaDia, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
-    User, Persona  # Make sure these imports match your actual models
+    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, User, Persona, ForoPersona # Make sure these imports match your actual models
 )
 from django.conf import settings
 from datetime import datetime
@@ -90,6 +90,7 @@ class DetalleMinutaSerializer(serializers.ModelSerializer):
     class Meta:
         model = DetalleMinuta
         fields = '__all__'
+        # Asegúrate de incluir los nuevos campos agregados a DetalleMinuta
 
 class RegistroComidaSerializer(serializers.ModelSerializer):
     id_persona = serializers.PrimaryKeyRelatedField(queryset=Persona.objects.all())
@@ -140,6 +141,11 @@ class UsuarioRolSerializer(serializers.ModelSerializer):
         }
         return representation
 
+class ForoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Foro
+        fields = '__all__'
+
 class PublicacionSerializer(serializers.ModelSerializer):
     autor_nombre = serializers.SerializerMethodField()
     autor_foto = serializers.SerializerMethodField()
@@ -185,10 +191,14 @@ class ComentarioSerializer(serializers.ModelSerializer):
 class RespuestaComentarioSerializer(serializers.ModelSerializer):
     autor_nombre = serializers.SerializerMethodField()
     autor_foto = serializers.SerializerMethodField()
+    respuestas_anidadas = serializers.SerializerMethodField()
     
     class Meta:
         model = RespuestaComentario
-        fields = '__all__'
+        fields = ['id', 'comentario', 'respuesta_padre', 'id_persona', 'contenido', 
+                 'fecha_creacion', 'fecha_actualizacion', 'activo',
+                 'autor_nombre', 'autor_foto', 'respuestas_anidadas']
+        read_only_fields = ['fecha_creacion', 'fecha_actualizacion']
 
     def get_autor_nombre(self, obj):
         if obj.id_persona:
@@ -199,6 +209,37 @@ class RespuestaComentarioSerializer(serializers.ModelSerializer):
         if obj.id_persona and obj.id_persona.foto_perfil:
             return obj.id_persona.foto_perfil
         return None
+    
+    def get_respuestas_anidadas(self, obj):
+        # Solo recuperar respuestas directas para evitar recursión infinita
+        respuestas = obj.respuestas_anidadas.filter(activo=True).order_by('fecha_creacion')
+        
+        # Para evitar recursión infinita, usamos un serializer sin el campo respuestas_anidadas
+        return RespuestaComentarioSimpleSerializer(respuestas, many=True).data
+
+class RespuestaComentarioSimpleSerializer(serializers.ModelSerializer):
+    autor_nombre = serializers.SerializerMethodField()
+    autor_foto = serializers.SerializerMethodField()
+    tiene_respuestas = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = RespuestaComentario
+        fields = ['id', 'comentario', 'respuesta_padre', 'id_persona', 'contenido', 
+                 'fecha_creacion', 'fecha_actualizacion', 'activo',
+                 'autor_nombre', 'autor_foto', 'tiene_respuestas']
+
+    def get_autor_nombre(self, obj):
+        if obj.id_persona:
+            return f"{obj.id_persona.nombres} {obj.id_persona.apellidos}"
+        return "Usuario"
+
+    def get_autor_foto(self, obj):
+        if obj.id_persona and obj.id_persona.foto_perfil:
+            return obj.id_persona.foto_perfil
+        return None
+    
+    def get_tiene_respuestas(self, obj):
+        return obj.respuestas_anidadas.filter(activo=True).exists()
 
 class AnalisisImagenSerializer(serializers.ModelSerializer):
     class Meta:
@@ -209,3 +250,39 @@ class VinculoPacienteCuidadorSerializer(serializers.ModelSerializer):
     class Meta:
         model = VinculoPacienteCuidador
         fields = '__all__'
+
+class NutrienteMinutaSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = NutrienteMinuta
+        fields = '__all__'
+
+class RestriccionAlimentosSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RestriccionAlimentos
+        fields = '__all__'
+
+class RestriccionMinutaNutrienteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RestriccionMinutaNutriente
+        fields = '__all__'
+
+class MinutasRestriccionesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MinutasRestricciones
+        fields = '__all__'
+
+class ForoPersonaSerializer(serializers.ModelSerializer):
+    nombre_foro = serializers.SerializerMethodField()
+    nombre_persona = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ForoPersona
+        fields = ['id', 'foro', 'persona', 'fecha_suscripcion', 'notificaciones', 'nombre_foro', 'nombre_persona']
+    
+    def get_nombre_foro(self, obj):
+        return obj.foro.nombre if obj.foro else None
+    
+    def get_nombre_persona(self, obj):
+        if obj.persona:
+            return f"{obj.persona.nombres} {obj.persona.apellidos}"
+        return None

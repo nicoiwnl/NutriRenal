@@ -1,23 +1,17 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  ActivityIndicator,
-  TouchableOpacity
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, View, Text, ActivityIndicator, ScrollView } from 'react-native';
+import { useRoute, useNavigation } from '@react-navigation/native';
 
 // Importar componentes y hooks del módulo
 import PublicacionForm from '../modules/comunidad/components/PublicacionForm';
 import useNuevaPublicacion from '../modules/comunidad/hooks/useNuevaPublicacion';
 import styles from '../modules/comunidad/styles/nuevaPublicacionStyles';
 
-export default function NuevaPublicacionScreen({ route, navigation }) {
-  // Usar el hook personalizado
+export default function NuevaPublicacionScreen() {
+  const navigation = useNavigation();
+  const route = useRoute();
+  
+  // Usar el hook personalizado para manejar la creación de publicaciones
   const {
     asunto,
     setAsunto,
@@ -26,62 +20,54 @@ export default function NuevaPublicacionScreen({ route, navigation }) {
     loading,
     personaId,
     initializing,
+    foros,
+    foroSeleccionado,
+    handleSelectForo,
+    loadingForos,
     handlePublicar
   } = useNuevaPublicacion(route, navigation);
 
-  // Mostrar indicador de carga mientras se inicializa
+  // Mostrar pantalla de carga mientras se inicializa
   if (initializing) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#690B22" />
-          <Text style={styles.loadingText}>Cargando...</Text>
-        </View>
-      </SafeAreaView>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#690B22" />
+        <Text style={styles.loadingText}>Preparando formulario...</Text>
+      </View>
     );
   }
 
-  // Mostrar error si no hay personaId disponible después de la inicialización
+  // Verificar que tengamos personaId antes de mostrar el formulario
   if (!personaId) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <MaterialIcons name="error-outline" size={60} color="#690B22" />
-          <Text style={styles.errorText}>No se pudo identificar al usuario</Text>
-          <TouchableOpacity 
-            style={styles.errorButton}
-            onPress={() => navigation?.goBack()}
-          >
-            <Text style={styles.errorButtonText}>Volver</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>No se pudo identificar su usuario. Por favor, inicie sesión nuevamente.</Text>
+      </View>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={{ flex: 1 }}
-        keyboardVerticalOffset={100}
-      >
-        <ScrollView style={styles.scrollView}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Nueva Publicación</Text>
-          </View>
-
-          <PublicacionForm
-            asunto={asunto}
-            setAsunto={setAsunto}
-            contenido={contenido}
-            setContenido={setContenido}
-            onPublicar={handlePublicar}
-            onCancel={() => navigation?.goBack()}
-            loading={loading}
-          />
-        </ScrollView>
-      </KeyboardAvoidingView>
+      <ScrollView style={styles.scrollView}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Nueva Publicación</Text>
+        </View>
+        
+        <PublicacionForm 
+          asunto={asunto}
+          setAsunto={setAsunto}
+          contenido={contenido}
+          setContenido={setContenido}
+          onPublicar={handlePublicar}
+          onCancel={() => navigation.goBack()}
+          loading={loading}
+          // Nuevas props para selector de foro
+          foros={foros}
+          foroSeleccionado={foroSeleccionado}
+          onSelectForo={handleSelectForo}
+          loadingForos={loadingForos}
+        />
+      </ScrollView>
     </SafeAreaView>
   );
 }

@@ -1,7 +1,10 @@
-import { useState, useEffect } from 'react';
+import React from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../../api';
+import { getPublicacionesByUsuario } from '../../../services/comunidadService';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function useMyPublications(navigation) {
   const [loading, setLoading] = useState(true);
@@ -17,6 +20,7 @@ export default function useMyPublications(navigation) {
         if (userData) {
           const parsed = JSON.parse(userData);
           setPersonaId(parsed.persona_id);
+          console.log("ID de persona obtenido:", parsed.persona_id);
           fetchPublicaciones(parsed.persona_id);
         } else {
           Alert.alert('Error', 'No se pudo identificar su usuario. Por favor, inicie sesión nuevamente.');
@@ -31,7 +35,7 @@ export default function useMyPublications(navigation) {
     fetchUserData();
   }, []);
 
-  // Función para cargar publicaciones desde API
+  // Función mejorada para cargar publicaciones desde API
   const fetchPublicaciones = async (id) => {
     if (!id) {
       setLoading(false);
@@ -39,11 +43,41 @@ export default function useMyPublications(navigation) {
     }
 
     try {
-      const response = await api.get(`/publicaciones/?id_persona=${id}`);
-      console.log('Mis publicaciones obtenidas:', response.data);
-      setPublicaciones(response.data);
+      console.log('Buscando publicaciones para persona:', id);
+      
+      // Primer intento: usar parámetro autor
+      let response = await api.get('/publicaciones/', { params: { autor: id } });
+      
+      // Si no hay resultados, intentar con id_persona
+      if (!response.data || response.data.length === 0) {
+        console.log('No se encontraron publicaciones con parámetro autor, intentando con id_persona');
+        response = await api.get('/publicaciones/', { params: { id_persona: id } });
+      }
+      
+      // Si aún no hay resultados, intentar con filtro manual
+      if (!response.data || response.data.length === 0) {
+        console.log('No se encontraron publicaciones con parámetros, obteniendo todas y filtrando');
+        const allResponse = await api.get('/publicaciones/');
+        if (allResponse.data && Array.isArray(allResponse.data)) {
+          // Filtrar manualmente por cualquier campo que pueda contener el ID de autor
+          const filtered = allResponse.data.filter(pub => 
+            pub.autor === id || 
+            pub.autor_id === id || 
+            pub.id_persona === id || 
+            pub.persona === id
+          );
+          console.log(`Se encontraron ${filtered.length} publicaciones mediante filtrado manual`);
+          setPublicaciones(filtered);
+        } else {
+          setPublicaciones([]);
+        }
+      } else {
+        console.log(`Se encontraron ${response.data.length} publicaciones del usuario`);
+        setPublicaciones(response.data);
+      }
     } catch (error) {
       console.error('Error al cargar mis publicaciones:', error);
+      console.log('Detalles del error:', error.response?.status, error.response?.data);
       Alert.alert('Error', 'No se pudieron cargar sus publicaciones. Intente nuevamente.');
       setPublicaciones([]);
     } finally {
@@ -51,6 +85,16 @@ export default function useMyPublications(navigation) {
       setRefreshing(false);
     }
   };
+
+  // Actualizar cuando la pantalla gana foco
+  useFocusEffect(
+    React.useCallback(() => {
+      if (personaId) {
+        console.log("Pantalla enfocada: recargando publicaciones del usuario");
+        fetchPublicaciones(personaId);
+      }
+    }, [personaId])
+  );
 
   // Función para manejar actualización mediante pull-to-refresh
   const onRefresh = () => {

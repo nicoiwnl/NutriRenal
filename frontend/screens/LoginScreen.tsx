@@ -62,7 +62,7 @@ export default function LoginScreen({ navigation }) {
                 color: '#690B22',
                 textAlign: 'center'
               }}>
-                SafetyIRC
+                NutriRenal
               </Text>
             </View>
 

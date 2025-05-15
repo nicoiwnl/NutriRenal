@@ -7,7 +7,9 @@ from .views import (
     ComidaDiaViewSet, RecetaViewSet, IngredienteRecetaViewSet, DetalleMinutaViewSet,
     RegistroComidaViewSet, CentroMedicoViewSet, ConsejoNutricionalViewSet, RolViewSet,
     UsuarioRolViewSet, UsuarioRolesView, PublicacionViewSet, ComentarioViewSet, RespuestaComentarioViewSet,
-    AnalisisImagenViewSet, VinculoPacienteCuidadorViewSet, PacientesCuidadorView, ActualizarFotoPerfilView
+    AnalisisImagenViewSet, VinculoPacienteCuidadorViewSet, PacientesCuidadorView, ActualizarFotoPerfilView,
+    NutrienteMinutaViewSet, RestriccionAlimentosViewSet, RestriccionMinutaNutrienteViewSet, MinutasRestriccionesViewSet,
+    ForoViewSet, ForoPersonaViewSet, suscribir_a_foro, desuscribir_de_foro
 )
 
 router = DefaultRouter()
@@ -35,6 +37,12 @@ router.register(r'comentarios', ComentarioViewSet)
 router.register(r'respuestas-comentario', RespuestaComentarioViewSet)
 router.register(r'analisis-imagen', AnalisisImagenViewSet)
 router.register(r'vinculos-paciente-cuidador', VinculoPacienteCuidadorViewSet)
+router.register(r'nutrientes-minuta', NutrienteMinutaViewSet)
+router.register(r'restricciones-alimentos', RestriccionAlimentosViewSet)
+router.register(r'restricciones-minuta-nutrientes', RestriccionMinutaNutrienteViewSet)
+router.register(r'minutas-restricciones', MinutasRestriccionesViewSet)
+router.register(r'foros', ForoViewSet)
+router.register(r'foro-suscripciones', ForoPersonaViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -46,4 +54,7 @@ urlpatterns = [
     path('usuario-roles/', UsuarioRolesView.as_view(), name='usuario_roles'),
     path('pacientes-por-cuidador/<uuid:persona_id>/', PacientesCuidadorView.as_view(), name='pacientes_por_cuidador'),
     path('actualizar-foto-perfil/', ActualizarFotoPerfilView.as_view(), name='actualizar-foto-perfil'),
+    path('suscribir-foro/', suscribir_a_foro, name='suscribir_foro'),
+    path('desuscribir-foro/', desuscribir_de_foro, name='desuscribir_foro'),
+    path('api/', include(router.urls)),
 ]

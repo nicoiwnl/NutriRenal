@@ -109,5 +109,29 @@ export default StyleSheet.create({
   errorButtonText: {
     color: 'white',
     fontWeight: 'bold',
-  }
+  },
+  // Estilos para el selector de foro
+  foroSelector: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  foroSelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  foroSelectorText: {
+    fontSize: 16,
+    color: '#1B4D3E',
+    flex: 1,
+    marginLeft: 8,
+    marginRight: 8,
+  },
 });

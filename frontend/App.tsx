@@ -23,6 +23,8 @@ import ConsejosScreen from './screens/ConsejosScreen';
 import RoleDiagnosticScreen from './screens/RoleDiagnosticScreen';
 import PublicacionDetailScreen from './screens/PublicacionDetailScreen';
 import NuevaPublicacionScreen from './screens/NuevaPublicacionScreen';
+import ForosScreen from './screens/ForosScreen';  // Garantizar que este nombre coincide con el archivo real
+import MisPublicacionesScreen from './screens/MisPublicacionesScreen';
 
 // Log the imported component to verify it's loaded correctly
 console.log('NuevaPublicacionScreen imported:', NuevaPublicacionScreen);
@@ -47,44 +49,21 @@ const CheckAuthScreen = ({ navigation }) => {
 
 const Stack = createNativeStackNavigator();
 
-// Set up navigation service
-import NavigationService from './navigation/NavigationService';
-
 export default function App() {
   const navigationRef = React.useRef(null);
   
-  // Configure the navigation reference for use with NavigationService
-  useEffect(() => {
+  // Simplificar la configuración - solo logging para depuración
+  const onNavigationReady = () => {
+    console.log('🔄 NavigationContainer is ready');
+    
     if (navigationRef.current) {
-      NavigationService.setTopLevelNavigator(navigationRef.current);
-    }
-  }, [navigationRef.current]);
-
-  // Custom handler for unhandled navigation actions
-  const handleUnhandledAction = (action) => {
-    // Log the action without showing warning
-    console.log('Action not handled by navigator:', action.type, action.payload);
-    
-    // Try fallback navigation using CommonActions if possible
-    if (navigationRef.current && action.type === 'NAVIGATE') {
-      const { name, params } = action.payload;
-      console.log(`Attempting fallback navigation to ${name}`);
+      const state = navigationRef.current.getRootState();
+      console.log("📋 Available routes:", state.routeNames);
       
-      try {
-        // Try using the common dispatch method
-        navigationRef.current.dispatch(
-          CommonActions.navigate({
-            name: name,
-            params: params
-          })
-        );
-      } catch (err) {
-        console.log('Fallback navigation failed:', err);
-      }
+      // Verificar específicamente la ruta 'Foros'
+      const forosExists = state.routeNames.includes('Foros');
+      console.log(`🔍 'Foros' route exists: ${forosExists ? 'YES ✓' : 'NO ✗'}`);
     }
-    
-    // Return false to suppress the default warning
-    return false;
   };
 
   return (
@@ -92,11 +71,7 @@ export default function App() {
       <SafeAreaProvider>
         <NavigationContainer
           ref={navigationRef}
-          onReady={() => {
-            console.log('NavigationContainer is ready');
-            NavigationService.setTopLevelNavigator(navigationRef.current);
-          }}
-          onUnhandledAction={handleUnhandledAction}
+          onReady={onNavigationReady}
         >
           <Stack.Navigator 
             initialRouteName="CheckAuth"
@@ -197,7 +172,22 @@ export default function App() {
               component={RoleDiagnosticScreen} 
               options={{ title: 'Diagnóstico de Roles' }} 
             />
+            <Stack.Screen 
+              name="Foro" 
+              component={ForosScreen}  // Usar el nombre exacto del componente importado
+              options={{ title: 'Foros de la Comunidad' }} 
+            />
             
+            <Stack.Screen 
+              name="MisPublicaciones" 
+              component={MisPublicacionesScreen} 
+              options={{ 
+                title: 'Mis Publicaciones',
+                presentation: 'card',
+                animation: 'slide_from_right'
+              }}
+            />
+
           </Stack.Navigator>
         </NavigationContainer>
       </SafeAreaProvider>

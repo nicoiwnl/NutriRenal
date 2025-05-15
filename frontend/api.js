@@ -5,7 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const isMobile = Platform.OS !== 'web';
 
 const baseURL = isMobile 
-  ? 'http://192.168.1.27:8000/api'
+  ? 'http://192.168.1.146:8000/api'
   : 'http://127.0.0.1:8000/api';
 
 console.log('Using baseURL:', baseURL);
