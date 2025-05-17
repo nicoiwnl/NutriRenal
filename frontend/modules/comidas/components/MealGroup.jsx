@@ -1,16 +1,46 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { MaterialIcons } from '@expo/vector-icons';
 import styles from '../styles/minutaStyles';
 
-const MealGroup = ({ title, items }) => {
+const MealGroup = ({ title, items, onItemPress }) => {
   return (
     <View style={styles.mealGroup}>
       <Text style={styles.mealHeader}>{title}</Text>
-      {items.map((item, index) => (
-        <View key={index} style={styles.mealItem}>
-          <Text style={styles.mealItemName}>• {item.name}</Text>
-          <Text style={styles.mealItemDesc}>{item.desc}</Text>
-        </View>
+      
+      {items.map(item => (
+        <TouchableOpacity 
+          key={item.id} 
+          style={styles.mealItemCard}
+          onPress={() => onItemPress(item)}
+        >
+          <View style={styles.mealItemContent}>
+            {item.image ? (
+              <Image 
+                source={{ 
+                  uri: item.image.startsWith('http') 
+                    ? item.image 
+                    : `http://192.168.1.146:8000/media/${item.image}`
+                }}
+                style={styles.mealItemImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View style={styles.mealItemNoImage}>
+                <MaterialIcons name="image-not-supported" size={24} color="#ccc" />
+              </View>
+            )}
+            
+            <View style={styles.mealItemDetails}>
+              <Text style={styles.mealItemName}>{item.name}</Text>
+              <Text style={styles.mealItemDesc} numberOfLines={2}>{item.desc}</Text>
+              <View style={styles.mealItemActionRow}>
+                <MaterialIcons name="visibility" size={16} color="#690B22" />
+                <Text style={styles.mealItemActionText}>Ver detalles</Text>
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
       ))}
     </View>
   );

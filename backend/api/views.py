@@ -3,18 +3,18 @@ from rest_framework import viewsets
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from .models import (
     User, Persona, PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
-    MinutaNutricional, ComidaDia, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
+    MinutaNutricional, ComidaTipo, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
-    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, ForoPersona
+    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, ForoPersona, Minuta
 )
 from .serializers import (
     UserSerializer, PersonaSerializer, PerfilMedicoSerializer, CondicionPreviaSerializer, UsuarioCondicionSerializer, CategoriaAlimentoSerializer,
-    UnidadMedidaSerializer, AlimentoSerializer, PorcionAlimentoSerializer, MinutaNutricionalSerializer, ComidaDiaSerializer,
+    UnidadMedidaSerializer, AlimentoSerializer, PorcionAlimentoSerializer, MinutaNutricionalSerializer, ComidaTipoSerializer,
     RecetaSerializer, IngredienteRecetaSerializer, DetalleMinutaSerializer, RegistroComidaSerializer,
     CentroMedicoSerializer, ConsejoNutricionalSerializer, RolSerializer, UsuarioRolSerializer, PublicacionSerializer,
     ComentarioSerializer, RespuestaComentarioSerializer, AnalisisImagenSerializer, VinculoPacienteCuidadorSerializer,
     NutrienteMinutaSerializer, RestriccionAlimentosSerializer, RestriccionMinutaNutrienteSerializer, MinutasRestriccionesSerializer, ForoSerializer,
-    ForoPersonaSerializer
+    ForoPersonaSerializer, MinutaSerializer
 )
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -611,9 +611,9 @@ class MinutaNutricionalViewSet(viewsets.ModelViewSet):
     serializer_class = MinutaNutricionalSerializer
     permission_classes = [AllowAny]
 
-class ComidaDiaViewSet(viewsets.ModelViewSet):
-    queryset = ComidaDia.objects.all()
-    serializer_class = ComidaDiaSerializer
+class ComidaTipoViewSet(viewsets.ModelViewSet):
+    queryset = ComidaTipo.objects.all()
+    serializer_class = ComidaTipoSerializer
     permission_classes = [AllowAny]
 
 class RecetaViewSet(viewsets.ModelViewSet):
@@ -805,7 +805,6 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .models import Persona
-# Opcional: si usas settings para MEDIA_ROOT
 from django.conf import settings
 import os
 
@@ -998,3 +997,10 @@ def desuscribir_de_foro(request):
     except Exception as e:
         return Response({'error': f'Error al cancelar la suscripción: {str(e)}'}, 
                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class MinutaViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for viewing and editing Minuta instances.
+    """
+    queryset = Minuta.objects.all()
+    serializer_class = MinutaSerializer

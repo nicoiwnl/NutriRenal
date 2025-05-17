@@ -2,12 +2,12 @@ from django.contrib import admin
 from .models import (
     User, Persona, PerfilMedico, CondicionPrevia, UsuarioCondicion, 
     CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
-    MinutaNutricional, ComidaDia, Receta, IngredienteReceta, 
+    MinutaNutricional, ComidaTipo, Minuta, Receta, IngredienteReceta, 
     DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, 
     RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
     NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones,
-    Foro  # Añadimos la importación de Foro
+    Foro, ForoPersona
 )
 
 # User & Authentication
@@ -25,7 +25,8 @@ admin.site.register(UnidadMedida)
 admin.site.register(Alimento)
 admin.site.register(PorcionAlimento)
 admin.site.register(MinutaNutricional)
-admin.site.register(ComidaDia)
+admin.site.register(ComidaTipo)
+admin.site.register(Minuta)
 admin.site.register(Receta)
 admin.site.register(IngredienteReceta)
 admin.site.register(DetalleMinuta)

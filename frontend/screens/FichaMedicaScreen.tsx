@@ -21,6 +21,7 @@ import CreateProfileCard from '../modules/fichaMedica/components/CreateProfileCa
 
 // Helpers necesarios
 import { getImageUrl } from '../utils/imageHelper';
+import { calcularCalorias } from '../utils/calculosNutricionales';
 
 // Constantes
 const SHOW_DEBUG_UI = false; // Set to false to hide development debug panels
@@ -302,6 +303,20 @@ export default function FichaMedicaScreen({ navigation, route }) {
       </SafeAreaView>
     );
   }
+
+  // Calcular calorías requeridas
+  const calcularCaloriasRequeridas = () => {
+    if (!pacienteData?.perfil_medico) return 0;
+    
+    const genero = pacienteData?.usuario?.genero || 'Masculino'; 
+    const peso = parseFloat(pacienteData.perfil_medico.peso) || 70;
+    const altura = parseFloat(pacienteData.perfil_medico.altura) || 1.70;
+    const edad = pacienteData?.usuario?.edad || 40;
+    const nivelActividad = pacienteData.perfil_medico.nivel_actividad || 'moderado';
+    
+    // Usar exactamente la misma función, pero sin categorizar para mostrar valor exacto
+    return calcularCalorias(genero, peso, altura, edad, nivelActividad, true, false);
+  };
 
   // Vista predeterminada (para pacientes o cuidadores viendo un paciente)
   return (

@@ -34,7 +34,7 @@ urlpatterns = [
 try:
     from rest_framework.documentation import include_docs_urls
     urlpatterns += [
-        path('docs/', include_docs_urls(title='SafetyIRC API', description='API para la aplicación SafetyIRC')),
+        path('docs/', include_docs_urls(title='Safety IRC API', description='API para la aplicación Safety IRC')),
     ]
 except ImportError:
     # Documentation feature unavailable, but will not prevent migrations

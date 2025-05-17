@@ -4,12 +4,12 @@ from .views import (
     register_user, login_user, paciente_dashboard, vincular_paciente_cuidador, listar_pacientes_cuidador,
     UserViewSet, PersonaViewSet, PerfilMedicoViewSet, CondicionPreviaViewSet, UsuarioCondicionViewSet,
     CategoriaAlimentoViewSet, UnidadMedidaViewSet, AlimentoViewSet, PorcionAlimentoViewSet, MinutaNutricionalViewSet,
-    ComidaDiaViewSet, RecetaViewSet, IngredienteRecetaViewSet, DetalleMinutaViewSet,
+    ComidaTipoViewSet, RecetaViewSet, IngredienteRecetaViewSet, DetalleMinutaViewSet,
     RegistroComidaViewSet, CentroMedicoViewSet, ConsejoNutricionalViewSet, RolViewSet,
     UsuarioRolViewSet, UsuarioRolesView, PublicacionViewSet, ComentarioViewSet, RespuestaComentarioViewSet,
     AnalisisImagenViewSet, VinculoPacienteCuidadorViewSet, PacientesCuidadorView, ActualizarFotoPerfilView,
     NutrienteMinutaViewSet, RestriccionAlimentosViewSet, RestriccionMinutaNutrienteViewSet, MinutasRestriccionesViewSet,
-    ForoViewSet, ForoPersonaViewSet, suscribir_a_foro, desuscribir_de_foro
+    ForoViewSet, ForoPersonaViewSet, suscribir_a_foro, desuscribir_de_foro, MinutaViewSet
 )
 
 router = DefaultRouter()
@@ -23,7 +23,7 @@ router.register(r'unidades-medida', UnidadMedidaViewSet)
 router.register(r'alimentos', AlimentoViewSet)
 router.register(r'porciones-alimento', PorcionAlimentoViewSet)
 router.register(r'minutas-nutricionales', MinutaNutricionalViewSet)
-router.register(r'comidas-dia', ComidaDiaViewSet)
+router.register(r'comidas-tipo', ComidaTipoViewSet)
 router.register(r'recetas', RecetaViewSet)
 router.register(r'ingredientes-receta', IngredienteRecetaViewSet)
 router.register(r'detalles-minuta', DetalleMinutaViewSet)
@@ -43,6 +43,7 @@ router.register(r'restricciones-minuta-nutrientes', RestriccionMinutaNutrienteVi
 router.register(r'minutas-restricciones', MinutasRestriccionesViewSet)
 router.register(r'foros', ForoViewSet)
 router.register(r'foro-suscripciones', ForoPersonaViewSet)
+router.register(r'minutas', MinutaViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

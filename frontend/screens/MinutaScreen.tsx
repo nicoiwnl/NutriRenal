@@ -1,68 +1,186 @@
 import React from 'react';
-import { View, Text, ScrollView, ActivityIndicator } from 'react-native';
-import { Card } from 'react-native-paper';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 // Importar componentes y hooks del módulo
 import MinutaSelector from '../modules/comidas/components/MinutaSelector';
 import MinutaDetail from '../modules/comidas/components/MinutaDetail';
 import NoDataMinuta from '../modules/comidas/components/NoDataMinuta';
-import MealGroup from '../modules/comidas/components/MealGroup';
+import ComidaDetalleModal from '../modules/comidas/components/ComidaDetalleModal';
+import NoMinutaCard from '../modules/comidas/components/NoMinutaCard';
+import RestriccionesForm from '../modules/comidas/components/RestriccionesForm';
 import useMinuta from '../modules/comidas/hooks/useMinuta';
 import styles from '../modules/comidas/styles/minutaStyles';
 
-export default function MinutaScreen() {
+export default function MinutaScreen({ navigation }) {
   // Usar el hook personalizado
   const {
     loading,
     minutas,
     selectedMinuta,
     error,
+    tienePerfil,
+    pacienteData,
+    currentDay,
+    comidas,
+    tiposComida,
+    mostrarSolicitud,
+    restricciones,
+    comidaSeleccionada,
+    mostrarDetalleComida,
     handleSelectMinuta,
-    handlePrintMinuta
+    handleChangeDay,
+    handleVerDetalleComida,
+    handleCerrarDetalleComida,
+    handleSolicitarMinuta,
+    handleCancelarSolicitud,
+    handleCambiarRestriccion,
+    handleConfirmarSolicitud
   } = useMinuta();
 
+  // Pantalla de carga mejorada
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#690B22" />
-        <Text style={styles.loadingText}>Cargando su minuta nutricional...</Text>
+        <StatusBar barStyle="dark-content" backgroundColor="#F8E8D8" />
+        <View style={styles.loadingAnimation}>
+          <MaterialIcons name="restaurant" size={55} color="#690B22" />
+          <ActivityIndicator size="large" color="#690B22" style={{marginTop: 20}} />
+        </View>
+        <Text style={styles.loadingText}>Preparando su plan alimentario...</Text>
+        <Text style={styles.loadingSubtext}>Esto tomará solo un momento</Text>
       </View>
+    );
+  }
+
+  // Pantalla de perfil médico requerido mejorada
+  if (!tienePerfil) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="dark-content" backgroundColor="#F8E8D8" />
+        <ScrollView contentContainerStyle={styles.contentContainer}>
+          <View style={styles.headerContainer}>
+            <Text style={styles.screenTitle}>Tu Plan Alimentario</Text>
+            <View style={styles.dividerLine} />
+          </View>
+          
+          <View style={styles.noPerfilCard}>
+            <View style={styles.noPerfilIconContainer}>
+              <MaterialIcons name="medical-services" size={45} color="#690B22" />
+            </View>
+            <Text style={styles.noPerfilTitle}>
+              Información médica necesaria
+            </Text>
+            <Text style={styles.noPerfilDescription}>
+              Para crear tu plan alimentario personalizado, necesitamos algunos datos importantes sobre tu salud. Esto nos ayudará a ofrecerte recomendaciones adecuadas para tu situación particular.
+            </Text>
+            <TouchableOpacity 
+              style={styles.noPerfilButton}
+              onPress={() => navigation.navigate('FichaMedica')}
+            >
+              <MaterialIcons name="article" size={20} color="#fff" />
+              <Text style={styles.noPerfilButtonText}>Completar mi Ficha Médica</Text>
+            </TouchableOpacity>
+            <Text style={styles.noPerfilTip}>
+              Esto tomará menos de 5 minutos
+            </Text>
+          </View>
+        </ScrollView>
+      </SafeAreaView>
     );
   }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView>
-        <Card style={styles.card}>
-          <Card.Content>
-            <View style={styles.header}>
-              <Text style={styles.subtitle}>Plan alimentario personalizado</Text>
-            </View>
-            
-            {minutas.length === 0 ? (
-              <NoDataMinuta />
-            ) : (
-              <>
-                {/* Selector de minuta si hay más de una */}
-                <MinutaSelector 
-                  minutas={minutas}
-                  selectedMinuta={selectedMinuta}
-                  onSelect={handleSelectMinuta}
-                />
-                
-                {/* Detalles de la minuta seleccionada */}
-                {selectedMinuta && (
-                  <MinutaDetail 
-                    minuta={selectedMinuta}
-                    onPrint={handlePrintMinuta}
-                  />
-                )}
-              </>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8E8D8" />
+      
+      {/* Header */}
+      <View style={styles.headerContainer}>
+        <Text style={styles.screenTitle}>Plan Alimentario</Text>
+        <Text style={styles.screenSubtitle}>Nutrición personalizada para tu bienestar</Text>
+        <View style={styles.dividerLine} />
+      </View>
+      
+      <ScrollView contentContainerStyle={styles.contentContainer}>
+        {minutas.length === 0 ? (
+          <NoMinutaCard 
+            pacienteData={pacienteData} 
+            onSolicitarMinuta={handleSolicitarMinuta} 
+          />
+        ) : (
+          <View style={styles.minutaContainer}>
+            {/* Selector de minuta si hay más de una */}
+            {minutas.length > 1 && (
+              <MinutaSelector 
+                minutas={minutas}
+                selectedMinuta={selectedMinuta}
+                onSelect={handleSelectMinuta}
+              />
             )}
-          </Card.Content>
-        </Card>
+            
+            {/* Info banner del plan activo - ahora con la info de vigencia */}
+            {selectedMinuta && (
+              <View style={styles.periodoVigenciaContainer}>
+                <MaterialIcons name="event-available" size={22} color="#690B22" />
+                <View style={styles.periodoVigenciaTextos}>
+                  <Text style={styles.periodoVigenciaTitle}>
+                    Plan alimentario vigente
+                  </Text>
+                  <Text style={styles.vigenciaText}>
+                    {`Finaliza el ${new Date(selectedMinuta.fecha_vigencia).toLocaleDateString('es-ES', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}`}
+                    {/* Calcular días restantes */}
+                    {(() => {
+                      const hoy = new Date();
+                      const vigencia = new Date(selectedMinuta.fecha_vigencia);
+                      const diferencia = Math.ceil((vigencia - hoy) / (1000 * 60 * 60 * 24));
+                      const diasRestantes = diferencia > 0 ? diferencia : 0;
+                      return (
+                        <Text style={styles.diasRestantesText}>
+                          {` (${diasRestantes} ${diasRestantes === 1 ? 'día' : 'días'} restantes)`}
+                        </Text>
+                      );
+                    })()}
+                  </Text>
+                </View>
+              </View>
+            )}
+            
+            {/* Detalles de la minuta seleccionada */}
+            {selectedMinuta && (
+              <MinutaDetail 
+                minuta={selectedMinuta}
+                comidas={comidas}
+                tiposComida={tiposComida}
+                currentDay={currentDay}
+                onChangeDay={handleChangeDay}
+                onVerDetalleComida={handleVerDetalleComida}
+              />
+            )}
+          </View>
+        )}
       </ScrollView>
+
+      {/* Modal para mostrar detalles de una comida */}
+      <ComidaDetalleModal 
+        visible={mostrarDetalleComida}
+        comida={comidaSeleccionada}
+        onClose={handleCerrarDetalleComida}
+      />
+
+      {/* Modal para solicitar minuta con restricciones */}
+      <RestriccionesForm
+        visible={mostrarSolicitud}
+        restricciones={restricciones}
+        onChangeRestriccion={handleCambiarRestriccion}
+        onConfirmar={handleConfirmarSolicitud}
+        onCancelar={handleCancelarSolicitud}
+        loading={loading}
+      />
     </SafeAreaView>
   );
 }

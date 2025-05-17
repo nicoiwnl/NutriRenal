@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
-    MinutaNutricional, ComidaDia, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
+    MinutaNutricional, ComidaTipo, Minuta, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
     NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, User, Persona, ForoPersona # Make sure these imports match your actual models
 )
@@ -66,14 +66,27 @@ class PorcionAlimentoSerializer(serializers.ModelSerializer):
         model = PorcionAlimento
         fields = '__all__'
 
-class MinutaNutricionalSerializer(serializers.ModelSerializer):
+# Añadir serializer para Minuta
+class MinutaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = MinutaNutricional
+        model = Minuta
         fields = '__all__'
 
-class ComidaDiaSerializer(serializers.ModelSerializer):
+class MinutaNutricionalSerializer(serializers.ModelSerializer):
+    minuta_nombre = serializers.SerializerMethodField()
+    
     class Meta:
-        model = ComidaDia
+        model = MinutaNutricional
+        # Exclude nombre_minuta if you're using the SerializerMethodField instead
+        exclude = ['nombre_minuta'] if 'nombre_minuta' in [f.name for f in MinutaNutricional._meta.get_fields()] else []
+    
+    def get_minuta_nombre(self, obj):
+        return obj.minuta.nombre if obj.minuta else None
+
+# Reemplazar ComidaDiaSerializer con ComidaTipoSerializer
+class ComidaTipoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ComidaTipo
         fields = '__all__'
 
 class RecetaSerializer(serializers.ModelSerializer):

@@ -91,34 +91,50 @@ class PerfilMedico(models.Model):
             print(f"Error al calcular IMC: {e}")
             return 0
 
-    def calcular_calorias_diarias(self, genero, edad):
+    def calcular_calorias_diarias(self, genero, edad, ajuste_renal=True, categorizar=False):
         try:
             peso = float(self.peso)
             altura = float(self.altura)
             edad_num = int(edad) if edad else 30
             
-            # Asegúrate de que genero tenga un valor predeterminado
+            # Normalizar el género
             genero = genero.lower() if genero else 'femenino'
             
-            if genero == 'masculino':
+            # Cálculo de TMB (Tasa Metabólica Basal) usando la ecuación de Harris-Benedict revisada
+            if genero == 'masculino' or genero == 'm':
                 tmb = 88.362 + (13.397 * peso) + (4.799 * altura * 100) - (5.677 * edad_num)
             else:
                 tmb = 447.593 + (9.247 * peso) + (3.098 * altura * 100) - (4.330 * edad_num)
 
-            # Asegúrate de que nivel_actividad tenga un valor predeterminado
+            # Factores de actividad mejorados
+            factores_actividad = {
+                'sedentario': 1.2,     # Poco o ningún ejercicio
+                'ligera': 1.375,       # Ejercicio ligero 1-3 días por semana
+                'moderada': 1.55,      # Ejercicio moderado 3-5 días por semana
+                'alta': 1.725,         # Ejercicio intenso 6-7 días por semana
+                'muy alta': 1.9        # Ejercicio muy intenso o entrenamiento 2x/día
+            }
+            
+            # Usar nivel_actividad del perfil, con valor predeterminado
             nivel_actividad = self.nivel_actividad if self.nivel_actividad else 'sedentario'
             
-            if nivel_actividad == 'sedentario':
-                calorias = tmb * 1.2
-            elif nivel_actividad == 'ligera':
-                calorias = tmb * 1.375
-            elif nivel_actividad == 'moderada':
-                calorias = tmb * 1.55
-            elif nivel_actividad == 'alta':
-                calorias = tmb * 1.725
-            else:  
-                calorias = tmb * 1.9
-
+            # Aplicar factor de actividad
+            factor = factores_actividad.get(nivel_actividad, 1.2)  # 1.2 como valor predeterminado
+            calorias = tmb * factor
+            
+            # Aplicar ajuste para pacientes renales (reducción del 10%)
+            if ajuste_renal:
+                calorias = calorias * 0.9
+                
+            # Redondear resultado
+            calorias = round(calorias)
+            
+            # Opcional: categorizar en grupos de calorías predefinidos
+            if categorizar:
+                categorias_minuta = [1400, 1600, 1800, 2000]
+                categoria_elegida = min(categorias_minuta, key=lambda x: abs(x - calorias))
+                return categoria_elegida
+                
             return calorias
         except (ValueError, TypeError) as e:
             print(f"Error al calcular calorías: {e}")
@@ -254,21 +270,44 @@ class PorcionAlimento(models.Model):
         return f"{self.alimento.nombre} - {self.cantidad} {self.unidad.nombre}"
 # Fin Seccion de Alimentos y Medidas
 # Inicio Seccion de Minutas
-class MinutaNutricional(models.Model):
+
+# Nueva tabla Minuta con solo id y nombre
+class Minuta(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="minutas", null=True, blank=True)
-    fecha_creacion = models.DateField(auto_now_add=True)
-    fecha_vigencia = models.DateField()
-    estado = models.CharField(max_length=20, default='activa')
+    nombre = models.CharField(max_length=100, blank=True, null=True)
+    genero = models.CharField(max_length=50, blank=True, null=True)
+    bajo_en_sodio = models.BooleanField(default=False)
+    bajo_en_potasio = models.BooleanField(default=False)
+    bajo_en_fosforo = models.BooleanField(default=False)
+    bajo_en_proteinas = models.BooleanField(default=False)
+    calorias = models.DecimalField(max_digits=6, decimal_places=2, blank=True, null=True)
+    tipo_dialisis = models.CharField(max_length=50, blank=True, null=True, choices=[('hemodialisis', 'Hemodiálisis'), ('dialisis_peritoneal', 'Diálisis Peritoneal'),('ambas', 'Ambas')])
 
     def __str__(self):
-        return f"{self.id_persona.nombre if self.id_persona else 'Sin persona'} - {self.fecha_creacion}"
+        return self.nombre
+
+class MinutaNutricional(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name='minutas')
+    minuta = models.ForeignKey(Minuta, on_delete=models.SET_NULL, null=True, related_name='asignaciones')
+    nombre_minuta = models.CharField(max_length=100, blank=True, null=True)  # Make it optional
+    fecha_creacion = models.DateField(auto_now_add=True)
+    fecha_vigencia = models.DateField()
+    estado = models.CharField(
+        max_length=20,
+        choices=[('activa', 'Activa'), ('inactiva', 'Inactiva')],
+        default='activa'
+    )
+
+    def __str__(self):
+        persona_nombre = self.id_persona.nombres if self.id_persona else "Sin persona"
+        return f"{persona_nombre} - {self.minuta.nombre} ({self.fecha_creacion})"
 
 class NutrienteMinuta(models.Model):
     id = models.AutoField(primary_key=True)
     codigo = models.CharField(max_length=50, unique=True)
     nombre = models.CharField(max_length=100, unique=True)
-    unidad = models.ForeignKey(UnidadMedida, on_delete=models.SET_NULL, null=True, blank=True)
+    unidad = models.CharField(max_length=100, blank=True, null=True)  # Ya cambiado a CharField
 
     def __str__(self):
         return f"{self.nombre} ({self.codigo})"
@@ -299,10 +338,10 @@ class MinutasRestricciones(models.Model):
     def __str__(self):
         return f"{self.minuta.id_persona.nombre} - {self.restriccion.nombre}"
 
-class ComidaDia(models.Model):
+class ComidaTipo(models.Model):
     id = models.AutoField(primary_key=True)
-    nombre = models.CharField(max_length=50, unique=True)
-
+    nombre = models.CharField(max_length=50, unique=True, blank=True, null=True)
+    
     def __str__(self):
         return self.nombre
 
@@ -341,16 +380,18 @@ class IngredienteReceta(models.Model):
 
 class DetalleMinuta(models.Model):
     id = models.AutoField(primary_key=True)
-    minuta_id = models.ForeignKey(MinutaNutricional, on_delete=models.CASCADE, related_name="detalles", null =True, blank=True)
-    dia_semana = models.CharField(max_length=20),
-    comida_dia = models.ForeignKey(ComidaDia, on_delete=models.CASCADE, related_name="detalles", null=True, blank=True)
-    comida_tipo = models.CharField(max_length=50),
+    minuta_id = models.ForeignKey(Minuta, on_delete=models.CASCADE, related_name="detalles", null=True, blank=True)
+    dia_semana = models.CharField(max_length=20, blank=True, null=True)
+    comida_tipo = models.ForeignKey(ComidaTipo, on_delete=models.CASCADE, related_name="detalles", null=True, blank=True)  # Cambiado de comida_dia a comida_tipo
     nombre_comida = models.CharField(max_length=100, null=True, blank=True)
     descripcion = models.TextField(blank=True, null=True)
     imagen_url = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
-        return f"{self.minuta.id_persona.nombre} - {self.comida.nombre}"
+        # Actualizado para usar los nuevos campos
+        persona_nombre = self.minuta_id.id_persona.nombres if self.minuta_id and self.minuta_id.id_persona else "Sin persona"
+        comida_nombre = self.comida_tipo.nombre if self.comida_tipo else "Sin tipo de comida"
+        return f"{persona_nombre} - {comida_nombre}"
 
 class RegistroComida(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
