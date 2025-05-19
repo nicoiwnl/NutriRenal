@@ -225,10 +225,11 @@ export default function AlimentoDetailScreen({ route, navigation }) {
           visible={showRegistroModal}
           onDismiss={() => setShowRegistroModal(false)}
           alimento={alimento}
-          selectedUnit={selectedPortion || selectedUnit} // This will now work
+          selectedUnit={selectedPortion || selectedUnit} 
           onSuccess={() => {
-            // Si deseas hacer algo después de registrar, como recargar datos
-            if (typeof window !== 'undefined') {
+            // Una función vacía o una función que no usa window.scrollTo
+            // Las operaciones específicas para web se harían con comprobaciones de plataforma
+            if (Platform.OS === 'web' && typeof window !== 'undefined' && window.scrollTo) {
               window.scrollTo(0, 0);
             }
           }}
@@ -784,7 +785,6 @@ const styles = StyleSheet.create({
     color: '#C62828',
   },
   
-  // ...existing styles...
   // Styles for the food consumption registration form
   registroFormScroll: {
     maxHeight: 400,

@@ -153,7 +153,7 @@ export default function CentrosMedicosScreen({ navigation }) {
           onCallPhone={callPhone}
           onCenterMap={() => centerMapOnCenters(mapRef)}
           onCenterUserLocation={() => centerMapOnUserLocation(mapRef)}
-          onChangeViewMode={changeViewMode}
+          onChangeViewMode={setViewMode}
         />
       )}
     </SafeAreaView>

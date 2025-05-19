@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, Alert } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import MapView, { Marker, Callout } from 'react-native-maps';
 
@@ -13,6 +13,29 @@ const CentroMap = ({
   onCenterUserLocation,
   onChangeViewMode
 }) => {
+  // Estado para almacenar el centro seleccionado para mostrar opciones
+  const [selectedCentro, setSelectedCentro] = useState(null);
+  
+  // Función para manejar el toque en el callout
+  const handleCalloutPress = (centro) => {
+    // Mostrar un diálogo con opciones
+    Alert.alert(
+      centro.nombre,
+      centro.direccion,
+      [
+        {
+          text: "Cómo llegar",
+          onPress: () => onOpenMaps(centro.latitud, centro.longitud, centro.nombre)
+        },
+        centro.telefono ? {
+          text: "Llamar",
+          onPress: () => onCallPhone(centro.telefono)
+        } : null,
+        { text: "Cancelar", style: "cancel" }
+      ].filter(Boolean) // Eliminar elementos null
+    );
+  };
+
   // Plataformas nativas: Renderizar el mapa
   return (
     <View style={styles.mapContainer}>
@@ -48,40 +71,50 @@ const CentroMap = ({
               title={centro.nombre}
               description={centro.direccion}
               pinColor={centro.servicio_dialisis ? '#990000' : '#1a75ff'}
+              // Manejar el toque en el marcador directamente
+              onCalloutPress={() => {
+                // Mostrar opciones en un Alert
+                Alert.alert(
+                  centro.nombre,
+                  centro.direccion,
+                  [
+                    {
+                      text: "Cómo llegar",
+                      onPress: () => onOpenMaps(centro.latitud, centro.longitud, centro.nombre),
+                      style: "default"
+                    },
+                    centro.telefono ? {
+                      text: "Llamar",
+                      onPress: () => onCallPhone(centro.telefono),
+                      style: "default"
+                    } : null,
+                    { text: "Cancelar", style: "cancel" }
+                  ].filter(Boolean) // Eliminar elementos null
+                );
+              }}
             >
-              <Callout tooltip>
+              <Callout tooltip style={{padding: 0, margin: 0}}>
                 <View style={styles.calloutContainer}>
                   <Text style={styles.calloutTitle}>{centro.nombre}</Text>
-                  <Text style={styles.calloutText}>{centro.direccion}</Text>
                   
                   {centro.servicio_dialisis && (
                     <View style={styles.calloutBadge}>
+                      <MaterialIcons name="water-drop" size={14} color="#721C24" />
                       <Text style={styles.calloutBadgeText}>Servicio de Diálisis</Text>
                     </View>
                   )}
+                  
+                  <Text style={styles.calloutText}>{centro.direccion}</Text>
                   
                   {centro.telefono && (
                     <Text style={styles.calloutText}>Tel: {centro.telefono}</Text>
                   )}
                   
-                  <View style={styles.calloutButtons}>
-                    <TouchableOpacity
-                      style={styles.calloutButton}
-                      onPress={() => onOpenMaps(centro.latitud, centro.longitud, centro.nombre)}
-                    >
-                      <MaterialIcons name="directions" size={12} color="#FFF" />
-                      <Text style={styles.calloutButtonText}>Ruta</Text>
-                    </TouchableOpacity>
-                    
-                    {centro.telefono && (
-                      <TouchableOpacity
-                        style={styles.calloutButton}
-                        onPress={() => onCallPhone(centro.telefono)}
-                      >
-                        <MaterialIcons name="phone" size={12} color="#FFF" />
-                        <Text style={styles.calloutButtonText}>Llamar</Text>
-                      </TouchableOpacity>
-                    )}
+                  <View style={styles.callToActionContainer}>
+                    <Text style={styles.callToActionText}>
+                      Toca para opciones
+                    </Text>
+                    <MaterialIcons name="touch-app" size={20} color="#690B22" />
                   </View>
                 </View>
               </Callout>
@@ -155,61 +188,105 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 8,
     padding: 12,
-    width: 200,
+    width: 240,
+    // Eliminar alignItems para permitir mejor alineación de elementos internos
+    // alignItems: 'center', 
+    justifyContent: 'center',
+    // Mejorar las sombras para que sea más visible
     ...Platform.select({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.2,
-        shadowRadius: 2,
+        shadowOpacity: 0.5,
+        shadowRadius: 4,
       },
       android: {
-        elevation: 4,
+        elevation: 8,
       },
     }),
   },
+  
   calloutTitle: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#1B4D3E',
-    marginBottom: 4,
+    marginBottom: 6,
+    textAlign: 'center',
   },
-  calloutText: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
+  
   calloutBadge: {
     backgroundColor: '#F8D7DA',
-    borderRadius: 4,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    alignSelf: 'flex-start',
-    marginVertical: 4,
-  },
-  calloutBadgeText: {
-    color: '#721C24',
-    fontSize: 10,
-    fontWeight: 'bold',
-  },
-  calloutButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 8,
-  },
-  calloutButton: {
-    backgroundColor: '#690B22',
-    borderRadius: 4,
+    borderRadius: 16,
     paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
+    alignSelf: 'center',
+    marginVertical: 5,
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: 8,
+    justifyContent: 'center',
   },
-  calloutButtonText: {
-    color: '#FFFFFF',
+  
+  calloutBadgeText: {
+    color: '#721C24',
     fontSize: 12,
+    fontWeight: 'bold',
     marginLeft: 4,
+  },
+  
+  calloutText: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  
+  callToActionContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    backgroundColor: '#F1E3D3',
+    padding: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E07A5F',
+  },
+  callToActionText: {
+    color: '#690B22',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginRight: 8,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    gap: 8,
+  },
+  actionButton: {
+    backgroundColor: '#1a75ff',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+  },
+  callButton: {
+    backgroundColor: '#4CAF50',
+  },
+  actionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 6,
   },
   webMapFallback: {
     flex: 1,

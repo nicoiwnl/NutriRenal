@@ -135,7 +135,7 @@ const MinutaDetail = ({
                         source={{ 
                           uri: grupo.comida.imagen_url.startsWith('http') 
                             ? grupo.comida.imagen_url
-                            : `http://192.168.1.146:8000/media/${grupo.comida.imagen_url}`
+                            : `http://192.168.1.160:8000/media/${grupo.comida.imagen_url}`
                         }}
                         style={styles.mealItemImage}
                         resizeMode="cover"

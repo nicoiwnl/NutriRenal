@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Platform, Linking } from 'react-native';
+import { Platform, Linking, Alert } from 'react-native';
 import api from '../../../api';
 
 // Solo importar Location en plataformas móviles
@@ -144,42 +144,78 @@ export default function useCentrosMedicos() {
     }
   };
 
-  // Funciones para abrir mapas y llamar
+  // Funciones mejoradas para abrir mapas y llamar
   const openMaps = (latitud, longitud, nombre) => {
-    const scheme = Platform.select({
-      ios: 'maps:0,0?q=',
-      android: 'geo:0,0?q=',
-      web: 'https://maps.google.com/?q='
-    });
-    
-    const latLng = `${latitud},${longitud}`;
-    const label = encodeURI(nombre);
-    const url = Platform.select({
-      ios: `${scheme}${label}@${latLng}`,
-      android: `${scheme}${latLng}(${label})`,
-      web: `${scheme}${latLng}(${label})`
-    });
+    try {
+      console.log('Abriendo mapa para:', nombre, 'en', latitud, longitud);
+      
+      const scheme = Platform.select({
+        ios: 'maps:0,0?q=',
+        android: 'geo:0,0?q=',
+        web: 'https://maps.google.com/?q='
+      });
+      
+      const latLng = `${latitud},${longitud}`;
+      const label = encodeURIComponent(nombre);
+      const url = Platform.select({
+        ios: `${scheme}${label}@${latLng}`,
+        android: `${scheme}${latLng}(${label})`,
+        web: `${scheme}${latLng}(${label})`
+      });
 
-    Linking.openURL(url);
+      console.log('Opening URL:', url);
+      
+      Linking.canOpenURL(url).then(supported => {
+        if (!supported) {
+          Alert.alert('Error', 'No se puede abrir el mapa en este dispositivo');
+          console.log('Cannot open maps URL:', url);
+        } else {
+          return Linking.openURL(url);
+        }
+      });
+    } catch (error) {
+      console.error('Error al abrir mapas:', error);
+      Alert.alert('Error', 'No se pudo abrir la aplicación de mapas');
+    }
   };
 
   const callPhone = (phone) => {
-    let phoneNumber = phone;
-    if (Platform.OS !== 'android') {
-      phoneNumber = `telprompt:${phone}`;
-    } else {
-      phoneNumber = `tel:${phone}`;
+    try {
+      console.log('Llamando a:', phone);
+      
+      // Verificar que el teléfono tenga un formato válido
+      const phoneNumber = phone.replace(/\s+/g, ''); // Eliminar espacios
+      
+      if (!phoneNumber || phoneNumber.length < 5) {
+        Alert.alert('Error', 'Número de teléfono no válido');
+        return;
+      }
+      
+      let phoneUrl = Platform.select({
+        ios: `telprompt:${phoneNumber}`,
+        android: `tel:${phoneNumber}`,
+        web: `tel:${phoneNumber}`
+      });
+      
+      console.log('Opening phone URL:', phoneUrl);
+      
+      Linking.canOpenURL(phoneUrl)
+        .then(supported => {
+          if (!supported) {
+            Alert.alert('Error', 'Las llamadas telefónicas no están soportadas en este dispositivo');
+            console.log('Cannot make phone calls on this device');
+          } else {
+            return Linking.openURL(phoneUrl);
+          }
+        })
+        .catch(err => {
+          console.error('Error al intentar llamar:', err);
+          Alert.alert('Error', 'No se pudo realizar la llamada');
+        });
+    } catch (error) {
+      console.error('Error general al llamar:', error);
+      Alert.alert('Error', 'No se pudo acceder a la función de llamada');
     }
-    
-    Linking.canOpenURL(phoneNumber)
-      .then(supported => {
-        if (!supported) {
-          console.log('No se puede realizar llamadas desde este dispositivo');
-        } else {
-          return Linking.openURL(phoneNumber);
-        }
-      })
-      .catch(err => console.error('Error al intentar llamar:', err));
   };
 
   return {

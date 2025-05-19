@@ -131,7 +131,7 @@ const RegistroModal = ({
 
   const handleRegister = async () => {
     // Verificar que tenemos todos los datos necesarios
-    if (!currentSelectedUnit) {
+    if (!currentSelectedUnit || !currentSelectedUnit.id) {
       Alert.alert('Error', 'No se ha seleccionado una unidad de medida válida');
       return;
     }
@@ -151,10 +151,10 @@ const RegistroModal = ({
         unidad_medida: currentSelectedUnit.id,
         fecha_consumo: fechaConsumo.toISOString(),
         notas: notas,
-        id_persona: userData.persona_id // Añadir el ID de la persona
+        id_persona: userData.persona_id
       };
       
-      console.log('Enviando datos:', registroData); // Para depuración
+      console.log('Enviando datos:', registroData);
       
       const response = await api.post('/registros-comida/', registroData);
 

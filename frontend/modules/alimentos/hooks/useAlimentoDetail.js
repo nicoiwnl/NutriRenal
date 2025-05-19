@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Alert } from 'react-native';
+import { useState, useEffect, useMemo } from 'react';
+import { Alert, Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../../api';
 
@@ -224,6 +224,18 @@ export default function useAlimentoDetail(alimentoId) {
     }
   };
 
+  // Seleccionar la primera unidad por defecto cuando se cargan
+  useEffect(() => {
+    if (unidadesMedida.length > 0 && !selectedUnit) {
+      // Asegúrate de que haya un ID válido en la primera unidad
+      const defaultUnit = unidadesMedida[0];
+      if (defaultUnit && defaultUnit.id) {
+        setSelectedUnit(defaultUnit);
+        setSelectedPortion(defaultUnit);
+      }
+    }
+  }, [unidadesMedida]);
+
   // Objeto con valores actuales
   const currentValues = Object.keys(adjustedValues).length > 0 ? adjustedValues : alimento;
   
@@ -254,6 +266,12 @@ export default function useAlimentoDetail(alimentoId) {
     setShowReferenceInfo,
     formatNumber,
     getSemaphoreColor,
-    registrarConsumo
+    registrarConsumo,
+    onSuccess: () => {
+      // Verificar si estamos en web antes de usar window.scrollTo
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && window.scrollTo) {
+        window.scrollTo(0, 0);
+      }
+    }
   };
 }
