@@ -611,6 +611,54 @@ class MinutaNutricionalViewSet(viewsets.ModelViewSet):
     serializer_class = MinutaNutricionalSerializer
     permission_classes = [AllowAny]
 
+    def get_queryset(self):
+        """
+        Override para implementar un filtrado más estricto y seguro por id_persona
+        """
+        queryset = super().get_queryset()
+        
+        # Obtener el parámetro id_persona de la URL
+        id_persona = self.request.query_params.get('id_persona')
+        estado = self.request.query_params.get('estado')
+        exact_match = self.request.query_params.get('exact_match', 'false').lower() == 'true'
+        
+        # Log para depuración
+        print(f"🔍 Filtrando minutas por persona_id={id_persona}, estado={estado}, exact_match={exact_match}")
+        
+        # Si hay ID de persona, filtrar estrictamente
+        if id_persona:
+            # Filtrado estricto por UUID
+            try:
+                # Convertir a string normalizado para comparación exacta
+                id_persona_str = str(id_persona).strip().lower().replace('-', '')
+                
+                if exact_match:
+                    # Filtrado exacto - solo devolver minutas que coincidan exactamente con este ID
+                    queryset = queryset.filter(id_persona__id=id_persona)
+                    print(f"📋 Aplicando filtrado exacto de UUID para {id_persona}")
+                    
+                    # Verificación manual para detectar problemas
+                    results_count = queryset.count()
+                    print(f"📊 Resultados después de filtrado exacto: {results_count}")
+                    
+                    # Verificar cada minuta para confirmar propiedad
+                    for minuta in queryset:
+                        minuta_persona_id = str(minuta.id_persona.id).strip().lower().replace('-', '')
+                        if minuta_persona_id != id_persona_str:
+                            print(f"⚠️ ALERTA: Minuta {minuta.id} asignada a {minuta.id_persona.id}, no a {id_persona}")
+                else:
+                    queryset = queryset.filter(id_persona__id=id_persona)
+            except Exception as e:
+                print(f"❌ Error filtrando por id_persona: {e}")
+                return MinutaNutricional.objects.none()  # Devolver queryset vacío en caso de error
+            
+        # Filtrar por estado si se proporciona
+        if estado:
+            queryset = queryset.filter(estado=estado)
+                
+        print(f"🔢 Total de minutas filtradas: {queryset.count()}")
+        return queryset
+
 class ComidaTipoViewSet(viewsets.ModelViewSet):
     queryset = ComidaTipo.objects.all()
     serializer_class = ComidaTipoSerializer

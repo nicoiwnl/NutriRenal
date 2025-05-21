@@ -930,4 +930,123 @@ export default StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 5,
   },
+
+  // Estilos para el botón de revocar minuta - con mayor visibilidad
+  revocarButtonContainer: {
+    marginTop: 25,
+    marginBottom: 10,
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingTop: 15,
+  },
+  revocarButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffebee',
+    borderWidth: 1,
+    borderColor: '#ef9a9a',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    width: '80%',  // Ancho más grande para mayor visibilidad
+  },
+  revocarButtonText: {
+    color: '#c62828',
+    marginLeft: 8,
+    fontWeight: '500',
+    fontSize: 15,
+  },
+  revocarInfo: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
+    width: '80%',
+  },
+
+  // Estilos para alertas de compatibilidad
+  compatibilidadAlerta: {
+    marginVertical: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  compatibilidadAlertaBaja: {
+    backgroundColor: '#fff3cd',
+    borderColor: '#ffeeba',
+  },
+  compatibilidadAlertaMedia: {
+    backgroundColor: '#ffe8cc',
+    borderColor: '#ffd8a8',
+  },
+  compatibilidadAlertaAlta: {
+    backgroundColor: '#d1e7dd',
+    borderColor: '#badbcc',
+  },
+  compatibilidadAlertaTexto: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 14,
+  },
+  compatibilidadAlertaTextoBaja: {
+    color: '#856404',
+  },
+  compatibilidadAlertaTextoMedia: {
+    color: '#724c0f',
+  },
+  compatibilidadAlertaTextoAlta: {
+    color: '#155724',
+  },
+  compatibilidadPorcentaje: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    marginLeft: 'auto',
+    paddingLeft: 10,
+  },
+
+  // Estilos para el componente RestriccionesFallidas
+  restriccionesFallidasContainer: {
+    backgroundColor: '#FDF3E8',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
+    borderLeftWidth: 3,
+    borderLeftColor: '#E07A5F',
+  },
+  restriccionesFallidasHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  restriccionesFallidasTitle: {
+    fontWeight: 'bold',
+    fontSize: 15,
+    color: '#690B22',
+    marginLeft: 6,
+  },
+  restriccionFallidaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingLeft: 6,
+  },
+  restriccionFallidaTexto: {
+    fontSize: 14,
+    color: '#4E342E',
+    marginLeft: 8,
+    flex: 1,
+  },
+  restriccionesFallidasNota: {
+    fontSize: 13,
+    color: '#666',
+    fontStyle: 'italic',
+    marginTop: 8,
+    paddingLeft: 6,
+  },
 });

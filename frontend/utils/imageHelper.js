@@ -2,7 +2,7 @@ import { Platform } from 'react-native';
 
 // Set the correct base URLs for accessing the backend
 const WEB_BASE_URL = 'http://127.0.0.1:8000';
-const MOBILE_BASE_URL = 'http://192.168.1.160:8000'; // Update this with your actual IP address
+const MOBILE_BASE_URL = 'http://192.168.1.169:8000'; // Update this with your actual IP address
 
 /**
  * Get the full URL for an image, falling back to a default if not provided

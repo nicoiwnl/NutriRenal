@@ -145,10 +145,10 @@ const NoMinutaCard = ({ pacienteData, onSolicitarMinuta }) => {
           <Text style={styles.infoMedicaLabel}>Nivel de actividad:</Text>
           <Text style={styles.infoMedicaValue}>
             {pacienteData?.nivel_actividad === 'sedentario' ? 'Sedentario' :
-             pacienteData?.nivel_actividad === 'ligero' ? 'Actividad ligera' :
-             pacienteData?.nivel_actividad === 'moderada' ? 'Actividad moderada' :
-             pacienteData?.nivel_actividad === 'activo' ? 'Actividad intensa' :
-             pacienteData?.nivel_actividad === 'muy_activo' ? 'Actividad muy intensa' :
+             pacienteData?.nivel_actividad === 'ligera' ? 'Ligera' :
+             pacienteData?.nivel_actividad === 'moderada' ? 'Moderada' :
+             pacienteData?.nivel_actividad === 'alta' ? 'Alta' :
+             pacienteData?.nivel_actividad === 'muy alta' ? 'Muy alta' :
              'No especificado'}
           </Text>
         </View>

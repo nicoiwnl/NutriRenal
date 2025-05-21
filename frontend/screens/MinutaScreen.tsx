@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StatusBar } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, ScrollView, ActivityIndicator, TouchableOpacity, StatusBar, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
@@ -29,6 +29,7 @@ export default function MinutaScreen({ navigation }) {
     restricciones,
     comidaSeleccionada,
     mostrarDetalleComida,
+    compatibilidadMinuta, // Añadimos esta propiedad
     handleSelectMinuta,
     handleChangeDay,
     handleVerDetalleComida,
@@ -36,8 +37,31 @@ export default function MinutaScreen({ navigation }) {
     handleSolicitarMinuta,
     handleCancelarSolicitud,
     handleCambiarRestriccion,
-    handleConfirmarSolicitud
+    handleConfirmarSolicitud,
+    handleRevocarMinuta,
+    refreshMinutas
   } = useMinuta();
+
+  // Añadir efecto para refrescar minutas al montar el componente y cuando se enfoca la pantalla
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      console.log('📱 MinutaScreen enfocada - refrescando datos');
+      refreshMinutas();
+    });
+
+    // Carga inicial
+    refreshMinutas();
+    
+    // Limpieza al desmontar
+    return unsubscribe;
+  }, [navigation]);
+  
+  // Error handling
+  useEffect(() => {
+    if (error) {
+      Alert.alert('Error', error, [{ text: 'Entendido', onPress: refreshMinutas }]);
+    }
+  }, [error]);
 
   // Pantalla de carga mejorada
   if (loading) {
@@ -91,6 +115,9 @@ export default function MinutaScreen({ navigation }) {
     );
   }
 
+  // Verificación adicional: no hay minutas ni una minuta seleccionada
+  const tieneMinutaAsignada = minutas.length > 0 && selectedMinuta !== null;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#F8E8D8" />
@@ -103,7 +130,7 @@ export default function MinutaScreen({ navigation }) {
       </View>
       
       <ScrollView contentContainerStyle={styles.contentContainer}>
-        {minutas.length === 0 ? (
+        {!tieneMinutaAsignada ? (
           <NoMinutaCard 
             pacienteData={pacienteData} 
             onSolicitarMinuta={handleSolicitarMinuta} 
@@ -159,6 +186,8 @@ export default function MinutaScreen({ navigation }) {
                 currentDay={currentDay}
                 onChangeDay={handleChangeDay}
                 onVerDetalleComida={handleVerDetalleComida}
+                onRevocarPlan={handleRevocarMinuta}
+                compatibilidadMinuta={compatibilidadMinuta} // Pasar la info de compatibilidad
               />
             )}
           </View>

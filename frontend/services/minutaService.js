@@ -8,13 +8,38 @@ import api from '../api';
  */
 export const getMinutasNutricionales = async (personaId, estado = '') => {
   try {
-    let url = `/minutas-nutricionales/?id_persona=${personaId}`;
+    if (!personaId) {
+      console.error('Error: No se proporcionó ID de persona para consultar minutas');
+      return [];
+    }
+    
+    let url = `/minutas-nutricionales/?id_persona=${personaId}&exact_match=true`;
     if (estado) {
       url += `&estado=${estado}`;
     }
-    console.log(`Consultando minutas nutricionales: ${url}`);
+    console.log(`🔍 Consultando minutas nutricionales: ${url}`);
     const response = await api.get(url);
-    return response.data;
+    
+    // Registrar la cantidad de minutas encontradas para este usuario específico
+    console.log(`📊 Encontradas ${response.data.length} minutas para persona ${personaId}`);
+    
+    // Verificación adicional: comprobar si todas las minutas realmente pertenecen a esta persona
+    const minutasVerificadas = response.data.filter(minuta => 
+      minuta.id_persona === personaId
+    );
+    
+    if (minutasVerificadas.length !== response.data.length) {
+      console.error(`🚨 ALERTA CRÍTICA: Se encontraron ${response.data.length - minutasVerificadas.length} minutas que NO pertenecen a la persona ${personaId}`);
+      
+      // Log detallado de las minutas problemáticas
+      response.data.forEach(minuta => {
+        if (minuta.id_persona !== personaId) {
+          console.error(`🚨 Minuta ID ${minuta.id} asignada a persona ${minuta.id_persona}, no a ${personaId}`);
+        }
+      });
+    }
+    
+    return minutasVerificadas; // Devolver solo las minutas que pertenecen a esta persona
   } catch (error) {
     console.error('Error obteniendo minutas nutricionales:', error);
     throw error;
@@ -43,9 +68,24 @@ export const getTiposComida = async () => {
  */
 export const getComidasPorDia = async (minutaId, dia) => {
   try {
+    if (!minutaId) {
+      console.error('Error: No se proporcionó ID de minuta para consultar comidas');
+      return [];
+    }
+    
     console.log(`Consultando comidas para minuta ${minutaId}, día ${dia}`);
     const response = await api.get(`/detalles-minuta/?minuta_id=${minutaId}&dia_semana=${dia}`);
-    return response.data;
+    
+    // Verificar que las comidas corresponden al día solicitado
+    const comidasFiltradas = response.data.filter(comida => 
+      String(comida.dia_semana) === String(dia)
+    );
+    
+    if (comidasFiltradas.length !== response.data.length) {
+      console.warn(`⚠️ ALERTA: API devolvió comidas para días diferentes del solicitado (${dia})`);
+    }
+    
+    return comidasFiltradas;
   } catch (error) {
     console.error(`Error obteniendo comidas para el día ${dia}:`, error);
     throw error;
