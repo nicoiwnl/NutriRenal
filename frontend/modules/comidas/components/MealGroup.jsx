@@ -20,7 +20,7 @@ const MealGroup = ({ title, items, onItemPress }) => {
                 source={{ 
                   uri: item.image.startsWith('http') 
                     ? item.image 
-                    : `http://192.168.1.146:8000/media/${item.image}`
+                    : `http://192.168.1.24:8000/media/${item.image}`
                 }}
                 style={styles.mealItemImage}
                 resizeMode="cover"

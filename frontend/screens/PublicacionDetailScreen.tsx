@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,9 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  RefreshControl
+  RefreshControl,
+  Keyboard,
+  Dimensions
 } from 'react-native';
 import { Card } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -23,6 +25,8 @@ import styles from '../modules/comunidad/styles/publicacionDetailStyles';
 
 export default function PublicacionDetailScreen({ route, navigation }) {
   const { publicacionId } = route.params;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const { height: screenHeight } = Dimensions.get('window');
   
   // Usar el hook personalizado
   const {
@@ -40,8 +44,41 @@ export default function PublicacionDetailScreen({ route, navigation }) {
     handlePublishComment,
     handleReply,
     onRefresh,
-    formatDate
+    formatDate,
+    activeCommentRef,
+    setActiveCommentRef
   } = usePublicacionDetail(publicacionId, navigation);
+
+  // Efecto para detectar la aparición del teclado
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        if (replyingTo && activeCommentRef && scrollViewRef.current) {
+          // Calcular posición óptima considerando el tamaño del teclado
+          const keyboardHeight = e.endCoordinates.height;
+          const commentPosition = activeCommentRef.y;
+          // Queremos que el comentario quede visible un poco por encima del teclado
+          const scrollToPosition = Math.max(0, commentPosition - (screenHeight - keyboardHeight) / 2);
+          
+          // Dar tiempo para que la UI se actualice
+          setTimeout(() => {
+            if (scrollViewRef.current) { // Añadir verificación de null
+              scrollViewRef.current.scrollTo({
+                y: scrollToPosition,
+                animated: true
+              });
+            }
+          }, 100);
+        }
+      }
+    );
+
+    // Limpiar el listener cuando el componente se desmonte
+    return () => {
+      keyboardDidShowListener.remove();
+    };
+  }, [replyingTo, activeCommentRef, screenHeight]);
 
   if (loading && !refreshing) {
     return (
@@ -72,13 +109,15 @@ export default function PublicacionDetailScreen({ route, navigation }) {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        keyboardVerticalOffset={100}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 120 : 80}
       >
         <ScrollView 
+          ref={scrollViewRef}
           style={styles.scrollView}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
+          keyboardShouldPersistTaps="handled"
         >
           <Card style={styles.card}>
             <Card.Content>
@@ -123,6 +162,7 @@ export default function PublicacionDetailScreen({ route, navigation }) {
                   setReplyContent={setReplyContent}
                   handleReply={handleReply}
                   commentLoading={commentLoading}
+                  setActiveCommentRef={setActiveCommentRef}
                 />
               ))
             ) : (

@@ -37,8 +37,20 @@ const PublicacionCard = ({ publicacion, onPress, showDeleteButton = false, onDel
     }
   };
 
-  // Contar comentarios
-  const numComentarios = publicacion.comentarios ? publicacion.comentarios.length : 0;
+  // Contar comentarios - Mejorado para manejar diferentes formatos de datos
+  const numComentarios = (() => {
+    // Caso 1: Si tenemos un campo num_comentarios o cantidad_comentarios
+    if (publicacion.num_comentarios !== undefined) return publicacion.num_comentarios;
+    if (publicacion.cantidad_comentarios !== undefined) return publicacion.cantidad_comentarios;
+    if (publicacion.comentarios_count !== undefined) return publicacion.comentarios_count;
+    
+    // Caso 2: Si tenemos un array de comentarios completos
+    if (Array.isArray(publicacion.comentarios)) return publicacion.comentarios.length;
+    
+    // Caso 3: Si no tenemos ningún dato, mostrar 0
+    console.log(`No se encontró información de comentarios para la publicación ${publicacion.id}`);
+    return 0;
+  })();
   
   // Obtener información del foro
   const foroNombre = publicacion.foro_nombre || publicacion.nombre_foro || 'General';

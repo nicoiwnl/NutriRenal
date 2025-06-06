@@ -50,7 +50,7 @@ export default function NuevaPublicacionScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Nueva Publicación</Text>
+          
         </View>
         
         <PublicacionForm 

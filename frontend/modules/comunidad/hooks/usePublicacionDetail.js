@@ -22,6 +22,7 @@ export default function usePublicacionDetail(publicacionId, navigation) {
   const [userName, setUserName] = useState('');
   const [userImage, setUserImage] = useState('');
   const [commentLoading, setCommentLoading] = useState(false);
+  const [activeCommentRef, setActiveCommentRef] = useState(null);
 
   // Cargar datos de usuario y publicación al iniciar
   useEffect(() => {
@@ -157,6 +158,7 @@ export default function usePublicacionDetail(publicacionId, navigation) {
       await crearRespuesta(respuestaData);
       setReplyContent('');
       setReplyingTo(null);
+      setActiveCommentRef(null); // Resetear la referencia al comentario activo
       await cargarComentarios();
       Alert.alert('Éxito', 'Su respuesta ha sido publicada');
     } catch (error) {
@@ -202,6 +204,8 @@ export default function usePublicacionDetail(publicacionId, navigation) {
     handlePublishComment,
     handleReply,
     onRefresh,
-    formatDate
+    formatDate,
+    activeCommentRef,
+    setActiveCommentRef
   };
 }

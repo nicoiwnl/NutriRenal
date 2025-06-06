@@ -14,7 +14,7 @@ const ComidaDetalleModal = ({ visible, comida, onClose }) => {
     }
     
     // Si es una ruta relativa, construir URL completa
-    return `http://192.168.1.169:8000/media/${imageUrl}`;
+    return `http://192.168.1.24:8000/media/${imageUrl}`;
   };
   
   // Comprobar si tenemos una imagen válida

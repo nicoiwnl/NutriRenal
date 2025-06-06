@@ -25,28 +25,30 @@ export const getPublicaciones = async (foroId = null) => {
       try {
         // Obtener todos los foros para mapear IDs a nombres
         const forosResponse = await api.get('/foros/');
-        const foros = forosResponse.data || [];
         
-        if (foros.length > 0) {
-          // Crear mapa de ID a nombre
-          const forosMap = {};
-          foros.forEach(foro => {
-            forosMap[foro.id] = foro.nombre;
-          });
-          
-          // Enriquecer cada publicación con el nombre del foro
-          const enriquecidas = publicaciones.map(pub => {
-            const foroId = pub.foro || pub.id_foro;
-            return {
-              ...pub,
-              foro_nombre: forosMap[foroId] || 'General'
-            };
-          });
-          
-          return enriquecidas;
-        }
+        // Enriquecer cada publicación con información adicional
+        const publicacionesEnriquecidas = await Promise.all(publicaciones.map(async (pub) => {
+          // Intentar obtener el conteo de comentarios si no está incluido
+          if (pub.comentarios === undefined && pub.num_comentarios === undefined && pub.comentarios_count === undefined) {
+            try {
+              // Solicitar comentarios solo para obtener el conteo (evitamos cargar todos los detalles)
+              const comentariosResponse = await api.get(`/comentarios/?publicacion=${pub.id}`);
+              if (comentariosResponse.data && Array.isArray(comentariosResponse.data)) {
+                pub.comentarios_count = comentariosResponse.data.length;
+                console.log(`Publicación ${pub.id} tiene ${pub.comentarios_count} comentarios`);
+              }
+            } catch (commentError) {
+              console.log(`No se pudo obtener el conteo de comentarios para publicación ${pub.id}`);
+              pub.comentarios_count = 0;
+            }
+          }
+          return pub;
+        }));
+        
+        return publicacionesEnriquecidas;
       } catch (e) {
-        console.error('Error al obtener información de foros:', e);
+        console.error('Error al obtener información adicional:', e);
+        return publicaciones;
       }
     }
     

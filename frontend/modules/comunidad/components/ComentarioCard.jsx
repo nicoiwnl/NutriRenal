@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { Card } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -15,10 +15,37 @@ const ComentarioCard = ({
   replyContent, 
   setReplyContent, 
   handleReply, 
-  commentLoading 
+  commentLoading,
+  setActiveCommentRef
 }) => {
+  const commentRef = useRef(null);
+
+  // Función para capturar la posición del comentario al presionar responder
+  const handleReplyPress = () => {
+    if (commentRef.current) {
+      commentRef.current.measure((x, y, width, height, pageX, pageY) => {
+        setActiveCommentRef({ y: pageY, height });
+        setReplyingTo(comentario.id);
+      });
+    } else {
+      setReplyingTo(comentario.id);
+    }
+  };
+
   return (
-    <Card key={comentario.id} style={styles.commentCard}>
+    <Card 
+      key={comentario.id} 
+      style={styles.commentCard}
+      ref={commentRef}
+      onLayout={() => {
+        // Capturar la posición cuando ya está respondiendo a este comentario
+        if (replyingTo === comentario.id && commentRef.current) {
+          commentRef.current.measure((x, y, width, height, pageX, pageY) => {
+            setActiveCommentRef({ y: pageY, height });
+          });
+        }
+      }}
+    >
       <Card.Content>
         <View style={styles.commentHeader}>
           <Image
@@ -36,7 +63,7 @@ const ComentarioCard = ({
         
         <TouchableOpacity 
           style={styles.replyButton}
-          onPress={() => setReplyingTo(comentario.id)}
+          onPress={handleReplyPress}
         >
           <MaterialIcons name="reply" size={16} color="#690B22" />
           <Text style={styles.replyButtonText}>Responder</Text>

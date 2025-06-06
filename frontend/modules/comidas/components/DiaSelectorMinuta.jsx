@@ -65,10 +65,15 @@ const DiaSelectorMinuta = ({ currentDay, onChangeDay, fechaVigencia }) => {
         const itemWidth = 85; // Aproximadamente el ancho de cada botón
         const scrollTo = Math.max(0, selectedIndex * itemWidth - 40);
         
-        // Scroll a la posición
-        setTimeout(() => {
-          scrollViewRef.current.scrollTo({ x: scrollTo, animated: true });
+        // Scroll a la posición - Añadir verificación adicional dentro del timeout
+        const timer = setTimeout(() => {
+          if (scrollViewRef.current) { // Verificación adicional de nulo aquí
+            scrollViewRef.current.scrollTo({ x: scrollTo, animated: true });
+          }
         }, 100);
+
+        // Limpiar el timeout si el componente se desmonta
+        return () => clearTimeout(timer);
       }
     }
   }, [currentDay]);
