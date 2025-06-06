@@ -1049,4 +1049,19 @@ export default StyleSheet.create({
     marginTop: 8,
     paddingLeft: 6,
   },
+  noComidasContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 25,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    marginTop: 10,
+  },
+  noComidasText: {
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 10,
+    fontSize: 15,
+    fontStyle: 'italic',
+  },
 });

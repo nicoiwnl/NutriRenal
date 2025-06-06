@@ -3,7 +3,14 @@ import { View, Text, Modal, Image, TouchableOpacity, ScrollView } from 'react-na
 import { MaterialIcons } from '@expo/vector-icons';
 import styles from '../styles/minutaStyles';
 
+// Importar el hook y el componente nuevo
+import useAlimentosComida from '../hooks/useAlimentosComida';
+import AlimentosDetectadosLista from './AlimentosDetectadosLista';
+
 const ComidaDetalleModal = ({ visible, comida, onClose }) => {
+  // Utilizar el hook para detectar alimentos en la descripción
+  const { loading, alimentosDetectados, unidadesMedida, error } = useAlimentosComida(comida);
+
   // Función para procesar la URL de la imagen correctamente
   const getImageUrl = (imageUrl) => {
     if (!imageUrl) return null;
@@ -67,6 +74,14 @@ const ComidaDetalleModal = ({ visible, comida, onClose }) => {
                   <View style={styles.modalSection}>
                     <Text style={styles.modalDescription}>{comida.desc}</Text>
                   </View>
+                  
+                  {/* Componente de alimentos detectados - ahora con unidades */}
+                  <AlimentosDetectadosLista 
+                    alimentosDetectados={alimentosDetectados}
+                    unidadesMedida={unidadesMedida}
+                    loading={loading}
+                    error={error}
+                  />
                   
                   <View style={styles.modalTips}>
                     <MaterialIcons name="lightbulb" size={20} color="#E07A5F" />
