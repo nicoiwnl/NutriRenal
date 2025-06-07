@@ -42,7 +42,8 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',  # Añadir esta línea
     'api',
-    'corsheaders'
+    'corsheaders',
+    'gpt',  # Añadir el módulo GPT
 ]
 
 MIDDLEWARE = [
@@ -144,9 +145,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Si estás usando Django REST framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
+        # Comentar temporalmente para depuración
+        # 'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',
+        'rest_framework.permissions.AllowAny',  # Cambiar a AllowAny para pruebas
     ],
 }
 
@@ -165,3 +168,24 @@ CORS_ALLOWED_ORIGINS = [
     'exp://172.20.10.4:8081',
     'exp://192.168.1.24:8081'
 ]
+
+# Asegurarse de que los directorios de media existan
+import os
+os.makedirs(os.path.join(MEDIA_ROOT, 'analisis_comida'), exist_ok=True)
+
+# Configuración de OpenAI
+from dotenv import load_dotenv
+
+# Cargar variables desde .env si existe
+load_dotenv()
+
+# Configuración de OpenAI - buscar en múltiples fuentes
+OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY', '')
+
+# Si la clave no está en variables de entorno, intentar cargarla de un archivo local
+if not OPENAI_API_KEY:
+    try:
+        with open(os.path.join(BASE_DIR, 'openai_key.txt'), 'r') as key_file:
+            OPENAI_API_KEY = key_file.read().strip()
+    except (FileNotFoundError, IOError):
+        pass

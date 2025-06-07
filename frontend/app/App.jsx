@@ -32,6 +32,7 @@ import CentrosMedicosScreen from '../screens/CentrosMedicosScreen';
 import MisRegistrosScreen from '../screens/MisRegistrosScreen';
 import RecetaDetailScreen from '../screens/RecetaDetailScreen';
 import IngredientesAlimentosScreen from '../screens/IngredientesAlimentosScreen';
+import ScanResultScreen from '../screens/ScanResultScreen'; // Añade esta importación
 
 // New: Define the navigators
 const Stack = createNativeStackNavigator();
@@ -299,6 +300,15 @@ function RootStack() {
           title: 'Mis Publicaciones',
           presentation: 'card',
           animation: 'slide_from_right'
+        }}
+      />
+      <Stack.Screen 
+        name="ScanResult" 
+        component={ScanResultScreen} 
+        options={{ 
+          title: 'Análisis de Alimento',
+          presentation: 'card',
+          animation: 'slide_from_bottom'
         }}
       />
       {/* Nuevas pantallas */}

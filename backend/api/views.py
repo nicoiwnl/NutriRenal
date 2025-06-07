@@ -29,6 +29,7 @@ from django.core.files.base import ContentFile
 import base64
 import uuid
 from django.conf import settings
+import os
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -1052,3 +1053,224 @@ class MinutaViewSet(viewsets.ModelViewSet):
     """
     queryset = Minuta.objects.all()
     serializer_class = MinutaSerializer
+
+# Importar nuevos módulos
+import base64
+import json
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+
+# Cambiar la importación para usar el modelo Alimento de api.models
+from .models import Alimento  # Corregir importación para usar el modelo local
+from gpt.vision import analizar_imagen_alimentos
+from gpt.alimentos import buscar_alimentos_similares, calcular_nutrientes_por_cantidad
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def analizar_imagen(request):
+    """
+    Endpoint para analizar una imagen y devolver los alimentos detectados.
+    Versión unificada y corregida que guarda correctamente el id_persona.
+    """
+    try:
+        # 1. EXTRAER ID DE PERSONA - estrategia completa
+        persona_id = None
+        
+        # Log de todos los datos recibidos para debug
+        print(f"analizar_imagen - Datos recibidos: {request.data}")
+        print(f"Headers recibidos: {request.headers}")
+        
+        # Buscar en los datos de la petición con múltiples nombres de campo
+        id_field_names = ['id_persona', 'persona_id', 'id_persona_id', 'usuario_id', 'userId', 'user_id']
+        for field_name in id_field_names:
+            if field_name in request.data and request.data[field_name]:
+                persona_id = request.data[field_name]
+                print(f"ID de persona encontrado en campo '{field_name}': {persona_id}")
+                break
+        
+        # Buscar en objetos anidados si existen
+        if not persona_id and 'user' in request.data and isinstance(request.data['user'], dict):
+            for field_name in id_field_names:
+                if field_name in request.data['user'] and request.data['user'][field_name]:
+                    persona_id = request.data['user'][field_name]
+                    print(f"ID de persona encontrado en user.{field_name}: {persona_id}")
+                    break
+                
+        # Buscar en los headers
+        if not persona_id:
+            header_names = ['X-User-ID', 'X-Persona-ID', 'Authorization']
+            for header in header_names:
+                if header in request.headers:
+                    value = request.headers[header]
+                    if header == 'Authorization' and value.startswith('Bearer '):
+                        token = value.split(' ')[1]
+                        # Intenta extraer ID de usuario del token - implementación básica
+                        if token.startswith('simple-token-'):
+                            try:
+                                user_id = token.replace('simple-token-', '')
+                                user = User.objects.get(rut=user_id)
+                                if hasattr(user, 'id_persona') and user.id_persona:
+                                    persona_id = user.id_persona.id
+                                    print(f"ID de persona extraído del token: {persona_id}")
+                            except:
+                                pass
+                    else:
+                        persona_id = value
+                        print(f"ID de persona encontrado en header '{header}': {persona_id}")
+                        break
+        
+        # Validar que la imagen está presente en la solicitud
+        if 'imagen' not in request.data:
+            return Response({"error": "No se proporcionó una imagen para analizar"}, status=status.HTTP_400_BAD_REQUEST)
+            
+        imagen_base64 = request.data.get('imagen')
+        
+        # 2. PROCESAR LA IMAGEN
+        # Extraer la parte base64 si viene con prefijo
+        formato_imagen = "jpeg"
+        base64_str = imagen_base64
+        if "data:image" in imagen_base64:
+            formato, base64_str = imagen_base64.split(';base64,')
+            formato_imagen = formato.split('/')[-1]
+        
+        # Guardar la imagen
+        upload_dir = os.path.join(settings.MEDIA_ROOT, 'analisis_comida')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"food_analysis_{timestamp}_{str(uuid.uuid4())[:8]}.{formato_imagen}"
+        filepath = os.path.join(upload_dir, filename)
+        
+        try:
+            with open(filepath, "wb") as img_file:
+                img_file.write(base64.b64decode(base64_str))
+        except Exception as e:
+            return Response({"error": f"Error al guardar la imagen: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Crear URL relativa para acceso frontend
+        relative_path = os.path.join('analisis_comida', filename)
+        image_url = relative_path.replace('\\', '/')
+        
+        # 3. ANALIZAR IMAGEN CON GPT VISION
+        from gpt.vision import analizar_imagen_alimentos
+        
+        try:
+            # Realizar el análisis real de la imagen utilizando GPT Vision
+            resultado_analisis = analizar_imagen_alimentos(base64_str)
+            print(f"Análisis GPT Vision completado: {resultado_analisis}")
+            
+            # CRITICAL FIX: Asegurar que todas las propiedades importantes estén explícitamente extraídas
+            # y disponibles en el nivel superior del resultado
+            resultado_procesado = {
+                "alimentos_detectados": resultado_analisis.get("alimentos_detectados", []),
+                "totales": resultado_analisis.get("totales", {}),
+                "texto_original": resultado_analisis.get("texto_original", ""),
+                # Asegurar que recomendaciones y compatibilidad_renal se extraigan correctamente
+                "recomendaciones": resultado_analisis.get("recomendaciones", ""),
+                "compatibilidad_renal": resultado_analisis.get("compatibilidad_renal", False)
+            }
+            
+            # Si no hay recomendaciones en el nivel superior, intentar extraerlas desde texto_original
+            if not resultado_procesado["recomendaciones"] and isinstance(resultado_analisis.get("texto_original"), dict):
+                resultado_procesado["recomendaciones"] = resultado_analisis["texto_original"].get("recomendaciones", "")
+                resultado_procesado["compatibilidad_renal"] = resultado_analisis["texto_original"].get("compatibilidad_renal", False)
+            
+            print(f"Resultado procesado con recomendaciones: {resultado_procesado['recomendaciones'][:50]}...")
+            
+        except Exception as e:
+            print(f"❌ Error al analizar imagen con GPT Vision: {str(e)}")
+            # En caso de fallo con GPT Vision, usar un fallback más simple
+            resultado_procesado = {
+                "alimentos_detectados": ["No se pudo analizar la imagen"],
+                "totales": {
+                    "energia": 0,
+                    "proteinas": 0,
+                    "hidratos_carbono": 0,
+                    "lipidos": 0,
+                    "sodio": 0,
+                    "potasio": 0,
+                    "fosforo": 0
+                },
+                "recomendaciones": "No se pudo completar el análisis. Por favor, intente con otra imagen.",
+                "compatibilidad_renal": False,
+                "texto_original": "Error en análisis de imagen"
+            }
+        
+        # 4. CREAR REGISTRO EN BASE DE DATOS
+        try:
+            # Obtener la persona si existe el ID
+            persona = None
+            if persona_id:
+                try:
+                    from .models import Persona
+                    persona = Persona.objects.get(id=persona_id)
+                    print(f"✅ PERSONA ENCONTRADA CON ID {persona_id}: {persona}")
+                except Persona.DoesNotExist:
+                    print(f"❌ No se encontró persona con ID {persona_id}")
+                except Exception as e:
+                    print(f"❌ Error al buscar persona: {e}")
+            
+            # NUEVO: Crear un nombre descriptivo basado en los alimentos detectados
+            alimentos_detectados = resultado_procesado.get("alimentos_detectados", [])
+            if alimentos_detectados and len(alimentos_detectados) > 0:
+                # Si hay 3 o menos alimentos, mostrarlos todos
+                if len(alimentos_detectados) <= 3:
+                    nombre_descriptivo = f"Análisis de {', '.join(alimentos_detectados)}"
+                else:
+                    # Si hay más de 3, mostrar los primeros 3 y un contador
+                    nombre_descriptivo = f"Análisis de {', '.join(alimentos_detectados[:3])} y {len(alimentos_detectados)-3} más"
+            else:
+                nombre_descriptivo = "Análisis de alimento no identificado"
+            
+            # IMPORTANTE: Crear objeto de análisis con la persona y el nuevo nombre descriptivo
+            analisis = AnalisisImagen(
+                id_persona=persona,  # Este es el campo que necesita estar correctamente asignado
+                url_imagen=image_url,
+                resultado=resultado_procesado,  # Usar el resultado procesado
+                nombre=nombre_descriptivo  # Usar el nombre descriptivo en lugar de "Análisis de alimentos completado"
+            )
+            analisis.save()
+            
+            print(f"✅ ANÁLISIS GUARDADO CON ID: {analisis.id}")
+            print(f"✅ PERSONA ASIGNADA AL ANÁLISIS: {analisis.id_persona}")
+            print(f"✅ NOMBRE DESCRIPTIVO: {analisis.nombre}")
+            
+            # Añadir ID a la respuesta - asegurando que las recomendaciones estén explícitamente incluidas
+            respuesta = {
+                "id": str(analisis.id),
+                "id_persona": str(persona_id) if persona_id else None,
+                "persona_id": str(persona_id) if persona_id else None,
+                "imagen_analizada": image_url,
+                "fecha_analisis": analisis.fecha_analisis.isoformat(),
+                "nombre": analisis.nombre,  # Incluir el nombre descriptivo en la respuesta
+                # Incluir todos los campos procesados explícitamente
+                "alimentos_detectados": resultado_procesado["alimentos_detectados"],
+                "totales": resultado_procesado["totales"],
+                "recomendaciones": resultado_procesado["recomendaciones"],
+                "compatibilidad_renal": resultado_procesado["compatibilidad_renal"],
+                "texto_original": resultado_procesado["texto_original"]
+            }
+            
+            return Response(respuesta, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            import traceback
+            print(f"❌ ERROR AL GUARDAR ANÁLISIS: {e}")
+            print(traceback.format_exc())
+            return Response({
+                "error": f"Error al guardar el análisis: {str(e)}",
+                "imagen_analizada": image_url 
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"❌ ERROR GENERAL EN ANALIZAR_IMAGEN: {str(e)}")
+        print(error_trace)
+        return Response(
+            {"error": f"Error al procesar la imagen: {str(e)}",
+             "traceback": error_trace if settings.DEBUG else None}, 
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )

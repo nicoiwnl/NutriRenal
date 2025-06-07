@@ -9,7 +9,7 @@ from .views import (
     UsuarioRolViewSet, UsuarioRolesView, PublicacionViewSet, ComentarioViewSet, RespuestaComentarioViewSet,
     AnalisisImagenViewSet, VinculoPacienteCuidadorViewSet, PacientesCuidadorView, ActualizarFotoPerfilView,
     NutrienteMinutaViewSet, RestriccionAlimentosViewSet, RestriccionMinutaNutrienteViewSet, MinutasRestriccionesViewSet,
-    ForoViewSet, ForoPersonaViewSet, suscribir_a_foro, desuscribir_de_foro, MinutaViewSet
+    ForoViewSet, ForoPersonaViewSet, suscribir_a_foro, desuscribir_de_foro, MinutaViewSet, analizar_imagen
 )
 
 router = DefaultRouter()
@@ -57,5 +57,6 @@ urlpatterns = [
     path('actualizar-foto-perfil/', ActualizarFotoPerfilView.as_view(), name='actualizar-foto-perfil'),
     path('suscribir-foro/', suscribir_a_foro, name='suscribir_foro'),
     path('desuscribir-foro/', desuscribir_de_foro, name='desuscribir_foro'),
+    path('analizar-imagen/', analizar_imagen, name='analizar_imagen'),
     path('api/', include(router.urls)),
 ]

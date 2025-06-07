@@ -1,6 +1,6 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
 export default StyleSheet.create({
   container: {
@@ -149,64 +149,98 @@ export default StyleSheet.create({
     backgroundColor: '#F8E8D8',
     padding: 16,
   },
-  resultCard: {
-    backgroundColor: '#FFFFFF',
+  resultImage: {
+    width: '100%',
+    height: width * 0.6,
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
+    marginBottom: 20,
+    backgroundColor: '#FFF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  resultImageSmall: {
+    width: width * 0.7,
+    height: width * 0.5,
+    borderRadius: 8,
+    marginVertical: 20,
+    alignSelf: 'center',
+    backgroundColor: '#FFF',
   },
   resultTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#1B4D3E',
-    marginBottom: 8,
+    marginBottom: 16,
   },
-  resultContent: {
+  errorMessage: {
     fontSize: 16,
-    color: '#333',
-    marginBottom: 12,
+    color: '#C62828',
+    textAlign: 'center',
+    marginVertical: 20,
   },
-  resultImageContainer: {
+  noResultsContainer: {
     alignItems: 'center',
-    marginVertical: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
   },
-  resultImage: {
-    width: width * 0.8,
-    height: width * 0.6,
+  noResultsText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 10,
+  },
+  actionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: 24,
+    marginBottom: 40,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 8,
+    minWidth: 160,
   },
-  resultFooter: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    marginTop: 12,
-  },
-  resultFooterButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  scanAgainButton: {
     backgroundColor: '#690B22',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
   },
-  resultFooterButtonText: {
+  actionButtonText: {
     color: '#FFFFFF',
-    marginLeft: 8,
     fontWeight: 'bold',
+    fontSize: 16,
+    marginLeft: 8,
   },
+  
+  // Estilos para la vista de carga
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F8E8D8',
+    padding: 20,
+  },
+  loadingAnimation: {
+    alignItems: 'center',
+    marginBottom: 30,
   },
   loadingText: {
-    marginTop: 12,
-    fontSize: 16,
+    fontSize: 18,
+    fontWeight: 'bold',
     color: '#690B22',
-  }
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#888',
+    textAlign: 'center',
+  },
 });

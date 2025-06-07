@@ -410,7 +410,8 @@ class AnalisisImagen(models.Model):
     url_imagen = models.CharField(max_length=255)
     fecha_analisis = models.DateTimeField(auto_now_add=True)
     resultado = models.JSONField()
-    conclusion = models.TextField(blank=True, null=True)
+    nombre = models.TextField(blank=True, null=True)
+    alimentos_detectados = models.ManyToManyField(Alimento, blank=True, related_name="apariciones_en_analisis")
 
     def __str__(self):
         return f"{self.id_persona.nombres if self.id_persona else 'Sin persona'} - {self.fecha_analisis}"

@@ -19,11 +19,12 @@ import ConsejosPorCategoriaScreen from './screens/ConsejosPorCategoriaScreen';
 import FichaMedicaScreen from './screens/FichaMedicaScreen';
 import ComunidadScreen from './screens/ComunidadScreen';
 import QRScannerScreen from './screens/QRScannerScreen';
+import ScanResultScreen from './screens/ScanResultScreen'; // Añadir esta importación
 import ConsejosScreen from './screens/ConsejosScreen';
 import RoleDiagnosticScreen from './screens/RoleDiagnosticScreen';
 import PublicacionDetailScreen from './screens/PublicacionDetailScreen';
 import NuevaPublicacionScreen from './screens/NuevaPublicacionScreen';
-import ForosScreen from './screens/ForosScreen';  // Garantizar que este nombre coincide con el archivo real
+import ForosScreen from './screens/ForosScreen';
 import MisPublicacionesScreen from './screens/MisPublicacionesScreen';
 
 // Log the imported component to verify it's loaded correctly
@@ -65,6 +66,15 @@ export default function App() {
       console.log(`🔍 'Foros' route exists: ${forosExists ? 'YES ✓' : 'NO ✗'}`);
     }
   };
+
+  useEffect(() => {
+    // Retry after a short delay to ensure app is fully loaded
+    const retryTimer = setTimeout(() => {
+      retryFailedSelectionUpdates();
+    }, 5000);
+    
+    return () => clearTimeout(retryTimer);
+  }, []);
 
   return (
     <MenuProvider>
@@ -128,7 +138,12 @@ export default function App() {
             <Stack.Screen 
               name="QRScanner" 
               component={QRScannerScreen} 
-              options={{ title: 'Escanear QR' }} 
+              options={{ title: 'Escanear Alimento' }} 
+            />
+            <Stack.Screen 
+              name="ScanResult" 
+              component={ScanResultScreen} 
+              options={{ title: 'Análisis de Alimento' }} 
             />
             <Stack.Screen 
               name="Alimentos" 
