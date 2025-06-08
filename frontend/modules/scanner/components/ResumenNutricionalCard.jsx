@@ -3,6 +3,20 @@ import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { formatMinerales } from '../../../utils/formatUtils';
 
+// Define new threshold constants for visual consistency
+const THRESHOLDS = {
+  SODIO: 375,    // Actualizado de 800 a 375
+  POTASIO: 500,  // Actualizado de 1000 a 500
+  FOSFORO: 250   // Actualizado de 700 a 250
+};
+
+// Define warning thresholds (middle values) for yellow indicator
+const WARNING_THRESHOLDS = {
+  SODIO: THRESHOLDS.SODIO / 2,    // 187.5
+  POTASIO: THRESHOLDS.POTASIO / 2, // 250
+  FOSFORO: THRESHOLDS.FOSFORO / 2  // 125
+};
+
 // Create a focused component that only displays the three key minerals
 const ResumenNutricionalCard = (props) => {
   console.log("ResumenNutricionalCard rendering with props:", JSON.stringify(props, null, 2));
@@ -102,80 +116,174 @@ const ResumenNutricionalCard = (props) => {
   
   console.log("Displaying values - Sodio:", sodioFormatted, "Potasio:", potasioFormatted, "Fósforo:", fosforoFormatted);
   
+  // Determine mineral status (0: good, 1: warning, 2: exceeded)
+  const getMineralStatus = (mineral, value) => {
+    if (mineral === 'sodio') {
+      if (value < WARNING_THRESHOLDS.SODIO) return 0; // Good - Green
+      if (value < THRESHOLDS.SODIO) return 1;         // Warning - Yellow
+      return 2;                                       // Exceeded - Red
+    }
+    else if (mineral === 'potasio') {
+      if (value < WARNING_THRESHOLDS.POTASIO) return 0;
+      if (value < THRESHOLDS.POTASIO) return 1;
+      return 2;
+    }
+    else if (mineral === 'fosforo') {
+      if (value < WARNING_THRESHOLDS.FOSFORO) return 0;
+      if (value < THRESHOLDS.FOSFORO) return 1;
+      return 2;
+    }
+    return 0;
+  };
+  
+  // Get color for mineral status
+  const getMineralColor = (status) => {
+    switch(status) {
+      case 0: return '#4CAF50'; // Green
+      case 1: return '#FFC107'; // Yellow
+      case 2: return '#F44336'; // Red
+      default: return '#4CAF50';
+    }
+  };
+  
+  // Determine data source type
+  const esEstimacionIA = props.fuenteValores === 'estimacion_ia';
+  
+  // Calculate status for each mineral
+  const sodioStatus = getMineralStatus('sodio', safeValues.sodio);
+  const potasioStatus = getMineralStatus('potasio', safeValues.potasio);
+  const fosforoStatus = getMineralStatus('fosforo', safeValues.fosforo);
+  
   return (
     <Animated.View style={[
       styles.card, 
       { backgroundColor: highlightBackground }
     ]}>
-      <Text style={styles.cardTitle}>Minerales relevantes en enfermedad renal</Text>
+      <View style={styles.headerContainer}>
+        {/* Title now occupies its own row at top */}
+        <Text style={styles.cardTitle}>Minerales relevantes en enfermedad renal</Text>
+      </View>
       
-      {/* Semáforo de minerales - CRITICAL: always use safeCompatibilidad, never props.compatibilidad */}
+      {/* Source badge now in its own container below title */}
+      <View style={styles.sourceContainer}>
+        <View style={[
+          styles.sourceBadge,
+          esEstimacionIA ? styles.iaBadge : styles.realBadge
+        ]}>
+          <MaterialIcons 
+            name={esEstimacionIA ? "psychology" : "verified"} 
+            size={14} 
+            color={esEstimacionIA ? "#FF6D00" : "#388E3C"} 
+          />
+          <Text style={[
+            styles.sourceText,
+            esEstimacionIA ? styles.iaText : styles.realText
+          ]}>
+            {esEstimacionIA ? "Inteligencia Artificial" : "Base de datos"}
+          </Text>
+        </View>
+      </View>
+      
+      {/* Semáforo de minerales - ACTUALIZADO con nuevos límites y colores */}
       <View style={styles.mineralSection}>
         <View style={styles.mineralItem}>
           <View style={styles.mineralLabelContainer}>
             <Text style={styles.mineralLabel}>Sodio</Text>
+            <Text style={styles.mineralLimit}>Límite: {THRESHOLDS.SODIO}mg</Text>
           </View>
           <View style={styles.mineralBarContainer}>
             <View 
               style={[
                 styles.mineralBar, 
                 { 
-                  backgroundColor: safeCompatibilidad.sodio.compatible ? '#4CAF50' : '#F44336',
-                  width: `${Math.min(100, Math.max(10, safeValues.sodio / 10))}%`
+                  backgroundColor: getMineralColor(sodioStatus),
+                  width: `${Math.min(100, Math.max(10, safeValues.sodio / (THRESHOLDS.SODIO * 1.5) * 100))}%`
                 }
               ]} 
             />
           </View>
-          <Text style={styles.mineralValue}>{sodioFormatted}</Text>
+          <Text style={[
+            styles.mineralValue,
+            sodioStatus === 2 ? styles.mineralValueExceeded : 
+            sodioStatus === 1 ? styles.mineralValueWarning : {}
+          ]}>
+            {sodioFormatted}
+          </Text>
         </View>
         
         <View style={styles.mineralItem}>
           <View style={styles.mineralLabelContainer}>
             <Text style={styles.mineralLabel}>Potasio</Text>
+            <Text style={styles.mineralLimit}>Límite: {THRESHOLDS.POTASIO}mg</Text>
           </View>
           <View style={styles.mineralBarContainer}>
             <View 
               style={[
                 styles.mineralBar, 
                 { 
-                  backgroundColor: safeCompatibilidad.potasio.compatible ? '#4CAF50' : '#F44336',
-                  width: `${Math.min(100, Math.max(10, safeValues.potasio / 20))}%`
+                  backgroundColor: getMineralColor(potasioStatus),
+                  width: `${Math.min(100, Math.max(10, safeValues.potasio / (THRESHOLDS.POTASIO * 1.5) * 100))}%`
                 }
               ]} 
             />
           </View>
-          <Text style={styles.mineralValue}>{potasioFormatted}</Text>
+          <Text style={[
+            styles.mineralValue,
+            potasioStatus === 2 ? styles.mineralValueExceeded : 
+            potasioStatus === 1 ? styles.mineralValueWarning : {}
+          ]}>
+            {potasioFormatted}
+          </Text>
         </View>
         
         <View style={styles.mineralItem}>
           <View style={styles.mineralLabelContainer}>
             <Text style={styles.mineralLabel}>Fósforo</Text>
+            <Text style={styles.mineralLimit}>Límite: {THRESHOLDS.FOSFORO}mg</Text>
           </View>
           <View style={styles.mineralBarContainer}>
             <View 
               style={[
                 styles.mineralBar, 
                 { 
-                  backgroundColor: safeCompatibilidad.fosforo.compatible ? '#4CAF50' : '#F44336',
-                  width: `${Math.min(100, Math.max(10, safeValues.fosforo / 10))}%`
+                  backgroundColor: getMineralColor(fosforoStatus),
+                  width: `${Math.min(100, Math.max(10, safeValues.fosforo / (THRESHOLDS.FOSFORO * 1.5) * 100))}%`
                 }
               ]} 
             />
           </View>
-          <Text style={styles.mineralValue}>{fosforoFormatted}</Text>
+          <Text style={[
+            styles.mineralValue,
+            fosforoStatus === 2 ? styles.mineralValueExceeded : 
+            fosforoStatus === 1 ? styles.mineralValueWarning : {}
+          ]}>
+            {fosforoFormatted}
+          </Text>
         </View>
       </View>
       
-      {/* Legend for values */}
+      {/* Legend for values - UPDATED with yellow indicator */}
       <View style={styles.legendContainer}>
         <View style={styles.legendItem}>
           <View style={[styles.legendColor, {backgroundColor: '#4CAF50'}]}></View>
           <Text style={styles.legendText}>Dentro del límite recomendado</Text>
         </View>
         <View style={styles.legendItem}>
+          <View style={[styles.legendColor, {backgroundColor: '#FFC107'}]}></View>
+          <Text style={styles.legendText}>Precaución, acercándose al límite</Text>
+        </View>
+        <View style={styles.legendItem}>
           <View style={[styles.legendColor, {backgroundColor: '#F44336'}]}></View>
           <Text style={styles.legendText}>Excede el límite recomendado</Text>
         </View>
+        
+        {/* Add a note about estimated values if applicable */}
+        {esEstimacionIA && (
+          <Text style={styles.estimadoNota}>
+            Los valores mostrados son estimaciones de IA basadas en el análisis de imagen y 
+            podrían variar respecto a los valores reales de la base de datos.
+          </Text>
+        )}
       </View>
     </Animated.View>
   );
@@ -198,7 +306,62 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#1B4D3E',
+    textAlign: 'center', // Center title
+  },
+  headerContainer: {
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  sourceContainer: {
+    alignItems: 'center', // Center the badge
     marginBottom: 16,
+  },
+  sourceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  iaBadge: {
+    backgroundColor: '#FFF3E0',
+    borderColor: '#FFCC80',
+  },
+  realBadge: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#A5D6A7',
+  },
+  sourceText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginLeft: 3,
+  },
+  iaText: {
+    color: '#FF6D00',
+  },
+  realText: {
+    color: '#388E3C',
+  },
+  // Warning text style for yellow level
+  mineralValueWarning: {
+    color: '#FFA000',
+    fontWeight: '600',
+  },
+  // Legacy styles
+  estimadoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#FFB74D',
+  },
+  estimadoText: {
+    fontSize: 12,
+    color: '#E65100',
   },
   mineralSection: {
     marginTop: 8,
@@ -209,11 +372,16 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
   mineralLabelContainer: {
-    width: 60,
+    width: 70,
   },
   mineralLabel: {
     fontSize: 14,
     color: '#333',
+  },
+  mineralLimit: {
+    fontSize: 10,
+    color: '#666',
+    marginTop: 2,
   },
   mineralBarContainer: {
     flex: 1,
@@ -235,6 +403,10 @@ const styles = StyleSheet.create({
     minWidth: 60,
     textAlign: 'right',
   },
+  mineralValueExceeded: {
+    color: '#F44336',
+    fontWeight: '700',
+  },
   legendContainer: {
     marginTop: 16,
     borderTopWidth: 1,
@@ -255,6 +427,19 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 12,
     color: '#666',
+  },
+  estimadoNota: {
+    fontSize: 12,
+    color: '#F57C00',
+    fontStyle: 'italic',
+    marginTop: 8,
+    textAlign: 'center',
+    borderLeftWidth: 3,
+    borderLeftColor: '#FFB74D',
+    paddingLeft: 8,
+    backgroundColor: '#FFF8E1',
+    paddingVertical: 8,
+    borderRadius: 4,
   }
 });
 
@@ -266,6 +451,11 @@ export default memo(ResumenNutricionalCard, (prevProps, nextProps) => {
   
   const prevCompatibilidad = prevProps.compatibilidad || {};
   const nextCompatibilidad = nextProps.compatibilidad || {};
+  
+  // Check if the source of data changed
+  if (prevProps.fuenteValores !== nextProps.fuenteValores) {
+    return false;
+  }
   
   // Check if any of the mineral values changed
   const mineralsEqual = 

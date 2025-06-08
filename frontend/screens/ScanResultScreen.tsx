@@ -57,6 +57,9 @@ export default function ScanResultScreen() {
     fosforo: 0
   });
   
+  // Add the missing state variable for nutritional values source
+  const [fuenteValoresNutricionales, setFuenteValoresNutricionales] = useState('base_datos');
+  
   const [compatibilidad, setCompatibilidad] = useState({
     sodio: {
       compatible: false,
@@ -277,10 +280,11 @@ export default function ScanResultScreen() {
         try {
           console.log("Loading initial nutritional values from service...");
           const resultadoActualizacion = await alimentosService.actualizarValoresNutricionales({
-            alimentos_detectados: alimentosChilenos
+            alimentos_detectados: alimentosChilenos,
+            totales: results.totales // Pasar los totales de la IA como respaldo
           });
           
-          if (resultadoActualizacion.alimentosActualizados.length > 0) {
+          if (resultadoActualizacion.alimentosActualizados.length > 0 || resultadoActualizacion.fuenteValores === 'estimacion_ia') {
             // MODIFICACIÓN: Convertir todos los valores a números antes de actualizar el estado
             const valoresConvertidos = {
               energia: parseFloat(resultadoActualizacion.valoresNutricionales.energia) || 0,
@@ -298,21 +302,24 @@ export default function ScanResultScreen() {
             setValoresNutricionales(valoresConvertidos);
             setHasInitialValues(true); // Marcar que tenemos valores iniciales
             
-            // Actualizar la compatibilidad con valores numéricos garantizados
+            // Actualizar la compatibilidad con valores numéricos garantizados y NUEVOS LÍMITES
             setCompatibilidad({
               sodio: {
-                compatible: valoresConvertidos.sodio < 800,
+                compatible: valoresConvertidos.sodio < 375, // Actualizado de 800 a 375
                 valor: valoresConvertidos.sodio,
               },
               potasio: {
-                compatible: valoresConvertidos.potasio < 1000,
+                compatible: valoresConvertidos.potasio < 500, // Actualizado de 1000 a 500
                 valor: valoresConvertidos.potasio,
               },
               fosforo: {
-                compatible: valoresConvertidos.fosforo < 700,
+                compatible: valoresConvertidos.fosforo < 250, // Actualizado de 700 a 250
                 valor: valoresConvertidos.fosforo,
               }
             });
+            
+            // Guardar la fuente de los datos nutricionales
+            setFuenteValoresNutricionales(resultadoActualizacion.fuenteValores);
           }
         } catch (error) {
           console.error('Error al actualizar valores nutricionales:', error);
@@ -499,15 +506,15 @@ export default function ScanResultScreen() {
         // IMPORTANT: Update compatibilidad immediately with a direct object (not functional update)
         const newCompatibilidad = {
           sodio: { 
-            compatible: safeNewValues.sodio < 800,
+            compatible: safeNewValues.sodio < 375, // Actualizado de 800 a 375
             valor: safeNewValues.sodio,
           },
           potasio: {
-            compatible: safeNewValues.potasio < 1000,
+            compatible: safeNewValues.potasio < 500, // Actualizado de 1000 a 500
             valor: safeNewValues.potasio,
           },
           fosforo: {
-            compatible: safeNewValues.fosforo < 700,
+            compatible: safeNewValues.fosforo < 250, // Actualizado de 700 a 250
             valor: safeNewValues.fosforo,
           }
         };
@@ -787,7 +794,6 @@ export default function ScanResultScreen() {
   // Main render
   return (
     <SafeAreaView style={styles.container}>
-      {/* Pass seleccionesEspecificas and foodsWithUnits to ScanResultView */}
       <ScanResultView
         results={results}
         imageUri={imageUri}
@@ -798,7 +804,8 @@ export default function ScanResultScreen() {
         isReadOnly={isReadOnly}
         seleccionesEspecificas={seleccionesEspecificas}
         foodsWithUnits={foodsWithUnits}
-        key={renderKey} // Add a key to force re-renders when selections change
+        fuenteValores={fuenteValoresNutricionales}
+        key={renderKey}
       />
       
       {/* Bottom buttons - MODIFIED to show different options in read-only mode */}

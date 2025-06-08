@@ -66,9 +66,16 @@ export default function useScanResult(route) {
             // If user has medical profile with restrictions, use those values
             const restricciones = userDataObj.perfil_medico.restricciones;
             setThresholds({
-              sodio: restricciones.sodio_max || 500,
+              sodio: restricciones.sodio_max || 375,  // Actualizado de 500 a 375
               potasio: restricciones.potasio_max || 500,
-              fosforo: restricciones.fosforo_max || 300
+              fosforo: restricciones.fosforo_max || 250  // Actualizado de 300 a 250
+            });
+          } else {
+            // Set the new default values if no user profile restrictions
+            setThresholds({
+              sodio: 375,
+              potasio: 500,
+              fosforo: 250
             });
           }
         }

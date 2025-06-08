@@ -43,7 +43,7 @@ export const alimentosService = {
   async actualizarValoresNutricionales(analisis, skipAlimentos = []) {
     try {
       const alimentosActualizados = [];
-      const valoresNutricionales = {
+      let valoresNutricionales = {
         energia: 0,
         proteinas: 0,
         hidratos_carbono: 0,
@@ -53,8 +53,18 @@ export const alimentosService = {
         fosforo: 0
       };
       
+      // Verificar si tenemos valores previos de la IA para usar como respaldo
+      const valoresIA = analisis.totales || {};
+      let alimentosEncontrados = 0;
+      let totalAlimentosBuscados = 0;
+      
       // Si tenemos alimentos detectados, procesar cada uno
       if (analisis.alimentos_detectados && analisis.alimentos_detectados.length > 0) {
+        // Contar cuántos alimentos vamos a buscar (excluimos los que se saltan)
+        totalAlimentosBuscados = analisis.alimentos_detectados
+          .filter(alimento => !skipAlimentos.includes(alimento))
+          .length;
+        
         for (const nombreAlimento of analisis.alimentos_detectados) {
           // Skip foods the user has already selected
           if (skipAlimentos.includes(nombreAlimento)) {
@@ -67,6 +77,18 @@ export const alimentosService = {
             const alimentoInfo = await this.obtenerInfoNutricional(nombreAlimento);
             
             if (alimentoInfo) {
+              // Verificar que el alimento encontrado realmente corresponda al buscado
+              // Este es un filtro crucial para evitar falsos positivos
+              const esAlimentoCorrespondiente = 
+                alimentoInfo.nombre.toLowerCase().includes(nombreAlimento.toLowerCase()) ||
+                nombreAlimento.toLowerCase().includes(alimentoInfo.nombre.toLowerCase());
+                
+              // Si no hay correspondencia real, no lo contamos como encontrado
+              if (!esAlimentoCorrespondiente) {
+                console.log(`El alimento encontrado "${alimentoInfo.nombre}" no corresponde realmente a "${nombreAlimento}". Ignorando.`);
+                continue;
+              }
+              
               // Acumular valores nutricionales
               valoresNutricionales.energia += alimentoInfo.energia || 0;
               valoresNutricionales.proteinas += alimentoInfo.proteinas || 0;
@@ -79,8 +101,11 @@ export const alimentosService = {
               // Guardar el alimento encontrado
               alimentosActualizados.push({
                 nombre: nombreAlimento,
-                info: alimentoInfo
+                info: alimentoInfo,
+                fuente: 'base_datos'
               });
+              
+              alimentosEncontrados++;
             }
           } catch (err) {
             console.log(`No se encontró información para ${nombreAlimento}`);
@@ -88,14 +113,62 @@ export const alimentosService = {
         }
       }
       
-      // Devolver la información actualizada
+      // Si no encontramos TODOS los alimentos en la BD (o encontramos muy pocos),
+      // usamos los valores estimados por la IA
+      // NUEVA LÓGICA: Si encontramos menos de la mitad de los alimentos, usar IA
+      if ((alimentosEncontrados < (totalAlimentosBuscados / 2)) && Object.keys(valoresIA).length > 0) {
+        console.log(`Usando valores estimados por IA porque se encontraron solo ${alimentosEncontrados} de ${totalAlimentosBuscados} alimentos`);
+        console.log('Valores IA disponibles:', valoresIA);
+        
+        // Usar los valores de la IA directamente
+        valoresNutricionales = {
+          energia: parseFloat(valoresIA.energia || 0),
+          proteinas: parseFloat(valoresIA.proteinas || 0),
+          hidratos_carbono: parseFloat(valoresIA.hidratos_carbono || 0),
+          lipidos: parseFloat(valoresIA.lipidos || 0),
+          sodio: parseFloat(valoresIA.sodio || 0),
+          potasio: parseFloat(valoresIA.potasio || 0),
+          fosforo: parseFloat(valoresIA.fosforo || 0)
+        };
+        
+        // Devolver la información actualizada con indicación de fuente IA
+        return {
+          alimentosActualizados,
+          valoresNutricionales,
+          todosEncontrados: false,
+          fuenteValores: 'estimacion_ia'
+        };
+      }
+      
+      // Devolver la información actualizada con la fuente correcta de datos
       return {
         alimentosActualizados,
         valoresNutricionales,
-        todosEncontrados: alimentosActualizados.length === (analisis.alimentos_detectados.length - skipAlimentos.length)
+        todosEncontrados: alimentosEncontrados === totalAlimentosBuscados,
+        fuenteValores: alimentosEncontrados > 0 ? 'base_datos' : 'estimacion_ia'
       };
     } catch (error) {
       console.error('Error actualizando valores nutricionales:', error);
+      
+      // Si hay error pero tenemos valores de IA, usarlos como fallback
+      if (analisis.totales && Object.keys(analisis.totales).length > 0) {
+        console.log('Error en BD, usando valores IA como fallback');
+        return {
+          alimentosActualizados: [],
+          valoresNutricionales: {
+            energia: parseFloat(analisis.totales.energia || 0),
+            proteinas: parseFloat(analisis.totales.proteinas || 0),
+            hidratos_carbono: parseFloat(analisis.totales.hidratos_carbono || 0),
+            lipidos: parseFloat(analisis.totales.lipidos || 0),
+            sodio: parseFloat(analisis.totales.sodio || 0),
+            potasio: parseFloat(analisis.totales.potasio || 0),
+            fosforo: parseFloat(analisis.totales.fosforo || 0)
+          },
+          todosEncontrados: false,
+          fuenteValores: 'estimacion_ia'
+        };
+      }
+      
       throw error;
     }
   }

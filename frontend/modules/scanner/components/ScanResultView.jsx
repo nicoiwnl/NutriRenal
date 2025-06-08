@@ -23,6 +23,7 @@ const ScanResultView = ({
   isReadOnly = false,
   seleccionesEspecificas = {}, // Accept the new props with defaults
   foodsWithUnits = {},
+  fuenteValores = 'base_datos',
   children,
 }) => {
   // Extract alimentos_detectados from results
@@ -73,6 +74,17 @@ const ScanResultView = ({
         style={styles.resultImage}
         resizeMode="cover"
       />
+      
+      {/* Banner simple para alimentos detectados */}
+      <View style={localStyles.detectadoBanner}>
+        <MaterialIcons name="restaurant" size={20} color="#690B22" />
+        <View style={localStyles.detectadoTexto}>
+          <Text style={localStyles.detectadoLabel}>Detectado:</Text>
+          <Text style={localStyles.detectadoValor}>
+            {results?.plato_detectado || results?.nombre || alimentosDetectados.join(", ")}
+          </Text>
+        </View>
+      </View>
       
       {/* Alimentos Detectados section */}
       <Text style={styles.resultTitle}>Alimentos Detectados</Text>
@@ -150,6 +162,7 @@ const ScanResultView = ({
       <ResumenNutricionalCard 
         totales={results.totales} 
         compatibilidad={safeCompatibilidad}
+        fuenteValores={fuenteValores}
       />
       
       {/* Recommendations section */}
@@ -255,7 +268,141 @@ const localStyles = StyleSheet.create({
     padding: 6,
     backgroundColor: '#F9F9F9',
     borderRadius: 20,
-  }
+  },
+  
+  // Nuevos estilos para el panel de detección mejorado
+  detectionPanel: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    margin: 16,
+    marginTop: -16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  detectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F1E3D3',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  detectionTitleText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#690B22',
+    marginLeft: 8,
+  },
+  detectionDetailsContainer: {
+    padding: 12,
+  },
+  detectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  detectionLabel: {
+    fontSize: 14,
+    color: '#666',
+    width: 70,
+  },
+  detectionValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    flex: 1,
+  },
+  detectionEnergyValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+  },
+  mineralGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    marginBottom: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 8,
+  },
+  mineralItem: {
+    width: '50%',
+    paddingVertical: 4,
+  },
+  mineralName: {
+    fontSize: 12,
+    color: '#666',
+  },
+  mineralValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+  },
+  mineralWarning: {
+    color: '#F44336',
+    fontWeight: 'bold',
+  },
+  compatibilityBar: {
+    marginTop: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  compatibilityIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    alignSelf: 'flex-start', 
+  },
+  compatibleIndicator: {
+    backgroundColor: '#4CAF50',
+  },
+  notCompatibleIndicator: {
+    backgroundColor: '#F44336',
+  },
+  compatibilityText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+
+  // Estilos para el banner simple
+  detectadoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8F0E8',
+    borderRadius: 8,
+    padding: 10,
+    margin: 16,
+    marginTop: -10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+    borderLeftWidth: 3,
+    borderLeftColor: '#690B22',
+  },
+  detectadoTexto: {
+    marginLeft: 10,
+    flex: 1,
+  },
+  detectadoLabel: {
+    fontSize: 12,
+    color: '#666',
+  },
+  detectadoValor: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+  },
 });
 
 export default ScanResultView;
