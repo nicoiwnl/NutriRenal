@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-@b!j7+l224)2dug)23#x+ky+#yn#_0he&7y0#m(9oi&%z^443z
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", "192.168.1.24"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","192.168.100.37"]
 
 
 # Application definition
@@ -166,7 +166,8 @@ CORS_ALLOWED_ORIGINS = [
     'exp://192.168.1.18:8081',
     'exp://192.168.1.27:8081',
     'exp://172.20.10.4:8081',
-    'exp://192.168.1.24:8081'
+    'exp://192.168.1.24:8081',
+    'exp://192.168.100.37:8081'
 ]
 
 # Asegurarse de que los directorios de media existan

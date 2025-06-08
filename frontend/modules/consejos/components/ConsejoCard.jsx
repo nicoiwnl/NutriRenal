@@ -2,13 +2,9 @@ import React from 'react';
 import { View, Text, Image, Platform } from 'react-native';
 import styles from '../styles/consejosStyles';
 import categoriaStyles from '../styles/consejosPorCategoriaStyles';
+import { BASE_URL } from '../../../config/apiConfig';
 
 const ConsejoCard = ({ item, inCategory = false }) => {
-  // URL base para las imágenes según la plataforma
-  const BASE_URL = Platform.OS === 'web' 
-    ? 'http://127.0.0.1:8000' 
-    : 'http://192.168.1.24:8000'; // Ajustar según la configuración de tu API
-
   // Usar estilos diferentes según si está en la pantalla principal o en categoría
   const containerStyle = inCategory 
     ? categoriaStyles.consejoContainer 

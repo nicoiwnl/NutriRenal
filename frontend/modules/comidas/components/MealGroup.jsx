@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import styles from '../styles/minutaStyles';
+import { getImageUrl } from '../../../config/apiConfig';
 
 const MealGroup = ({ title, items, onItemPress }) => {
   return (
@@ -18,9 +19,7 @@ const MealGroup = ({ title, items, onItemPress }) => {
             {item.image ? (
               <Image 
                 source={{ 
-                  uri: item.image.startsWith('http') 
-                    ? item.image 
-                    : `http://192.168.1.24:8000/media/${item.image}`
+                  uri: getImageUrl(item.image)
                 }}
                 style={styles.mealItemImage}
                 resizeMode="cover"

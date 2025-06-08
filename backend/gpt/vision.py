@@ -45,7 +45,8 @@ def analizar_imagen_alimentos(image_data, api_key=None):
         1. ¿Qué alimentos están presentes en la imagen?
         2. Estima los valores nutricionales aproximados del plato o alimento principal: 
            calorías, sodio (mg), potasio (mg), fósforo (mg), proteínas (g)
-        3. ¿Esta comida es adecuada para personas con enfermedad renal crónica?
+        3. ¿Esta comida es adecuada para personas con enfermedad renal crónica? , 
+        recuerda tener en cuenta la porcion de la comida y los dias que podria comer eso por semana sin problemas.
         
         Formatea tu respuesta como un JSON con los siguientes campos:
         {

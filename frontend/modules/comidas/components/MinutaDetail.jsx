@@ -5,7 +5,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import styles from '../styles/minutaStyles';
 import DiaSelectorMinuta from './DiaSelectorMinuta';
 import CompatibilidadAlerta from './CompatibilidadAlerta'; 
-import RestriccionesFallidas from './RestriccionesFallidas'; // Importar el nuevo componente
+import RestriccionesFallidas from './RestriccionesFallidas';
+import { getImageUrl } from '../../../config/apiConfig';
 
 const MinutaDetail = ({ 
   minuta, 
@@ -139,8 +140,6 @@ const MinutaDetail = ({
         
         return (
           <View key={tipo.id} style={styles.mealGroup}>
-            {/* Eliminamos el título del tipo de comida que estaba aquí */}
-            
             {grupo.comida ? (
               <TouchableOpacity 
                 key={grupo.comida.id} 
@@ -165,9 +164,7 @@ const MinutaDetail = ({
                     {grupo.comida.imagen_url ? (
                       <Image 
                         source={{ 
-                          uri: grupo.comida.imagen_url.startsWith('http') 
-                            ? grupo.comida.imagen_url
-                            : `http://192.168.1.24:8000/media/${grupo.comida.imagen_url}`
+                          uri: getImageUrl(grupo.comida.imagen_url)
                         }}
                         style={styles.mealItemImage}
                         resizeMode="cover"

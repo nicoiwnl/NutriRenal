@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, ActivityIndicator, FlatList, StyleSheet, 
 import { MaterialIcons } from '@expo/vector-icons';
 import RegistroModal from '../../alimentos/components/RegistroModal';
 import styles from '../styles/minutaStyles';
+import { getImageUrl } from '../../../config/apiConfig';
 
 const AlimentosDetectadosLista = ({ alimentosDetectados, unidadesMedida, loading, error }) => {
   const [alimentoSeleccionado, setAlimentoSeleccionado] = useState(null);
@@ -48,10 +49,7 @@ const AlimentosDetectadosLista = ({ alimentosDetectados, unidadesMedida, loading
               <View style={localStyles.alimentoInfo}>
                 {item.imagen ? (
                   <Image 
-                    source={{ uri: item.imagen.startsWith('http') ? 
-                      item.imagen : 
-                      `http://192.168.1.24:8000/media/${item.imagen}` 
-                    }} 
+                    source={{ uri: getImageUrl(item.imagen) }} 
                     style={localStyles.alimentoImagen}
                   />
                 ) : (

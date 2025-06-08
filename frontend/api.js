@@ -1,7 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BASE_URL, API_BASE } from './config/apiConfig';
-import { generateMockAnalisis } from './mocks/mockAnalisis';
 
 console.log('Using baseURL:', API_BASE);
 

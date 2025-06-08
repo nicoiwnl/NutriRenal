@@ -564,7 +564,6 @@ export default function QRScannerScreen({ navigation }) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={scannerStyles.header}>
-        <Text style={scannerStyles.title}>Análisis de Alimentos</Text>
         
         {/* Botón para ver análisis previos */}
         <TouchableOpacity 

@@ -709,22 +709,41 @@ export default function ScanResultScreen() {
     try {
       console.log(`Saving selections for analysis ${analisisId}...`);
       
-      // Create a payload with the selections
+      // Get the current state of selections and units to ensure we're not losing data
+      const currentSelections = { ...seleccionesEspecificas };
+      const currentUnits = { ...foodsWithUnits };
+      
+      // Create a payload with both the selections and units (merged with current state)
       const payload = {
         id: analisisId,
-        seleccionesEspecificas: selections,
-        foodsWithUnits: units
+        seleccionesEspecificas: { ...currentSelections, ...selections },
+        foodsWithUnits: { ...currentUnits, ...units }
       };
       
-      // Send to the API - use a conditional check before accessing the endpoint
-      if (ENDPOINTS.ANALISIS_SELECCIONES) {
-        await api.patch(`${ENDPOINTS.ANALISIS_SELECCIONES}/${analisisId}/`, payload);
-        console.log("Selections saved successfully");
-      } else {
-        console.log("ANALISIS_SELECCIONES endpoint not defined, skipping save");
+      // Check if endpoint is defined before trying to use it
+      if (!ENDPOINTS.ANALISIS_IMAGEN) {
+        console.warn("ANALISIS_IMAGEN endpoint is not defined, cannot save selections");
+        return;
       }
+      
+      // Use the correct endpoint format
+      const url = `${ENDPOINTS.ANALISIS_IMAGEN}/${analisisId}/`;
+      console.log("Saving to URL:", url);
+      
+      // Log the payload for debugging
+      console.log("With payload:", JSON.stringify(payload));
+      
+      // Send the update request
+      await api.patch(url, payload);
+      console.log("Selections saved successfully");
     } catch (error) {
       console.error("Failed to save food selections:", error);
+      console.error("Error details:", JSON.stringify({
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        url: error.config?.url
+      }));
       // Don't show an error to the user as this is a background operation
     }
   };
@@ -768,7 +787,7 @@ export default function ScanResultScreen() {
   // Main render
   return (
     <SafeAreaView style={styles.container}>
-      {/* Pass handleSelectAlimento to ScanResultView and isReadOnly flag */}
+      {/* Pass handleSelectAlimento to ScanResultView and isReadOnly flag, but don't pass RecomendacionesCard as children */}
       <ScanResultView
         results={results}
         imageUri={imageUri}
@@ -777,13 +796,7 @@ export default function ScanResultScreen() {
         compatibilidad={compatibilidad}
         onSelectAlimento={handleSelectAlimento}
         isReadOnly={isReadOnly}
-      >
-        {/* Pass the recomendaciones as children */}
-        <RecomendacionesCard 
-          analisisTexto={analisisTexto}
-          resultadoCompleto={results}
-        />
-      </ScanResultView>
+      />
       
       {/* Bottom buttons - MODIFIED to show different options in read-only mode */}
       {isReadOnly ? (

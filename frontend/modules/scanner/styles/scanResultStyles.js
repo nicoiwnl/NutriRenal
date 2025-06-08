@@ -376,9 +376,9 @@ const scanResultStyles = StyleSheet.create({
   scrollContainer: {
     flex: 1,
   },
-  resultSection: {
+  resultContent: {
     padding: 16,
-    paddingBottom: 80, // Add padding for bottom buttons
+    // Remove the hard-coded paddingBottom here as we'll set it dynamically
   },
   resultTitle: {
     fontSize: 18,
@@ -422,11 +422,11 @@ const scanResultStyles = StyleSheet.create({
     color: '#666',
   },
 
-  // Bottom buttons styles
+  // Bottom buttons styles - More compact
   bottomButtonsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    paddingVertical: 16,
+    paddingVertical: 12, // Reduced from 16
     backgroundColor: '#F8E8D8',
     borderTopWidth: 1,
     borderTopColor: '#E0E0E0',
@@ -434,6 +434,7 @@ const scanResultStyles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    zIndex: 10, // Ensure buttons are above content
   },
   actionButton: {
     flexDirection: 'row',

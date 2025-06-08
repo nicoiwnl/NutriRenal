@@ -61,7 +61,7 @@ const RecomendacionesCard = ({ analisisTexto, resultadoCompleto }) => {
         ]}>
           {compatible === false 
             ? "No recomendado para pacientes renales" 
-            : "Compatible con su perfil renal"}
+            : "Recomendado para pacientes renales"}
         </Text>
       </View>
       
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 8, // Reduced from 16 to 8 for even more compactness
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8, // Reduced from 12
   },
   cardTitle: {
     fontSize: 18,
@@ -98,9 +98,9 @@ const styles = StyleSheet.create({
   statusBadge: {
     borderRadius: 4,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 5, // Reduced from 6
     alignSelf: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 10, // Reduced from 12
   },
   statusText: {
     fontSize: 14,

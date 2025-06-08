@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 // Base URLs para diferentes entornos
 export const BASE_URL = Platform.OS === 'web' 
   ? 'http://127.0.0.1:8000'
-  : 'http://192.168.1.24:8000';
+  : 'http://192.168.100.37:8000';
   
 export const API_BASE = `${BASE_URL}/api`;
 
@@ -21,9 +21,8 @@ export const ENDPOINTS = {
   
   // Análisis de imágenes
   ANALIZAR_IMAGEN: `${API_BASE}/analizar-imagen/`,
-  MIS_ANALISIS: (userId) => `${API_BASE}/analisis-imagen/?persona_id=${userId}&id_persona=${userId}&usuario_id=${userId}`,
-  ANALISIS_SELECCIONES: `${API_BASE}/analisis-imagen/selecciones`, // New endpoint for saving food selections
-  
+  ANALISIS_IMAGEN: `${API_BASE}/analisis-imagen`, // Endpoint corregido para análisis de imágenes
+  MIS_ANALISIS: (userId) => `${API_BASE}/analisis-imagen/?persona_id=${userId}`, // Corregido para historial de análisis  
   // Alimentos
   ALIMENTOS: `${API_BASE}/alimentos/`,
   BUSCAR_ALIMENTO: `${API_BASE}/alimentos/buscar/`,

@@ -202,7 +202,7 @@ function TabNavigator({ navigation }) {
       })}
     >
       <Tab.Screen 
-        name="FichaMedica" 
+        name="FichaMedica" //cambiar despues
         component={FichaMedicaScreen}
         options={{ title: 'Ficha Médica' }}
       />
@@ -212,9 +212,9 @@ function TabNavigator({ navigation }) {
         options={{ title: 'Comunidad' }}
       />
       <Tab.Screen 
-        name="QRScanner" 
+        name="QRScanner" // cambiar despues
         component={QRScannerScreen}
-        options={{ title: 'Escanear' }}
+        options={{ title: 'Análisis IA' }}
       />
       <Tab.Screen 
         name="Alimentos" 

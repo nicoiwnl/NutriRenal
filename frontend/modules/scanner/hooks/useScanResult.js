@@ -3,6 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import api from '../../../api';
+import { BASE_URL } from '../../../config/apiConfig';
 
 export default function useScanResult(route) {
   const [loading, setLoading] = useState(false);
@@ -17,16 +18,20 @@ export default function useScanResult(route) {
   const [perfilMedico, setPerfilMedico] = useState(null);
   // Estado para almacenar la URL de imagen guardada en el servidor
   const [serverImageUrl, setServerImageUrl] = useState(null);
+  // Add state for thresholds
+  const [thresholds, setThresholds] = useState({
+    sodio: 500,
+    potasio: 500,
+    fosforo: 300
+  });
   
   // Determinar URL completa para la imagen del servidor
   useEffect(() => {
     if (results && results.imagen_analizada) {
-      const baseUrl = Platform.OS === 'web' 
-        ? 'http://127.0.0.1:8000/media/'
-        : 'http://192.168.1.24:8000/media/';
+      const mediaUrl = `${BASE_URL}/media/`;
       
-      setServerImageUrl(`${baseUrl}${results.imagen_analizada}`);
-      console.log('URL de imagen guardada:', `${baseUrl}${results.imagen_analizada}`);
+      setServerImageUrl(`${mediaUrl}${results.imagen_analizada}`);
+      console.log('URL de imagen guardada:', `${mediaUrl}${results.imagen_analizada}`);
     }
   }, [results]);
   
@@ -49,6 +54,32 @@ export default function useScanResult(route) {
     cargarPerfilMedico();
   }, []);
   
+  // Load thresholds from user profile or default settings
+  useEffect(() => {
+    const loadThresholds = async () => {
+      try {
+        // Try to get thresholds from profile or settings
+        const userData = await AsyncStorage.getItem('userData');
+        if (userData) {
+          const userDataObj = JSON.parse(userData);
+          if (userDataObj.perfil_medico && userDataObj.perfil_medico.restricciones) {
+            // If user has medical profile with restrictions, use those values
+            const restricciones = userDataObj.perfil_medico.restricciones;
+            setThresholds({
+              sodio: restricciones.sodio_max || 500,
+              potasio: restricciones.potasio_max || 500,
+              fosforo: restricciones.fosforo_max || 300
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error loading thresholds:', error);
+      }
+    };
+    
+    loadThresholds();
+  }, []);
+  
   // Evaluar la compatibilidad de los alimentos detectados con el perfil médico
   const evaluarCompatibilidad = (alimentosDetectados, perfil) => {
     if (!perfil || !alimentosDetectados) return {};
@@ -56,27 +87,26 @@ export default function useScanResult(route) {
     // Analizar los totales nutricionales
     const totales = results.totales;
     
-    // Implementar lógica de compatibilidad según perfil médico
-    // Esta es una implementación básica que se puede expandir
+    // Use loaded thresholds instead of hardcoded values
     const compatibilidadInfo = {
       sodio: {
         valor: totales.sodio,
-        compatible: totales.sodio < 500, // Valor ejemplo
-        mensaje: totales.sodio < 500 ? 
+        compatible: totales.sodio < thresholds.sodio,
+        mensaje: totales.sodio < thresholds.sodio ? 
           'Nivel de sodio aceptable' : 
           'Nivel de sodio elevado para tu condición'
       },
       potasio: {
         valor: totales.potasio,
-        compatible: totales.potasio < 500, // Valor ejemplo
-        mensaje: totales.potasio < 500 ? 
+        compatible: totales.potasio < thresholds.potasio,
+        mensaje: totales.potasio < thresholds.potasio ? 
           'Nivel de potasio aceptable' : 
           'Nivel de potasio elevado para tu condición'
       },
       fosforo: {
         valor: totales.fosforo,
-        compatible: totales.fosforo < 300, // Valor ejemplo
-        mensaje: totales.fosforo < 300 ? 
+        compatible: totales.fosforo < thresholds.fosforo,
+        mensaje: totales.fosforo < thresholds.fosforo ? 
           'Nivel de fósforo aceptable' : 
           'Nivel de fósforo elevado para tu condición'
       }

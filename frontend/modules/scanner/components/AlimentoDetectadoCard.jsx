@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { getImageUrl } from '../../../config/apiConfig';
 
 const AlimentoDetectadoCard = ({ alimento }) => {
   const navigation = useNavigation();
@@ -17,13 +18,6 @@ const AlimentoDetectadoCard = ({ alimento }) => {
     alert(`Registrar consumo: ${alimento.nombre}`);
   };
   
-  // URL base para imágenes
-  const getImageUrl = (url) => {
-    if (!url) return null;
-    if (url.startsWith('http')) return url;
-    return `http://192.168.1.24:8000${url}`;
-  };
-
   return (
     <View style={styles.card}>
       {/* Imagen del alimento */}

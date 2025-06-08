@@ -103,7 +103,10 @@ const ResumenNutricionalCard = (props) => {
   console.log("Displaying values - Sodio:", sodioFormatted, "Potasio:", potasioFormatted, "Fósforo:", fosforoFormatted);
   
   return (
-    <Animated.View style={[styles.card, { backgroundColor: highlightBackground }]}>
+    <Animated.View style={[
+      styles.card, 
+      { backgroundColor: highlightBackground }
+    ]}>
       <Text style={styles.cardTitle}>Minerales relevantes en enfermedad renal</Text>
       
       {/* Semáforo de minerales - CRITICAL: always use safeCompatibilidad, never props.compatibilidad */}
@@ -183,12 +186,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16,
+    marginBottom: 8, // Reduced for more compact layout
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.15, // Slightly enhanced shadow for depth
     shadowRadius: 3,
+    borderWidth: 0, // Ensure no border
   },
   cardTitle: {
     fontSize: 16,

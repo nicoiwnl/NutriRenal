@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Modal, Image, TouchableOpacity, ScrollView } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import styles from '../styles/minutaStyles';
+import { getImageUrl } from '../../../config/apiConfig';
 
 // Importar el hook y el componente nuevo
 import useAlimentosComida from '../hooks/useAlimentosComida';
@@ -11,19 +12,6 @@ const ComidaDetalleModal = ({ visible, comida, onClose }) => {
   // Utilizar el hook para detectar alimentos en la descripción
   const { loading, alimentosDetectados, unidadesMedida, error } = useAlimentosComida(comida);
 
-  // Función para procesar la URL de la imagen correctamente
-  const getImageUrl = (imageUrl) => {
-    if (!imageUrl) return null;
-    
-    // Si ya es una URL completa, usarla directamente
-    if (imageUrl.startsWith('http')) {
-      return imageUrl;
-    }
-    
-    // Si es una ruta relativa, construir URL completa
-    return `http://192.168.1.24:8000/media/${imageUrl}`;
-  };
-  
   // Comprobar si tenemos una imagen válida
   const hasValidImage = comida && comida.image && typeof comida.image === 'string';
   
