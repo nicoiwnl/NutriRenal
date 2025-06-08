@@ -1,8 +1,11 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const RecomendacionesCard = ({ analisisTexto, resultadoCompleto }) => {
+  // Add state to track if text is expanded
+  const [expanded, setExpanded] = useState(false);
+  
   // Find recommendations from all possible sources
   const getRecomendaciones = () => {
     // Check all possible places where recommendations might be stored
@@ -39,6 +42,9 @@ const RecomendacionesCard = ({ analisisTexto, resultadoCompleto }) => {
   
   // Skip rendering if no recommendations are found
   if (!recomendaciones) return null;
+  
+  // Check if text is longer than 100 characters to determine if we need expansion option
+  const isLongText = recomendaciones.length > 100;
 
   return (
     <View style={styles.card}>
@@ -65,9 +71,31 @@ const RecomendacionesCard = ({ analisisTexto, resultadoCompleto }) => {
         </Text>
       </View>
       
-      <Text style={styles.recomendacionText}>
+      <Text 
+        style={styles.recomendacionText}
+        // Remove numberOfLines restriction to show all text
+        numberOfLines={expanded || !isLongText ? null : 4}
+      >
         {recomendaciones}
       </Text>
+      
+      {/* Add "Ver más" / "Ver menos" option for long text */}
+      {isLongText && (
+        <TouchableOpacity 
+          style={styles.expandButton}
+          onPress={() => setExpanded(!expanded)}
+        >
+          <Text style={styles.expandButtonText}>
+            {expanded ? "Ver menos" : "Ver más"}
+          </Text>
+          <MaterialIcons 
+            name={expanded ? "expand-less" : "expand-more"} 
+            size={20} 
+            color="#690B22" 
+            style={styles.expandIcon}
+          />
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -77,7 +105,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 8, // Reduced from 16 to 8 for even more compactness
+    marginBottom: 16, // Increased from 8 to give more space
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -87,7 +115,7 @@ const styles = StyleSheet.create({
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8, // Reduced from 12
+    marginBottom: 12,
   },
   cardTitle: {
     fontSize: 18,
@@ -98,9 +126,9 @@ const styles = StyleSheet.create({
   statusBadge: {
     borderRadius: 4,
     paddingHorizontal: 10,
-    paddingVertical: 5, // Reduced from 6
+    paddingVertical: 6,
     alignSelf: 'flex-start',
-    marginBottom: 10, // Reduced from 12
+    marginBottom: 12,
   },
   statusText: {
     fontSize: 14,
@@ -110,6 +138,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#333',
     lineHeight: 22,
+  },
+  expandButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  expandButtonText: {
+    color: '#690B22',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  expandIcon: {
+    marginLeft: 4,
   }
 });
 

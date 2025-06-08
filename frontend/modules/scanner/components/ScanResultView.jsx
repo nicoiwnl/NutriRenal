@@ -2,7 +2,7 @@ import React from 'react';
 import { 
   View, 
   Text, 
-  FlatList, 
+  ScrollView, 
   Image, 
   TouchableOpacity,
   StyleSheet 
@@ -10,6 +10,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import ResumenNutricionalCard from './ResumenNutricionalCard';
 import styles from '../styles/scannerStyles';
+import RecomendacionesCard from './RecomendacionesCard';
 
 // Added onSelectAlimento prop to make food items interactive
 const ScanResultView = ({ 
@@ -18,22 +19,19 @@ const ScanResultView = ({
   serverImageUrl, 
   onScanAgain, 
   compatibilidad, 
-  children, 
   onSelectAlimento,
-  isReadOnly = false
+  isReadOnly = false,
+  seleccionesEspecificas = {}, // Accept the new props with defaults
+  foodsWithUnits = {},
+  children,
 }) => {
-  // Use the image from the server if available, otherwise use the local one
-  const displayImageUri = serverImageUrl || imageUri;
-  
-  // Create a safe version of compatibilidad with defaults
-  const safeCompatibilidad = compatibilidad || {
-    sodio: { compatible: false, valor: 0 },
-    potasio: { compatible: false, valor: 0 },
-    fosforo: { compatible: false, valor: 0 }
-  };
+  // Extract alimentos_detectados from results
+  const alimentosDetectados = results?.alimentos_detectados || 
+                             results?.texto_original?.alimentos_detectados || 
+                             [];
   
   // If there are no results, show error message
-  if (!results || !results.alimentos_detectados) {
+  if (!results || !alimentosDetectados.length) {
     // Simple version for error case
     return (
       <View style={styles.resultContainer}>
@@ -54,140 +52,121 @@ const ScanResultView = ({
     );
   }
 
-  // Create an array of all the content items for the FlatList
-  // This prevents nesting FlatLists inside ScrollView
-  const sections = [
-    { type: 'image', data: { uri: displayImageUri } },
-    { type: 'title', data: 'Alimentos Detectados' },
-    // Use the special type "alimentos" to render food items without nesting FlatLists
-    { type: 'alimentos', data: results.alimentos_detectados },
-    { type: 'title', data: 'Información Nutricional' },
-    { type: 'nutricionCard', data: { totales: results.totales, compatibilidad: safeCompatibilidad } },
-    // If there are custom children, add them as a section
-    children && { type: 'custom', data: children },
-  ].filter(Boolean); // Filter out any null/undefined sections
-
-  // Render each section based on its type
-  const renderItem = ({ item }) => {
-    switch (item.type) {
-      case 'image':
-        return (
-          <Image 
-            source={{ uri: item.data.uri }} 
-            style={styles.resultImage}
-            resizeMode="cover"
-            // Add additional image loading properties
-            loadingIndicatorSource={{ uri: 'https://via.placeholder.com/400?text=Cargando...' }}
-            progressiveRenderingEnabled={true}
-            fadeDuration={300} // Make image fade in smoothly
-          />
-        );
-      case 'title':
-        return <Text style={styles.resultTitle}>{item.data}</Text>;
-      case 'alimentos':
-        // MODIFIED: Make food items interactive with TouchableOpacity
-        return (
-          <View style={localStyles.alimentosContainer}>
-            {/* Add user guidance message */}
-            {!isReadOnly && (
-              <View style={localStyles.guidanceContainer}>
-                <MaterialIcons name="info-outline" size={18} color="#1B4D3E" />
-                <Text style={localStyles.guidanceText}>
-                  Toca cada alimento para seleccionar una versión específica y obtener información nutricional más precisa
-                </Text>
-              </View>
-            )}
-            
-            {item.data.length > 0 ? (
-              item.data.map((alimento, index) => (
-                <TouchableOpacity 
-                  key={index} 
-                  style={localStyles.alimentoItem}
-                  onPress={() => onSelectAlimento && onSelectAlimento(alimento)}
-                  disabled={isReadOnly}
-                >
-                  <View style={localStyles.iconContainer}>
-                    <MaterialIcons name="restaurant" size={20} color="#FFFFFF" />
-                  </View>
-                  <Text style={localStyles.alimentoText}>{alimento}</Text>
-                  
-                  {/* Show edit hint icon if not read-only */}
-                  {!isReadOnly && (
-                    <MaterialIcons name="edit" size={20} color="#690B22" />
-                  )}
-                </TouchableOpacity>
-              ))
-            ) : (
-              <View style={styles.noResultsContainer}>
-                <MaterialIcons name="search-off" size={40} color="#999" />
-                <Text style={styles.noResultsText}>
-                  No se pudieron identificar alimentos en la imagen
-                </Text>
-              </View>
-            )}
-          </View>
-        );
-      case 'nutricionCard':
-        return (
-          <ResumenNutricionalCard 
-            totales={item.data.totales} 
-            compatibilidad={item.data.compatibilidad}
-          />
-        );
-      case 'custom':
-        return item.data;
-      default:
-        return null;
-    }
+  // Extract all necessary data
+  const displayImageUri = serverImageUrl || imageUri;
+  
+  const safeCompatibilidad = compatibilidad || {
+    sodio: { compatible: false, valor: 0 },
+    potasio: { compatible: false, valor: 0 },
+    fosforo: { compatible: false, valor: 0 }
   };
 
-  // Use FlatList as the main container to avoid nesting issues
+  // Use ScrollView instead of FlatList for better content rendering
   return (
-    <FlatList
-      data={sections}
-      renderItem={renderItem}
-      keyExtractor={(item, index) => `section-${item.type}-${index}`}
-      style={styles.resultContainer}
-      contentContainerStyle={styles.resultContent}
-    />
+    <ScrollView 
+      style={styles.resultContainer} 
+      contentContainerStyle={[styles.resultContent, { paddingBottom: 75 }]}
+    >
+      {/* Display the food image */}
+      <Image 
+        source={{ uri: displayImageUri }} 
+        style={styles.resultImage}
+        resizeMode="cover"
+      />
+      
+      {/* Alimentos Detectados section */}
+      <Text style={styles.resultTitle}>Alimentos Detectados</Text>
+      
+      {/* Show instruction banner */}
+      {!isReadOnly && (
+        <View style={localStyles.instructionBanner}>
+          <MaterialIcons name="touch-app" size={22} color="#1B4D3E" />
+          <Text style={localStyles.instructionText}>
+            Toca cada alimento para seleccionar la versión correcta y obtener información nutricional precisa
+          </Text>
+        </View>
+      )}
+      
+      {/* Show detected foods */}
+      {alimentosDetectados.map((alimento, index) => {
+        // Get specific selection info
+        const nombreEspecifico = seleccionesEspecificas[alimento] || alimento;
+        const unidadTexto = foodsWithUnits[nombreEspecifico];
+        const isUpdated = seleccionesEspecificas[alimento] && seleccionesEspecificas[alimento] !== alimento;
+        
+        return (
+          <TouchableOpacity
+            key={`alimento-${index}`}
+            style={[
+              localStyles.alimentoItem,
+              isUpdated ? localStyles.alimentoItemUpdated : {}
+            ]}
+            onPress={() => onSelectAlimento(alimento)}
+            disabled={isReadOnly}
+          >
+            <View style={localStyles.alimentoContent}>
+              <View style={[
+                localStyles.iconContainer,
+                isUpdated ? localStyles.iconContainerUpdated : {}
+              ]}>
+                <MaterialIcons 
+                  name={isUpdated ? "check-circle" : "restaurant"} 
+                  size={20} 
+                  color={isUpdated ? "#FFFFFF" : "#690B22"} 
+                />
+              </View>
+              
+              <View style={localStyles.alimentoTextContainer}>
+                <Text style={localStyles.alimentoNombre}>
+                  {nombreEspecifico}
+                  {unidadTexto ? ` (${unidadTexto})` : ''}
+                </Text>
+                
+                {nombreEspecifico !== alimento && (
+                  <Text style={localStyles.detectedAs}>
+                    Detectado como: <Text style={localStyles.detectedTerm}>{alimento}</Text>
+                  </Text>
+                )}
+                
+                {isUpdated && (
+                  <View style={localStyles.updatedBadge}>
+                    <Text style={localStyles.updatedBadgeText}>Actualizado</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            
+            {!isReadOnly && (
+              <View style={localStyles.actionContainer}>
+                <MaterialIcons name="edit" size={24} color="#690B22" />
+              </View>
+            )}
+          </TouchableOpacity>
+        );
+      })}
+      
+      {/* Nutritional information section */}
+      <Text style={styles.resultTitle}>Información Nutricional</Text>
+      <ResumenNutricionalCard 
+        totales={results.totales} 
+        compatibilidad={safeCompatibilidad}
+      />
+      
+      {/* Recommendations section */}
+      <RecomendacionesCard 
+        analisisTexto={results.texto_original}
+        resultadoCompleto={results}
+      />
+      
+      {/* Any additional children */}
+      {children}
+    </ScrollView>
   );
 };
 
-// Local styles just for this component
+// Local styles for the component
 const localStyles = StyleSheet.create({
-  alimentosContainer: {
-    marginBottom: 16,
-  },
-  alimentoItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 1,
-    justifyContent: 'space-between', // Added to position the edit icon on the right
-  },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#690B22',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  alimentoText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    flex: 1,
-  },
-  guidanceContainer: {
+  instructionBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#E8F5E9',
@@ -195,13 +174,88 @@ const localStyles = StyleSheet.create({
     padding: 12,
     marginBottom: 16,
   },
-  guidanceText: {
+  instructionText: {
     flex: 1,
     fontSize: 14,
     color: '#1B4D3E',
     marginLeft: 8,
     lineHeight: 18,
   },
+  alimentoItem: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  alimentoItemUpdated: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#4CAF50',
+    backgroundColor: '#F8FFF8',
+  },
+  alimentoContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1E3D3',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  iconContainerUpdated: {
+    backgroundColor: '#4CAF50',
+  },
+  alimentoTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  alimentoNombre: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 2,
+  },
+  detectedAs: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  detectedTerm: {
+    fontStyle: 'italic',
+    color: '#999',
+  },
+  updatedBadge: {
+    backgroundColor: '#E8F5E9',
+    paddingVertical: 2,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  updatedBadgeText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: 'bold',
+  },
+  actionContainer: {
+    padding: 6,
+    backgroundColor: '#F9F9F9',
+    borderRadius: 20,
+  }
 });
 
 export default ScanResultView;

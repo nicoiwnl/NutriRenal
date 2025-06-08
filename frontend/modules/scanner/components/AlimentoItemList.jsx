@@ -120,6 +120,7 @@ const styles = StyleSheet.create({
   alimentoItemUpdated: {
     borderLeftWidth: 4,
     borderLeftColor: '#4CAF50',
+    backgroundColor: '#F8FFF8', // Añadir un fondo ligeramente verde para mayor visibilidad
   },
   alimentoContent: {
     flexDirection: 'row',
@@ -168,7 +169,7 @@ const styles = StyleSheet.create({
     borderColor: '#4CAF50',
   },
   updatedBadgeText: {
-    fontSize: 10,
+    fontSize: 12,
     color: '#4CAF50',
     fontWeight: 'bold',
   },

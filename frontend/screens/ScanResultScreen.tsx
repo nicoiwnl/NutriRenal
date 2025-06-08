@@ -787,7 +787,7 @@ export default function ScanResultScreen() {
   // Main render
   return (
     <SafeAreaView style={styles.container}>
-      {/* Pass handleSelectAlimento to ScanResultView and isReadOnly flag, but don't pass RecomendacionesCard as children */}
+      {/* Pass seleccionesEspecificas and foodsWithUnits to ScanResultView */}
       <ScanResultView
         results={results}
         imageUri={imageUri}
@@ -796,6 +796,9 @@ export default function ScanResultScreen() {
         compatibilidad={compatibilidad}
         onSelectAlimento={handleSelectAlimento}
         isReadOnly={isReadOnly}
+        seleccionesEspecificas={seleccionesEspecificas}
+        foodsWithUnits={foodsWithUnits}
+        key={renderKey} // Add a key to force re-renders when selections change
       />
       
       {/* Bottom buttons - MODIFIED to show different options in read-only mode */}
