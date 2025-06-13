@@ -426,7 +426,7 @@ export default function QRScannerScreen({ navigation }) {
   };
 
   // Navegar a la pantalla de resultados con un análisis seleccionado
-  const handleSelectAnalisis = async (analisis, seleccionesEspecificas = []) => {
+  const handleSelectAnalisis = async (analisis, seleccionesEspecificas = {}, unidadesRegistradas = {}) => {
     setShowAnalisisModal(false);
     
     // Asegurar que se pasa correctamente el ID
@@ -439,26 +439,15 @@ export default function QRScannerScreen({ navigation }) {
     
     console.log("Seleccionó análisis con ID:", analisisConId.id);
     console.log("ID de persona asociado:", analisisConId.persona_id || analisisConId.id_persona);
+    console.log("Selecciones específicas recibidas:", JSON.stringify(seleccionesEspecificas));
     
-    // Añadir las selecciones específicas al objeto de análisis
-    if (seleccionesEspecificas && seleccionesEspecificas.length > 0) {
-      console.log(`Incluyendo ${seleccionesEspecificas.length} selecciones específicas`);
-      
-      // Crear un mapa para fácil acceso
-      const seleccionesMap = {};
-      seleccionesEspecificas.forEach(seleccion => {
-        seleccionesMap[seleccion.alimentoOriginal] = {
-          nombre: seleccion.alimentoSeleccionado,
-          unidad: seleccion.unidad,
-          cantidad: seleccion.cantidad
-        };
-      });
-      
-      analisisConId.seleccionesEspecificas = seleccionesMap;
-    }
+    // Añadir las selecciones específicas y unidades al objeto de análisis
+    const procesado = processAnalysisData(analisisConId);
+    procesado.seleccionesEspecificas = seleccionesEspecificas || {};
+    procesado.foodsWithUnits = unidadesRegistradas || {};
     
     navigation.navigate('ScanResult', {
-      results: processAnalysisData(analisisConId),
+      results: procesado,
       userId: userId,
       isReadOnly: true
     });

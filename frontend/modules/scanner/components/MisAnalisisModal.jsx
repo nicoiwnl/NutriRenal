@@ -24,6 +24,7 @@ const MisAnalisisModal = ({
   loading = false 
 }) => {
   const [analisisConSelecciones, setAnalisisConSelecciones] = useState({});
+  const [unidadesRegistradas, setUnidadesRegistradas] = useState({});
   const [loadingSelecciones, setLoadingSelecciones] = useState(false);
 
   // Cargar selecciones específicas para los análisis
@@ -33,33 +34,71 @@ const MisAnalisisModal = ({
       
       setLoadingSelecciones(true);
       const selecciones = {};
+      const unidadesRegistradas = {};
       
       try {
-        // Primero, obtener todas las selecciones de la API
-        const response = await api.get('http://127.0.0.1:8000/api/selecciones-analisis/');
+        // IMPROVED: Add timeout to ensure API responds
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        console.log("Realizando llamada API a selecciones-analisis...");
+        
+        // FIXED: Use the correct URL format without duplicating "api/" prefix
+        const response = await api.get('selecciones-analisis/', { 
+          signal: controller.signal 
+        });
+        
+        clearTimeout(timeoutId);
         
         if (response.data && Array.isArray(response.data)) {
-          // Organizar las selecciones por análisis ID para fácil acceso
+          console.log(`Éxito! Recibidas ${response.data.length} selecciones de la API`);
+          
+          // Log the first few items for debugging
+          if (response.data.length > 0) {
+            console.log("Muestra de selecciones:", 
+              JSON.stringify(response.data.slice(0, 2)));
+          }
+          
+          // Group selections by analysis ID
           response.data.forEach(seleccion => {
             const analisisId = seleccion.analisis;
             
-            if (!selecciones[analisisId]) {
-              selecciones[analisisId] = [];
-            }
+            // Inicializar estructuras si no existen
+            if (!selecciones[analisisId]) selecciones[analisisId] = {};
+            if (!unidadesRegistradas[analisisId]) unidadesRegistradas[analisisId] = {};
             
-            selecciones[analisisId].push({
-              alimentoOriginal: seleccion.alimento_original,
-              alimentoSeleccionado: seleccion.alimento_nombre,
-              unidad: seleccion.unidad_nombre,
-              cantidad: seleccion.cantidad,
-              fecha: seleccion.fecha_seleccion
-            });
+            // Log each matching selection for clarity
+            console.log(`Guardando selección: ${seleccion.alimento_original} -> ${seleccion.alimento_nombre} para análisis ${analisisId}`);
+            
+            // Store as key-value: "leche" -> "Leche de burra"
+            selecciones[analisisId][seleccion.alimento_original] = seleccion.alimento_nombre;
+            
+            // Store unit text: "Leche de burra" -> "2 vasos"
+            const unidadTexto = `${seleccion.cantidad} ${seleccion.unidad_nombre}`;
+            unidadesRegistradas[analisisId][seleccion.alimento_nombre] = unidadTexto;
           });
           
           setAnalisisConSelecciones(selecciones);
+          setUnidadesRegistradas(unidadesRegistradas);
+          
+          // Log counts for each analysis
+          analisis.forEach(item => {
+            if (item && item.id && selecciones[item.id]) {
+              const count = Object.keys(selecciones[item.id]).length;
+              console.log(`Análisis ${item.id}: ${count} selecciones específicas`);
+            }
+          });
         }
       } catch (error) {
         console.error('Error al cargar selecciones específicas:', error);
+        // Log more details about the error
+        console.error('Detalles del error:', JSON.stringify({
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+          method: error.config?.method,
+          url: error.config?.url
+        }));
       } finally {
         setLoadingSelecciones(false);
       }
@@ -112,8 +151,9 @@ const MisAnalisisModal = ({
                     }
                     
                     // Obtener selecciones específicas para este análisis
-                    const seleccionesEspecificas = analisisConSelecciones[item.id] || [];
-                    const tieneSeleccionesEspecificas = seleccionesEspecificas.length > 0;
+                    const seleccionesEspecificas = analisisConSelecciones[item.id] || {};
+                    const unidadesFormato = unidadesRegistradas[item.id] || {};
+                    const tieneSeleccionesEspecificas = Object.keys(seleccionesEspecificas).length > 0;
                     
                     // Extraer información sobre alimentos detectados
                     const alimentosDetectados = item.alimentos_detectados || 
@@ -124,11 +164,11 @@ const MisAnalisisModal = ({
                     let descripcionAlimentos = "";
                     if (tieneSeleccionesEspecificas) {
                       // Mostrar las selecciones específicas con unidades si están disponibles
-                      const seleccionesTexto = seleccionesEspecificas
+                      const seleccionesTexto = Object.keys(seleccionesEspecificas)
                         .slice(0, 2)
-                        .map(s => `${s.cantidad} ${s.unidad} de ${s.alimentoSeleccionado}`)
+                        .map(key => `${unidadesFormato[key]} de ${seleccionesEspecificas[key]}`)
                         .join(", ");
-                      const tienesMas = seleccionesEspecificas.length > 2;
+                      const tienesMas = Object.keys(seleccionesEspecificas).length > 2;
                       descripcionAlimentos = seleccionesTexto + (tienesMas ? ", ..." : "");
                     } else if (alimentosDetectados.length > 0) {
                       // Mostrar alimentos detectados si no hay selecciones
@@ -142,7 +182,25 @@ const MisAnalisisModal = ({
                     return (
                       <TouchableOpacity 
                         style={styles.analisisItem}
-                        onPress={() => onSelectAnalisis(item, seleccionesEspecificas)}
+                        onPress={() => {
+                          const seleccionesFormato = analisisConSelecciones[item.id] || {};
+                          const unidadesFormato = unidadesRegistradas[item.id] || {};
+                          
+                          // IMPROVED: Log more details about what we're sending
+                          console.log(`Seleccionando análisis ${item.id}, enviando:`, {
+                            selecciones: JSON.stringify(seleccionesFormato),
+                            unidades: JSON.stringify(unidadesFormato)
+                          });
+                          
+                          // Ensure the specific selections are added to the item being passed
+                          const itemWithSelecciones = {
+                            ...item,
+                            seleccionesEspecificas: seleccionesFormato,
+                            foodsWithUnits: unidadesFormato
+                          };
+                          
+                          onSelectAnalisis(itemWithSelecciones, seleccionesFormato, unidadesFormato);
+                        }}
                       >
                         <View style={styles.analisisImageContainer}>
                           {/* Verificar si hay imagen antes de intentar mostrarla */}

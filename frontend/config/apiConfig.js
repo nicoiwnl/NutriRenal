@@ -36,18 +36,26 @@ export const ENDPOINTS = {
   SELECCIONES_POR_ANALISIS: (analisisId) => `${API_BASE}/selecciones-analisis/?analisis=${analisisId}`,
 };
 
-// Función para obtener la URL completa de una imagen
-export const getImageUrl = (relativePath) => {
-  if (!relativePath) return null;
-  if (relativePath.startsWith('http')) return relativePath;
+// Improved image URL helper function that adds domain when needed
+export const getImageUrl = (imagePath) => {
+  if (!imagePath) return null;
   
-  // Verificar si la ruta comienza con "analisis_comida" o algún otro directorio específico
-  if (relativePath.includes('analisis_comida')) {
-    // Ruta corregida para archivos de análisis de comida
-    return `${BASE_URL}/media/${relativePath}`;
+  // Check if it's already a full URL
+  if (imagePath.startsWith('http')) {
+    console.log('URL completa detectada:', imagePath);
+    return imagePath;
   }
   
-  // Eliminar barras diagonales al inicio si existen
-  const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
-  return `${BASE_URL}/${cleanPath}`; // Asegurar formato correcto
+  // Clean up the path if it starts with /media/ or media/
+  const cleanPath = imagePath.startsWith('/media/') 
+    ? imagePath.substring(7) // Remove /media/ prefix
+    : imagePath.startsWith('media/') 
+      ? imagePath.substring(6) // Remove media/ prefix
+      : imagePath;
+      
+  // Clean up any duplicate slashes
+  const finalUrl = `${BASE_URL}/media/${cleanPath}`.replace(/([^:]\/)\/+/g, "$1");
+  console.log(`Creando URL para imagen: ${finalUrl}`);
+  
+  return finalUrl;
 };

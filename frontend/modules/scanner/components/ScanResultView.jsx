@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -31,6 +31,36 @@ const ScanResultView = ({
                              results?.texto_original?.alimentos_detectados || 
                              [];
   
+  // ADDED: Better logging for debugging selections
+  useEffect(() => {
+    console.log("ScanResultView renderizando con:", {
+      totalAlimentos: alimentosDetectados.length,
+      alimentos: alimentosDetectados,
+      tieneSelecciones: Object.keys(seleccionesEspecificas || {}).length > 0,
+      selecciones: JSON.stringify(seleccionesEspecificas),
+      unidades: JSON.stringify(foodsWithUnits)
+    });
+  }, [alimentosDetectados, seleccionesEspecificas, foodsWithUnits]);
+
+  // Extract all necessary data
+  const displayImageUri = serverImageUrl || imageUri;
+  
+  // FIXED: Define safeCompatibilidad to prevent the ReferenceError
+  const safeCompatibilidad = compatibilidad || {
+    sodio: { compatible: false, valor: 0 },
+    potasio: { compatible: false, valor: 0 },
+    fosforo: { compatible: false, valor: 0 }
+  };
+  
+  // ADDED: Debug image URL handling
+  useEffect(() => {
+    console.log("ScanResultView - image display details:", {
+      serverImageUrl: serverImageUrl,
+      imageUri: imageUri,
+      finalDisplayUrl: displayImageUri
+    });
+  }, [serverImageUrl, imageUri, displayImageUri]);
+
   // If there are no results, show error message
   if (!results || !alimentosDetectados.length) {
     // Simple version for error case
@@ -53,14 +83,15 @@ const ScanResultView = ({
     );
   }
 
-  // Extract all necessary data
-  const displayImageUri = serverImageUrl || imageUri;
-  
-  const safeCompatibilidad = compatibilidad || {
-    sodio: { compatible: false, valor: 0 },
-    potasio: { compatible: false, valor: 0 },
-    fosforo: { compatible: false, valor: 0 }
-  };
+  // Add debugging useEffect to log selection data
+  useEffect(() => {
+    if (seleccionesEspecificas && Object.keys(seleccionesEspecificas).length > 0) {
+      console.log("ScanResultView - Mostrando selecciones específicas:", 
+        JSON.stringify(seleccionesEspecificas));
+      console.log("ScanResultView - Con unidades:", 
+        JSON.stringify(foodsWithUnits));
+    }
+  }, [seleccionesEspecificas, foodsWithUnits]);
 
   // Use ScrollView instead of FlatList for better content rendering
   return (
@@ -68,12 +99,23 @@ const ScanResultView = ({
       style={styles.resultContainer} 
       contentContainerStyle={[styles.resultContent, { paddingBottom: 75 }]}
     >
-      {/* Display the food image */}
-      <Image 
-        source={{ uri: displayImageUri }} 
-        style={styles.resultImage}
-        resizeMode="cover"
-      />
+      {/* Display the food image with improved error handling */}
+      {displayImageUri ? (
+        <Image 
+          source={{ uri: displayImageUri }} 
+          style={styles.resultImage}
+          resizeMode="cover"
+          onError={(e) => console.error("Error en la carga de imagen:", e.nativeEvent.error)}
+          onLoad={() => console.log("✓ Imagen cargada correctamente")}
+          // Add a key to force reload when URL changes
+          key={`img-${String(displayImageUri).split('/').pop()}`}
+        />
+      ) : (
+        <View style={[styles.resultImage, localStyles.noImageContainer]}>
+          <MaterialIcons name="image-not-supported" size={40} color="#ddd" />
+          <Text style={localStyles.noImageText}>No hay imagen disponible</Text>
+        </View>
+      )}
       
       {/* Banner simple para alimentos detectados */}
       <View style={localStyles.detectadoBanner}>
@@ -105,6 +147,9 @@ const ScanResultView = ({
         const nombreEspecifico = seleccionesEspecificas[alimento] || alimento;
         const unidadTexto = foodsWithUnits[nombreEspecifico];
         const isUpdated = seleccionesEspecificas[alimento] && seleccionesEspecificas[alimento] !== alimento;
+        
+        // ADDED: Log each food item for debugging
+        console.log(`Renderizando alimento #${index}: ${alimento} -> ${nombreEspecifico} (${isUpdated ? 'actualizado' : 'original'})`);
         
         return (
           <TouchableOpacity
@@ -403,6 +448,18 @@ const localStyles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1B4D3E',
   },
+
+  // Add missing styles referenced in the component
+  noImageContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f5f5f5',
+  },
+  noImageText: {
+    marginTop: 10,
+    color: '#999',
+    fontSize: 14,
+  }
 });
 
 export default ScanResultView;

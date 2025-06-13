@@ -5,7 +5,9 @@ import {
   Text,
   ActivityIndicator,
   Alert,
-  TouchableOpacity
+  TouchableOpacity,
+  Platform, // Add missing Platform import
+  Image // Add Image import since we're also using it for prefetching
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -108,26 +110,189 @@ export default function ScanResultScreen() {
     }
   }, [results]);
 
-  // NEW: Update serverImageUrl when results change
+  // FIXED: URL path correction for API call
   useEffect(() => {
-    if (results?.imagen_analizada) {
-      const url = getImageUrl(results.imagen_analizada);
-      setServerImageUrl(url);
+    const fetchSeleccionesEspecificas = async () => {
+      if (!analisisId || !isReadOnly) return;
+      
+      try {
+        console.log(`Realizando consulta directa para cargar selecciones del análisis: ${analisisId}`);
+        
+        // FIXED: Use the correct URL format without duplicating "api/" prefix
+        const response = await api.get(`selecciones-analisis/?analisis=${analisisId}`);
+        
+        if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+          console.log(`Éxito! Se encontraron ${response.data.length} selecciones específicas:`, 
+            JSON.stringify(response.data));
+          
+          // Create mappings for selections and units
+          const selecciones = {};
+          const unidades = {};
+          
+          // Array to hold nutritional values from specific foods
+          let totalNutritionalValues = {
+            energia: 0,
+            proteinas: 0,
+            hidratos_carbono: 0,
+            lipidos: 0,
+            sodio: 0,
+            potasio: 0,
+            fosforo: 0
+          };
+          
+          // Process each selection entry
+          for (const seleccion of response.data) {
+            // Debug each selection
+            console.log(`Selección encontrada: ${seleccion.alimento_original} -> ${seleccion.alimento_nombre}`);
+            
+            // Map original food to specific food
+            selecciones[seleccion.alimento_original] = seleccion.alimento_nombre;
+            
+            // Format unit text
+            const unidadTexto = `${seleccion.cantidad} ${seleccion.unidad_nombre}`;
+            unidades[seleccion.alimento_nombre] = unidadTexto;
+            
+            // ADDED: Fetch nutritional values for this specific food
+            try {
+              // Get the specific food nutritional data
+              const foodResponse = await api.get(`alimentos/${seleccion.alimento_seleccionado}/`);
+              if (foodResponse.data) {
+                const food = foodResponse.data;
+                
+                // Calculate factor based on quantity and unit
+                const cantidad = parseFloat(seleccion.cantidad) || 1;
+                
+                // Get unit information if available
+                const unidadMedidaResponse = await api.get(`unidades-medida/${seleccion.unidad_medida}/`);
+                const unidad = unidadMedidaResponse.data || {};
+                
+                const esLiquido = food.nombre.toLowerCase().includes('leche') || 
+                                 food.nombre.toLowerCase().includes('jugo') || 
+                                 food.es_liquido;
+                
+                // Determine conversion factor
+                let factor = 1;
+                if (esLiquido && unidad.equivalencia_ml) {
+                  factor = (unidad.equivalencia_ml * cantidad) / 100;
+                  console.log(`Usando factor líquido: ${factor} basado en ${unidad.equivalencia_ml}ml × ${cantidad}`);
+                } else if (!esLiquido && unidad.equivalencia_g) {
+                  factor = (unidad.equivalencia_g * cantidad) / 100;
+                  console.log(`Usando factor sólido: ${factor} basado en ${unidad.equivalencia_g}g × ${cantidad}`);
+                } else if (unidad.equivalencia_g) {
+                  factor = (unidad.equivalencia_g * cantidad) / 100;
+                  console.log(`Usando factor genérico: ${factor} basado en ${unidad.equivalencia_g}g × ${cantidad}`);
+                } else if (unidad.equivalencia_ml) {
+                  factor = (unidad.equivalencia_ml * cantidad) / 100;
+                  console.log(`Usando factor genérico: ${factor} basado en ${unidad.equivalencia_ml}ml × ${cantidad}`);
+                } else {
+                  console.log("No se encontró factor de conversión, usando 1.0");
+                }
+                
+                console.log(`Aplicando factor ${factor} para ${seleccion.alimento_nombre}`);
+                console.log("Valores nutricionales base:", {
+                  energia: food.energia,
+                  proteinas: food.proteinas,
+                  hidratos_carbono: food.hidratos_carbono,
+                  lipidos: food.lipidos || food.lipidos_totales,
+                  sodio: food.sodio,
+                  potasio: food.potasio,
+                  fosforo: food.fosforo
+                });
+                
+                // Add this food's nutritional values to the total
+                totalNutritionalValues.energia += (parseNumeric(food.energia) || 0) * factor;
+                totalNutritionalValues.proteinas += (parseNumeric(food.proteinas) || 0) * factor;
+                totalNutritionalValues.hidratos_carbono += (parseNumeric(food.hidratos_carbono) || 0) * factor;
+                totalNutritionalValues.lipidos += (parseNumeric(food.lipidos_totales || food.lipidos) || 0) * factor;
+                totalNutritionalValues.sodio += (parseNumeric(food.sodio) || 0) * factor;
+                totalNutritionalValues.potasio += (parseNumeric(food.potasio) || 0) * factor;
+                totalNutritionalValues.fosforo += (parseNumeric(food.fosforo) || 0) * factor;
+                
+                console.log(`Valores nutricionales actualizados para ${seleccion.alimento_nombre}:`, totalNutritionalValues);
+              }
+            } catch (foodError) {
+              console.error(`Error al obtener datos nutricionales para ${seleccion.alimento_nombre}:`, foodError);
+            }
+          }
+          
+          if (Object.keys(selecciones).length > 0) {
+            console.log("Aplicando selecciones específicas:", JSON.stringify(selecciones));
+            setSeleccionesEspecificas(selecciones);
+            setFoodsWithUnits(unidades);
+            setUserHasSelectedFood(true);
+            
+            // ADDED: Update nutritional values with the calculated totals
+            console.log("Estableciendo valores nutricionales calculados:", totalNutritionalValues);
+            setValoresNutricionales(totalNutritionalValues);
+            
+            // Update compatibility based on new values
+            setCompatibilidad({
+              sodio: {
+                compatible: totalNutritionalValues.sodio < 375,
+                valor: totalNutritionalValues.sodio,
+              },
+              potasio: {
+                compatible: totalNutritionalValues.potasio < 500,
+                valor: totalNutritionalValues.potasio,
+              },
+              fosforo: {
+                compatible: totalNutritionalValues.fosforo < 250,
+                valor: totalNutritionalValues.fosforo,
+              }
+            });
+            
+            // Force refresh by updating the render key
+            setRenderKey(`selections-loaded-${Date.now()}`);
+          }
+        } else {
+          console.log("No se encontraron selecciones específicas para este análisis.");
+        }
+      } catch (error) {
+        console.error("Error al cargar selecciones específicas:", error);
+        // Log more details about the error
+        console.error("Detalles:", JSON.stringify({
+          status: error.response?.status,
+          data: error.response?.data,
+          message: error.message,
+          method: error.config?.method,
+          url: error.config?.url
+        }));
+      }
+    };
+    
+    // Fetch selections immediately when we have an analysis ID in read-only mode
+    if (analisisId) {
+      console.log(`Intentando cargar selecciones para análisis ${analisisId}, isReadOnly: ${isReadOnly}`);
+      fetchSeleccionesEspecificas();
+    }
+  }, [analisisId, isReadOnly]);
+
+  // NEW: Update serverImageUrl when results are available
+  useEffect(() => {
+    if (results) {
+      // Check all possible locations for image URL
+      const imageSource = results.url_imagen || 
+                          results.imagen_analizada || 
+                          (results.texto_original && results.texto_original.imagen_analizada);
+      
+      if (imageSource) {
+        console.log("Imagen analizada encontrada:", imageSource);
+        // Make sure we're using the full URL with domain
+        const imageUrl = getImageUrl(imageSource);
+        console.log("URL de imagen procesada:", imageUrl);
+        setServerImageUrl(imageUrl);
+        
+        // Prefetch image to verify it loads
+        if (Platform.OS !== 'web') {
+          Image.prefetch(imageUrl)
+            .then(() => console.log("✓ Imagen precargada con éxito"))
+            .catch(error => console.error("✗ Error precargando imagen:", error));
+        }
+      } else {
+        console.log("No se encontró imagen en el análisis:", JSON.stringify(results, null, 2));
+      }
     }
   }, [results]);
-
-  // Logging para debugging - Updated with dependency on serverImageUrl
-  useEffect(() => {
-    console.log("ScanResultScreen - Datos recibidos:", {
-      analisisId: analisisId || "No disponible",
-      userId: userId || "No disponible",
-      tieneIdPersona: !!results?.id_persona || !!results?.persona_id,
-      personaId: results?.id_persona || results?.persona_id || "No disponible",
-      imageUri: imageUri,
-      serverImageUrl: serverImageUrl,
-      isReadOnly: isReadOnly  // Log the isReadOnly value for debugging
-    });
-  }, [analisisId, userId, results, imageUri, serverImageUrl]);
 
   // Cargar el token de autenticación al inicio
   useEffect(() => {
