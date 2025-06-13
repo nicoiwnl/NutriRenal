@@ -426,7 +426,7 @@ export default function QRScannerScreen({ navigation }) {
   };
 
   // Navegar a la pantalla de resultados con un análisis seleccionado
-  const handleSelectAnalisis = (analisis) => {
+  const handleSelectAnalisis = async (analisis, seleccionesEspecificas = []) => {
     setShowAnalisisModal(false);
     
     // Asegurar que se pasa correctamente el ID
@@ -440,10 +440,27 @@ export default function QRScannerScreen({ navigation }) {
     console.log("Seleccionó análisis con ID:", analisisConId.id);
     console.log("ID de persona asociado:", analisisConId.persona_id || analisisConId.id_persona);
     
+    // Añadir las selecciones específicas al objeto de análisis
+    if (seleccionesEspecificas && seleccionesEspecificas.length > 0) {
+      console.log(`Incluyendo ${seleccionesEspecificas.length} selecciones específicas`);
+      
+      // Crear un mapa para fácil acceso
+      const seleccionesMap = {};
+      seleccionesEspecificas.forEach(seleccion => {
+        seleccionesMap[seleccion.alimentoOriginal] = {
+          nombre: seleccion.alimentoSeleccionado,
+          unidad: seleccion.unidad,
+          cantidad: seleccion.cantidad
+        };
+      });
+      
+      analisisConId.seleccionesEspecificas = seleccionesMap;
+    }
+    
     navigation.navigate('ScanResult', {
       results: processAnalysisData(analisisConId),
       userId: userId,
-      isReadOnly: true  // ADDED: Pass flag to indicate this is a view-only mode
+      isReadOnly: true
     });
   };
 

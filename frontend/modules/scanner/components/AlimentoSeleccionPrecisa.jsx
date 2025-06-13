@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -7,26 +7,76 @@ import {
   TouchableOpacity, 
   FlatList,
   ActivityIndicator,
-  Image,
   TextInput,
   TouchableWithoutFeedback,
-  Keyboard
+  Keyboard,
+  Alert,
+  ScrollView
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../../../api';
-import { getImageUrl } from '../../../config/apiConfig';
+import { ENDPOINTS } from '../../../config/apiConfig';
 import { formatEnergia, formatMacronutrientes, formatMinerales } from '../../../utils/formatUtils';
 
-// Usar las unidades de medida específicas de la base de datos
-const UNIDADES_MEDIDA = [
-  { id: 1, nombre: 'Taza', abreviacion: 'taza', equivalencia_ml: 200.00, es_volumen: true },
-  { id: 2, nombre: 'Vaso', abreviacion: 'vaso', equivalencia_ml: 180.00, es_volumen: true },
-  { id: 3, nombre: 'Plato hondo', abreviacion: 'plato', equivalencia_ml: 250.00, es_volumen: true },
-  { id: 4, nombre: 'Plato normal', abreviacion: 'plato', equivalencia_ml: null, es_volumen: false },
-  { id: 5, nombre: 'Cucharada sopera', abreviacion: 'cdas', equivalencia_ml: 10.00, es_volumen: true },
-  { id: 6, nombre: 'Cucharadita de té', abreviacion: 'cdta', equivalencia_ml: 5.00, es_volumen: true },
-  { id: 7, nombre: 'Cajita de fósforos', abreviacion: 'caja', equivalencia_ml: 30.00, es_volumen: false },
-  { id: 8, nombre: 'Marraqueta', abreviacion: 'unidad', equivalencia_ml: 50.00, es_volumen: false }
+// Definición de unidades de medida predeterminadas como respaldo
+const UNIDADES_MEDIDA_DEFAULT = [
+  {
+    id: 1,
+    nombre: "Taza",
+    abreviacion: "taza",
+    equivalencia_ml: 200,
+    equivalencia_g: 200,
+    es_volumen: true
+  },
+  {
+    id: 2,
+    nombre: "Vaso",
+    abreviacion: "vaso",
+    equivalencia_ml: 180,
+    equivalencia_g: 180,
+    es_volumen: true
+  },
+  {
+    id: 3,
+    nombre: "Cucharada",
+    abreviacion: "cdas",
+    equivalencia_ml: 15,
+    equivalencia_g: 15,
+    es_volumen: true
+  },
+  {
+    id: 4,
+    nombre: "Cucharadita",
+    abreviacion: "cdta",
+    equivalencia_ml: 5, 
+    equivalencia_g: 5,
+    es_volumen: true
+  },
+  {
+    id: 5,
+    nombre: "Unidad mediana",
+    abreviacion: "ud",
+    equivalencia_ml: 100,
+    equivalencia_g: 100,
+    es_volumen: false
+  },
+  {
+    id: 6,
+    nombre: "Gramos",
+    abreviacion: "g",
+    equivalencia_ml: null,
+    equivalencia_g: 1,
+    es_volumen: false
+  },
+  {
+    id: 7,
+    nombre: "Mililitros",
+    abreviacion: "ml",
+    equivalencia_ml: 1,
+    equivalencia_g: null,
+    es_volumen: true
+  }
 ];
 
 /**
@@ -37,7 +87,10 @@ const AlimentoSeleccionPrecisa = ({
   onClose, 
   alimentoGenerico, 
   onSelectAlimento,
-  titulo = "Seleccionar tipo específico"
+  titulo = "Seleccionar tipo específico",
+  analisisId = null,
+  // Añadir prop para recibir unidades desde componente padre
+  unidadesMedidaProp = null 
 }) => {
   const [loading, setLoading] = useState(true);
   const [variantes, setVariantes] = useState([]);
@@ -47,7 +100,25 @@ const AlimentoSeleccionPrecisa = ({
   const [selectedUnit, setSelectedUnit] = useState(null);
   const [cantidad, setCantidad] = useState('1');
   const [ajustedNutrientes, setAjustedNutrientes] = useState(null);
-  const [unidadesMedida, setUnidadesMedida] = useState(UNIDADES_MEDIDA);
+  // Inicializar con el valor por defecto
+  const [unidadesMedida, setUnidadesMedida] = useState(unidadesMedidaProp || UNIDADES_MEDIDA_DEFAULT);
+  const [loadingUnidades, setLoadingUnidades] = useState(false);
+  
+  // Add refs to track mounting state and API requests
+  const isMounted = useRef(true);
+  const controllerRef = useRef(null);
+  const searchPerformed = useRef(false);
+  
+  // Cleanup function when component unmounts
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+      // Cancel any in-flight requests
+      if (controllerRef.current) {
+        controllerRef.current.abort();
+      }
+    };
+  }, []);
   
   // Función para cerrar el teclado - Added definition for the missing function
   const dismissKeyboard = () => {
@@ -57,11 +128,18 @@ const AlimentoSeleccionPrecisa = ({
   // Cargar unidades de medida y variantes cuando el modal se abre
   useEffect(() => {
     if (visible && alimentoGenerico) {
-      buscarVariantesAlimento();
+      // Reset state for new search
       setStep('select-food');
       setSelectedFood(null);
       setSelectedUnit(null);
       setCantidad('1');
+      searchPerformed.current = false;
+      
+      // Only search if we haven't already
+      if (!searchPerformed.current) {
+        buscarVariantesAlimento();
+        searchPerformed.current = true;
+      }
     }
   }, [visible, alimentoGenerico]);
 
@@ -72,36 +150,59 @@ const AlimentoSeleccionPrecisa = ({
     setLoading(true);
     setError(null);
     
+    // Cancel any existing request
+    if (controllerRef.current) {
+      controllerRef.current.abort();
+    }
+    
+    // Create a new abort controller
+    controllerRef.current = new AbortController();
+    
     try {
       // Buscar alimentos que contengan el término genérico
-      const response = await api.get(`/alimentos/?search=${encodeURIComponent(alimentoGenerico)}`);
+      const response = await api.get(
+        `/alimentos/?search=${encodeURIComponent(alimentoGenerico)}`,
+        { signal: controllerRef.current.signal }
+      );
       
-      if (response.data && response.data.length > 0) {
-        // Ordenar por relevancia (los que contienen exactamente el término primero)
-        const sortedData = response.data.sort((a, b) => {
-          const aMatch = a.nombre.toLowerCase().includes(alimentoGenerico.toLowerCase());
-          const bMatch = b.nombre.toLowerCase().includes(alimentoGenerico.toLowerCase());
+      // Only update state if component is still mounted
+      if (isMounted.current) {
+        if (response.data && response.data.length > 0) {
+          // Ordenar por relevancia (los que contienen exactamente el término primero)
+          const sortedData = response.data.sort((a, b) => {
+            const aMatch = a.nombre.toLowerCase().includes(alimentoGenerico.toLowerCase());
+            const bMatch = b.nombre.toLowerCase().includes(alimentoGenerico.toLowerCase());
+            
+            if (aMatch && !bMatch) return -1;
+            if (!aMatch && bMatch) return 1;
+            return 0;
+          });
           
-          if (aMatch && !bMatch) return -1;
-          if (!aMatch && bMatch) return 1;
-          return 0;
-        });
-        
-        setVariantes(sortedData);
-      } else {
-        setVariantes([]);
+          setVariantes(sortedData);
+        } else {
+          setVariantes([]);
+        }
+        setLoading(false);
       }
     } catch (err) {
-      console.error('Error buscando variantes de alimento:', err);
-      setError('No se pudieron cargar las variantes del alimento');
-    } finally {
-      setLoading(false);
+      // If the request was aborted, don't update state
+      if (err.name === 'AbortError') {
+        console.log('Search request was canceled');
+        return;
+      }
+      
+      // Only update state if component is still mounted
+      if (isMounted.current) {
+        console.error('Error buscando variantes de alimento:', err);
+        setError('No se pudieron cargar las variantes del alimento');
+        setLoading(false);
+      }
     }
   };
 
   // Determinar qué unidades mostrar según el tipo de alimento
   useEffect(() => {
-    if (selectedFood) {
+    if (selectedFood && unidadesMedida.length > 0) {
       // Determinar si es líquido o sólido
       const esLiquido = selectedFood.nombre.toLowerCase().includes('leche') || 
                         selectedFood.nombre.toLowerCase().includes('jugo') || 
@@ -111,26 +212,85 @@ const AlimentoSeleccionPrecisa = ({
                         selectedFood.es_liquido;
       
       // Filtrar unidades según tipo (líquido o sólido)
-      const unidadesFiltradas = UNIDADES_MEDIDA.filter(unidad => {
+      const unidadesFiltradas = unidadesMedida.filter(unidad => {
         // Para líquidos, preferir unidades de volumen
         if (esLiquido) return unidad.es_volumen;
-        // Para panes, permitir marraqueta
+        // Para panes, permitir unidades especiales como "marraqueta" si existe
         if (selectedFood.nombre.toLowerCase().includes('pan'))
-          return unidad.id === 8 || !unidad.es_volumen;
+          return (unidad.nombre?.toLowerCase().includes('marraqueta') || !unidad.es_volumen);
         // Para el resto, mostrar unidades no volumétricas o universales
-        return !unidad.es_volumen || unidad.id === 5 || unidad.id === 6;
+        return !unidad.es_volumen || unidad.nombre?.toLowerCase().includes('cucharada') || unidad.nombre?.toLowerCase().includes('cucharadita');
       });
       
+      // Si el filtro dejó algunas unidades, usarlas; si no, usar todas
+      const unidadesFinales = unidadesFiltradas.length > 0 ? unidadesFiltradas : unidadesMedida;
+      
       // Establecer las unidades filtradas y seleccionar la primera
-      setUnidadesMedida(unidadesFiltradas);
-      setSelectedUnit(unidadesFiltradas[0]);
+      setUnidadesMedida(unidadesFinales);
+      setSelectedUnit(unidadesFinales[0]);
     }
-  }, [selectedFood]);
+  }, [selectedFood, unidadesMedida.length]);
 
-  // Cuando el usuario selecciona un alimento específico
+  // Función para cargar dinámicamente las unidades de medida desde la base de datos
+  const loadUnidadesMedida = async () => {
+    // Si ya tenemos unidades pasadas como prop, usarlas directamente
+    if (unidadesMedidaProp && unidadesMedidaProp.length > 0) {
+      console.log("Usando unidades de medida proporcionadas por el componente padre:", unidadesMedidaProp.length);
+      return unidadesMedidaProp;
+    }
+    
+    setLoadingUnidades(true);
+    try {
+      // CORREGIDO: Usar la ruta correcta sin duplicar el prefijo "api/"
+      const endpoint = ENDPOINTS.UNIDADES_MEDIDA || "unidades-medida/";
+      
+      console.log("Intentando cargar unidades de medida desde:", endpoint);
+      
+      const response = await api.get(endpoint);
+      
+      if (response.data && response.data.length > 0) {
+        console.log(`Unidades cargadas desde la base de datos: ${response.data.length} unidades`);
+        return response.data;
+      } else {
+        console.log("Usando unidades por defecto porque la API devolvió una lista vacía");
+        return UNIDADES_MEDIDA_DEFAULT;
+      }
+    } catch (error) {
+      console.log("Error cargando unidades de medida:", error);
+      console.log("Detalles del error:", {
+        mensaje: error.message,
+        url: error.config?.url,
+        metodo: error.config?.method,
+        headers: error.config?.headers
+      });
+      // No mostrar alerta para evitar interrupción al usuario
+      return UNIDADES_MEDIDA_DEFAULT;
+    } finally {
+      setLoadingUnidades(false);
+    }
+  };
+
+  // Usar un efecto para cargar las unidades de medida al montar el componente
+  useEffect(() => {
+    const fetchUnidades = async () => {
+      const unidades = await loadUnidadesMedida();
+      if (isMounted.current) {
+        console.log("Estableciendo unidades de medida:", unidades.length);
+        setUnidadesMedida(unidades);
+      }
+    };
+    
+    fetchUnidades();
+  }, [unidadesMedidaProp]); // Añadir dependencia para actualizar si cambia la prop
+
+  // Función para seleccionar un alimento específico
   const handleSelectFood = (item) => {
+    // Añadir logging para ver qué se está seleccionando
+    console.log("Alimento seleccionado:", item);
+    
     if (!item.id) {
       // Si es el genérico sin ID, cierra directamente
+      console.log("Usando alimento genérico sin ID");
       onSelectAlimento(item);
       return;
     }
@@ -154,19 +314,16 @@ const AlimentoSeleccionPrecisa = ({
     // Determinar factor de conversión según unidad de medida y tipo de alimento
     let factorConversion = 1;
     
-    if (unidad.equivalencia_ml) {
-      // Para líquidos y unidades con equivalencia en ml
-      if (esLiquido) {
-        // Base estándar es 100ml para líquidos
-        factorConversion = (unidad.equivalencia_ml * cantidadValue) / 100;
-      } else {
-        // Para sólidos medidos en unidades volumétricas, usar densidad aproximada
-        // La porción estándar es 100g, y asumimos densidad media
-        factorConversion = (unidad.equivalencia_ml * cantidadValue) / 100;
-      }
+    // Utilizar el mismo método que RegistroItem para calcular factores de conversión
+    if (esLiquido && unidad.equivalencia_ml) {
+      factorConversion = (Number(unidad.equivalencia_ml) * cantidadValue) / 100;
+    } else if (!esLiquido && unidad.equivalencia_g) {
+      factorConversion = (Number(unidad.equivalencia_g) * cantidadValue) / 100;
+    } else if (unidad.equivalencia_ml) {
+      // Fallback a ml si es la única equivalencia disponible
+      factorConversion = (Number(unidad.equivalencia_ml) * cantidadValue) / 100;
     } else {
-      // Para unidades sin equivalencia ml (como unidad, porción)
-      // Usar la cantidad directamente, asumiendo que cada unidad es aproximadamente 100g
+      // Para unidades sin equivalencia, usar la cantidad directamente
       factorConversion = cantidadValue;
     }
     
@@ -193,9 +350,64 @@ const AlimentoSeleccionPrecisa = ({
     }
   }, [selectedFood, selectedUnit, cantidad]);
   
+  // Función para guardar la selección específica en la BD
+  const guardarSeleccionEspecifica = async (alimentoSeleccionado) => {
+    // Add a safety check to prevent errors
+    if (!analisisId || typeof analisisId !== 'string') {
+      console.log("No se puede guardar la selección: ID de análisis no válido", analisisId);
+      return null;
+    }
+    
+    try {
+      // Obtener ID de usuario
+      const userData = await AsyncStorage.getItem('userData');
+      if (!userData) {
+        console.log("No se encontró información del usuario");
+        return;
+      }
+      
+      const { persona_id } = JSON.parse(userData);
+      if (!persona_id) {
+        console.log("No se encontró ID de persona");
+        return;
+      }
+      
+      // Crear objeto de selección específica
+      const seleccion = {
+        analisis: analisisId,
+        persona: persona_id,
+        alimento_original: alimentoGenerico,
+        alimento_nombre: alimentoSeleccionado.nombre,
+        alimento_seleccionado: alimentoSeleccionado.id,
+        unidad_nombre: selectedUnit?.nombre || "porción",
+        unidad_medida: selectedUnit?.id || 1,
+        cantidad: cantidad || "1.00"
+      };
+      
+      console.log("Guardando selección específica:", seleccion);
+      
+      // Use ENDPOINTS.SELECCIONES_ANALISIS or fallback to relative path
+      const endpoint = ENDPOINTS.SELECCIONES_ANALISIS || '/selecciones-analisis/';
+      
+      // Enviar a la API usando path relativo (no URL absoluta)
+      const response = await api.post(endpoint, seleccion);
+      
+      console.log("Selección guardada exitosamente:", response.data);
+      
+      return response.data;
+    } catch (error) {
+      console.error("Error al guardar selección específica:", error);
+      console.error("Detalles:", error.response?.data);
+      return null;
+    }
+  };
+
   // Confirmar selección con la cantidad y unidad
-  const confirmarSeleccion = () => {
-    if (!selectedFood || !selectedUnit) return;
+  const confirmarSeleccion = async () => {
+    if (!selectedFood || !selectedUnit) {
+      console.error("No se puede confirmar: falta alimento o unidad");
+      return;
+    }
     
     // Añadir información de cantidad y unidad al objeto del alimento
     const alimentoFinal = {
@@ -204,6 +416,18 @@ const AlimentoSeleccionPrecisa = ({
       unidad_seleccionada: selectedUnit,
       valores_ajustados: ajustedNutrientes
     };
+    
+    console.log("Confirmando selección de alimento:", alimentoFinal);
+    
+    // Guardar la selección en la BD si hay analisisId
+    if (analisisId) {
+      try {
+        await guardarSeleccionEspecifica(alimentoFinal);
+      } catch (error) {
+        console.error("Error al guardar selección:", error);
+        // Continuar aunque falle el guardado
+      }
+    }
     
     // Retornar el alimento con la nueva información
     onSelectAlimento(alimentoFinal);
@@ -246,10 +470,19 @@ const AlimentoSeleccionPrecisa = ({
     // Reference unit for display
     const unidadReferencia = esLiquido ? 'ml' : 'g';
     
-    // Create the equivalence text
-    const equivalenciaText = item.equivalencia_ml 
-      ? `(${item.equivalencia_ml} ${unidadReferencia})` 
-      : '';
+    // Create the equivalence text based on the available properties
+    let equivalenciaText = '';
+    
+    if (item.equivalencia_ml && esLiquido) {
+      // For liquids, use ml equivalence
+      equivalenciaText = `(${item.equivalencia_ml} ml)`;
+    } else if (item.equivalencia_g && !esLiquido) {
+      // For solids, use g equivalence if available
+      equivalenciaText = `(${item.equivalencia_g} g)`;
+    } else if (item.equivalencia_ml && !esLiquido) {
+      // If only ml equivalence is available for solids, still show it
+      equivalenciaText = `(${item.equivalencia_ml} ml)`;
+    }
     
     return (
       <TouchableOpacity 
@@ -269,12 +502,14 @@ const AlimentoSeleccionPrecisa = ({
           ]}>
             {item.nombre}
           </Text>
-          <Text style={[
-            styles.equivalenciaText,
-            selectedUnit?.id === item.id ? styles.equivalenciaTextSelected : {}
-          ]}>
-            {equivalenciaText}
-          </Text>
+          {equivalenciaText ? (
+            <Text style={[
+              styles.equivalenciaText,
+              selectedUnit?.id === item.id ? styles.equivalenciaTextSelected : {}
+            ]}>
+              {equivalenciaText}
+            </Text>
+          ) : null}
         </View>
       </TouchableOpacity>
     );
@@ -306,6 +541,7 @@ const AlimentoSeleccionPrecisa = ({
     // Reference unit for display
     const unidadReferencia = esLiquido ? 'ml' : 'g';
 
+    // Mostrar vista estándar sin mensaje de carga ya que tenemos unidades por defecto
     return (
       <Modal
         visible={visible}
@@ -344,7 +580,6 @@ const AlimentoSeleccionPrecisa = ({
                     }}
                     keyboardType="numeric"
                     maxLength={5}
-                    // Add blur on submit to dismiss keyboard after pressing Enter/Done
                     blurOnSubmit={true}
                   />
                   <Text style={styles.cantidadUnidad}>
@@ -361,14 +596,55 @@ const AlimentoSeleccionPrecisa = ({
               </View>
               
               <Text style={styles.unidadesTitle}>Unidad de medida:</Text>
-              <FlatList
-                data={unidadesMedida}
-                renderItem={renderUnidadItem}
-                keyExtractor={(item) => item.id.toString()}
-                horizontal={true}
+              
+              {/* Replace horizontal FlatList with vertical ScrollView */}
+              <ScrollView 
                 style={styles.unidadesList}
-                showsHorizontalScrollIndicator={false}
-              />
+                contentContainerStyle={styles.unidadesListContent}
+                showsVerticalScrollIndicator={true}
+              >
+                {unidadesMedida.map((item) => {
+                  // Get equivalence text based on unit properties
+                  let equivalenciaText = '';
+                  
+                  if (item.equivalencia_ml && esLiquido) {
+                    equivalenciaText = `(${item.equivalencia_ml} ml)`;
+                  } else if (item.equivalencia_g && !esLiquido) {
+                    equivalenciaText = `(${item.equivalencia_g} g)`;
+                  } else if (item.equivalencia_ml && !esLiquido) {
+                    equivalenciaText = `(${item.equivalencia_ml} ml)`;
+                  }
+                  
+                  return (
+                    <TouchableOpacity
+                      key={item.id.toString()}
+                      style={[
+                        styles.verticalUnitItem,
+                        selectedUnit?.id === item.id && styles.verticalUnitItemSelected
+                      ]}
+                      onPress={() => {
+                        setSelectedUnit(item);
+                        calcularNutrientesAjustados(selectedFood, item, parseFloat(cantidad) || 1);
+                      }}
+                    >
+                      <Text style={[
+                        styles.verticalUnitText,
+                        selectedUnit?.id === item.id && styles.verticalUnitTextSelected
+                      ]}>
+                        {item.nombre}
+                      </Text>
+                      {equivalenciaText && (
+                        <Text style={[
+                          styles.verticalEquivalenciaText,
+                          selectedUnit?.id === item.id && styles.verticalEquivalenciaTextSelected
+                        ]}>
+                          {equivalenciaText}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
               
               {ajustedNutrientes && (
                 <View style={styles.resumenNutricional}>
@@ -715,45 +991,41 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   unidadesList: {
-    paddingHorizontal: 8,
-    marginBottom: 16,
+    maxHeight: 200,
+    width: '100%',
+    paddingHorizontal: 16,
   },
-  unidadItem: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 20,
-    marginHorizontal: 4,
-    minWidth: 100,
+  unidadesListContent: {
+    paddingBottom: 8,
   },
-  unidadItemSelected: {
-    backgroundColor: '#690B22',
-    borderColor: '#690B22',
-    // Add shadow for more emphasis
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 2,
-    elevation: 3,
+  verticalUnitItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    width: '100%',
   },
-  unidadText: {
-    fontSize: 14,
+  verticalUnitItemSelected: {
+    backgroundColor: '#f0f0f0',
+    borderLeftWidth: 3,
+    borderLeftColor: '#690B22',
+  },
+  verticalUnitText: {
+    fontSize: 16,
     color: '#333',
-    textAlign: 'center',
   },
-  unidadTextSelected: {
-    color: '#FFFFFF',
-    fontWeight: 'bold', // Make the text bold when selected
+  verticalUnitTextSelected: {
+    fontWeight: 'bold',
+    color: '#690B22',
   },
-  equivalenciaText: {
+  verticalEquivalenciaText: {
     fontSize: 12,
     color: '#666',
     marginTop: 2,
-    textAlign: 'center',
   },
-  equivalenciaTextSelected: {
-    color: '#FFD0D0', // Lighter pink that contrasts better with burgundy background
+  verticalEquivalenciaTextSelected: {
+    color: '#690B22',
+    opacity: 0.7,
   },
   equivalenciaContainer: {
     marginLeft: 10,
@@ -780,6 +1052,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1B4D3E',
     marginBottom: 8,
+  },
+  resumenBase: {
+    fontWeight: 'normal',
+    fontStyle: 'italic',
+    fontSize: 12,
   },
   resumenItem: {
     flexDirection: 'row',

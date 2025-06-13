@@ -367,6 +367,19 @@ export const overlayStyles = StyleSheet.create({
   },
 });
 
+// Estilos para MisAnalisisModal
+export const analisisModalStyles = StyleSheet.create({
+  analisisAlimentos: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 2,
+  },
+  alimentosText: {
+    fontStyle: 'italic',
+    color: '#690B22',
+  },
+});
+
 // Estilos principales combinados
 const scanResultStyles = StyleSheet.create({
   container: {

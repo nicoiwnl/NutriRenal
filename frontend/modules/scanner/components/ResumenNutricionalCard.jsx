@@ -19,7 +19,8 @@ const WARNING_THRESHOLDS = {
 
 // Create a focused component that only displays the three key minerals
 const ResumenNutricionalCard = (props) => {
-  console.log("ResumenNutricionalCard rendering with props:", JSON.stringify(props, null, 2));
+  // Remove excessive logging
+  // console.log("ResumenNutricionalCard rendering with props:", JSON.stringify(props, null, 2));
   
   // Step 1: Handle undefined props completely safely
   if (!props) props = {};
@@ -74,7 +75,8 @@ const ResumenNutricionalCard = (props) => {
       safeValues.fosforo !== prevValues.fosforo;
     
     if (hasChanged) {
-      console.log("Values changed! Animating from:", prevValues, "to:", safeValues);
+      // Remove excessive logging
+      // console.log("Values changed! Animating from:", prevValues, "to:", safeValues);
       setPrevValues(safeValues);
       
       // Only run animation if we're not on web platform and values changed
@@ -114,7 +116,8 @@ const ResumenNutricionalCard = (props) => {
   const potasioFormatted = formatMinerales(safeValues.potasio);
   const fosforoFormatted = formatMinerales(safeValues.fosforo);
   
-  console.log("Displaying values - Sodio:", sodioFormatted, "Potasio:", potasioFormatted, "Fósforo:", fosforoFormatted);
+  // Remove excessive logging
+  // console.log("Displaying values - Sodio:", sodioFormatted, "Potasio:", potasioFormatted, "Fósforo:", fosforoFormatted);
   
   // Determine mineral status (0: good, 1: warning, 2: exceeded)
   const getMineralStatus = (mineral, value) => {

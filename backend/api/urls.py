@@ -9,7 +9,8 @@ from .views import (
     UsuarioRolViewSet, UsuarioRolesView, PublicacionViewSet, ComentarioViewSet, RespuestaComentarioViewSet,
     AnalisisImagenViewSet, VinculoPacienteCuidadorViewSet, PacientesCuidadorView, ActualizarFotoPerfilView,
     NutrienteMinutaViewSet, RestriccionAlimentosViewSet, RestriccionMinutaNutrienteViewSet, MinutasRestriccionesViewSet,
-    ForoViewSet, ForoPersonaViewSet, suscribir_a_foro, desuscribir_de_foro, MinutaViewSet, analizar_imagen
+    ForoViewSet, ForoPersonaViewSet, suscribir_a_foro, desuscribir_de_foro, MinutaViewSet, analizar_imagen,
+    SeleccionesAnalisisViewSet, guardar_seleccion_analisis
 )
 
 router = DefaultRouter()
@@ -44,6 +45,7 @@ router.register(r'minutas-restricciones', MinutasRestriccionesViewSet)
 router.register(r'foros', ForoViewSet)
 router.register(r'foro-suscripciones', ForoPersonaViewSet)
 router.register(r'minutas', MinutaViewSet)
+router.register(r'selecciones-analisis', SeleccionesAnalisisViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -58,5 +60,5 @@ urlpatterns = [
     path('suscribir-foro/', suscribir_a_foro, name='suscribir_foro'),
     path('desuscribir-foro/', desuscribir_de_foro, name='desuscribir_foro'),
     path('analizar-imagen/', analizar_imagen, name='analizar_imagen'),
-    path('api/', include(router.urls)),
+    path('guardar-seleccion-analisis/', guardar_seleccion_analisis, name='guardar_seleccion_analisis'),
 ]

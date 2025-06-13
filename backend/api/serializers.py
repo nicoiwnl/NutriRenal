@@ -3,7 +3,7 @@ from .models import (
     PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
     MinutaNutricional, ComidaTipo, Minuta, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
-    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, User, Persona, ForoPersona # Make sure these imports match your actual models
+    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, User, Persona, ForoPersona, SeleccionesAnalisis # Make sure these imports match your actual models
 )
 from django.conf import settings
 from datetime import datetime
@@ -299,3 +299,17 @@ class ForoPersonaSerializer(serializers.ModelSerializer):
         if obj.persona:
             return f"{obj.persona.nombres} {obj.persona.apellidos}"
         return None
+
+class SeleccionesAnalisisSerializer(serializers.ModelSerializer):
+    alimento_nombre = serializers.SerializerMethodField()
+    unidad_nombre = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = SeleccionesAnalisis
+        fields = '__all__'
+        
+    def get_alimento_nombre(self, obj):
+        return obj.alimento_seleccionado.nombre if obj.alimento_seleccionado else None
+        
+    def get_unidad_nombre(self, obj):
+        return obj.unidad_medida.nombre if obj.unidad_medida else None

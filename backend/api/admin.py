@@ -7,7 +7,7 @@ from .models import (
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, 
     RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
     NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones,
-    Foro, ForoPersona
+    Foro, ForoPersona, SeleccionesAnalisis
 )
 
 # User & Authentication
@@ -102,3 +102,12 @@ class RespuestaComentarioAdmin(admin.ModelAdmin):
     list_filter = ('activo', 'fecha_creacion')
     search_fields = ('contenido', 'id_persona__nombres', 'id_persona__apellidos')
     readonly_fields = ('fecha_creacion', 'fecha_actualizacion')
+
+# Registrar el modelo SeleccionesAnalisis en el panel de administración
+@admin.register(SeleccionesAnalisis)
+class SeleccionesAnalisisAdmin(admin.ModelAdmin):
+    list_display = ('id', 'analisis', 'alimento_original', 'alimento_seleccionado', 'unidad_medida', 'cantidad')
+    list_filter = ('analisis', 'fecha_seleccion')
+    search_fields = ('alimento_original', 'alimento_seleccionado__nombre')
+    raw_id_fields = ('analisis', 'persona', 'alimento_seleccionado', 'unidad_medida')
+    date_hierarchy = 'fecha_seleccion'

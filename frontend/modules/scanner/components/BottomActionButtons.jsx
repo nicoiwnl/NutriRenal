@@ -2,7 +2,39 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
-const BottomActionButtons = ({ onScanAgain, onGoHome }) => {
+const BottomActionButtons = ({ 
+  onScanAgain, 
+  onGoHome, 
+  onBack, 
+  variant = 'default',
+  backButtonLabel = "Volver",
+  scanAgainButtonLabel = "Escanear Otro",
+  homeButtonLabel = "Ir al inicio"
+}) => {
+  // Configuración según la variante
+  if (variant === 'readOnly') {
+    return (
+      <View style={styles.bottomButtonsContainer}>
+        <TouchableOpacity
+          style={[styles.actionButton, styles.backButton]}
+          onPress={onBack}
+        >
+          <MaterialIcons name="arrow-back" size={20} color="#FFFFFF" />
+          <Text style={styles.actionButtonText}>{backButtonLabel}</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.actionButton, styles.scanAgainButton]}
+          onPress={onScanAgain}
+        >
+          <MaterialIcons name="camera-alt" size={20} color="#FFFFFF" />
+          <Text style={styles.actionButtonText}>{scanAgainButtonLabel}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+  
+  // Variante por defecto
   return (
     <View style={styles.bottomButtonsContainer}>
       <TouchableOpacity
@@ -10,7 +42,7 @@ const BottomActionButtons = ({ onScanAgain, onGoHome }) => {
         onPress={onScanAgain}
       >
         <MaterialIcons name="camera-alt" size={20} color="#FFFFFF" />
-        <Text style={styles.actionButtonText}>Escanear Otro</Text>
+        <Text style={styles.actionButtonText}>{scanAgainButtonLabel}</Text>
       </TouchableOpacity>
       
       <TouchableOpacity
@@ -18,7 +50,7 @@ const BottomActionButtons = ({ onScanAgain, onGoHome }) => {
         onPress={onGoHome}
       >
         <MaterialIcons name="home" size={20} color="#FFFFFF" />
-        <Text style={styles.actionButtonText}>Ir al inicio</Text>
+        <Text style={styles.actionButtonText}>{homeButtonLabel}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -48,6 +80,9 @@ const styles = StyleSheet.create({
   },
   scanAgainButton: {
     backgroundColor: '#690B22',
+  },
+  backButton: {
+    backgroundColor: '#1B4D3E',
   },
   goHomeButton: {
     backgroundColor: '#1B4D3E',

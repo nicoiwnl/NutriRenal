@@ -5,7 +5,8 @@ from .models import (
     User, Persona, PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
     MinutaNutricional, ComidaTipo, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
-    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, ForoPersona, Minuta
+    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, ForoPersona, Minuta,
+    SeleccionesAnalisis
 )
 from .serializers import (
     UserSerializer, PersonaSerializer, PerfilMedicoSerializer, CondicionPreviaSerializer, UsuarioCondicionSerializer, CategoriaAlimentoSerializer,
@@ -14,7 +15,7 @@ from .serializers import (
     CentroMedicoSerializer, ConsejoNutricionalSerializer, RolSerializer, UsuarioRolSerializer, PublicacionSerializer,
     ComentarioSerializer, RespuestaComentarioSerializer, AnalisisImagenSerializer, VinculoPacienteCuidadorSerializer,
     NutrienteMinutaSerializer, RestriccionAlimentosSerializer, RestriccionMinutaNutrienteSerializer, MinutasRestriccionesSerializer, ForoSerializer,
-    ForoPersonaSerializer, MinutaSerializer
+    ForoPersonaSerializer, MinutaSerializer, SeleccionesAnalisisSerializer
 )
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -1274,3 +1275,71 @@ def analizar_imagen(request):
              "traceback": error_trace if settings.DEBUG else None}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+class SeleccionesAnalisisViewSet(viewsets.ModelViewSet):
+    queryset = SeleccionesAnalisis.objects.all()
+    serializer_class = SeleccionesAnalisisSerializer
+    
+    def get_queryset(self):
+        qs = super().get_queryset()
+        analisis_id = self.request.query_params.get('analisis')
+        persona_id = self.request.query_params.get('persona')
+        
+        if analisis_id:
+            qs = qs.filter(analisis=analisis_id)
+        if persona_id:
+            qs = qs.filter(persona=persona_id)
+        
+        return qs
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Cambiar a IsAuthenticated en producción
+def guardar_seleccion_analisis(request):
+    """
+    Endpoint para guardar una selección específica de alimento en un análisis
+    """
+    try:
+        data = request.data
+        
+        # Validar campos obligatorios
+        required_fields = ['analisis', 'persona', 'alimento_original', 'alimento_seleccionado', 'unidad_medida']
+        for field in required_fields:
+            if field not in data:
+                return Response({'error': f'Falta el campo {field}'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Comprobar si ya existe una selección para este análisis y alimento original
+        seleccion_existente = SeleccionesAnalisis.objects.filter(
+            analisis_id=data['analisis'], 
+            alimento_original=data['alimento_original']
+        ).first()
+        
+        if seleccion_existente:
+            # Actualizar selección existente
+            seleccion_existente.alimento_seleccionado_id = data['alimento_seleccionado']
+            seleccion_existente.unidad_medida_id = data['unidad_medida']
+            seleccion_existente.cantidad = data.get('cantidad', 1)
+            seleccion_existente.save()
+            
+            return Response({
+                'message': 'Selección actualizada correctamente',
+                'seleccion': SeleccionesAnalisisSerializer(seleccion_existente).data
+            })
+        else:
+            # Crear nueva selección
+            nueva_seleccion = SeleccionesAnalisis(
+                analisis_id=data['analisis'],
+                persona_id=data['persona'],
+                alimento_original=data['alimento_original'],
+                alimento_seleccionado_id=data['alimento_seleccionado'],
+                unidad_medida_id=data['unidad_medida'],
+                cantidad=data.get('cantidad', 1)
+            )
+            nueva_seleccion.save()
+            
+            return Response({
+                'message': 'Selección guardada correctamente',
+                'seleccion': SeleccionesAnalisisSerializer(nueva_seleccion).data
+            }, status=status.HTTP_201_CREATED)
+            
+    except Exception as e:
+        return Response({'error': f'Error al guardar selección: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

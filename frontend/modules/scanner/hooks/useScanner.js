@@ -111,15 +111,28 @@ const useScanner = () => {
         }
       }
       
-      // IMPROVED ERROR HANDLING: Agregar timeout más largo
+      // 3. Enviar la imagen para analizar - VERSIÓN FUNCIONAL ORIGINAL
       const response = await api.post(ENDPOINTS.ANALIZAR_IMAGEN, {
         imagen: `data:image/jpeg;base64,${base64Image}`,
         region: 'chile',
         id_persona: userId,
         persona_id: userId,
-        userId: userId
+        userId: userId,
+        resultado: {
+          alimentos_detectados: [],
+          totales: {
+            energia: 0,
+            proteinas: 0,
+            hidratos_carbono: 0,
+            lipidos: 0,
+            sodio: 0,
+            potasio: 0,
+            fosforo: 0
+          }
+        },
+        url_imagen: "pendiente"
       }, {
-        timeout: 30000, // 30 segundos de timeout
+        timeout: 30000, // 30 segundos es suficiente como estaba originalmente
         headers: {
           'Content-Type': 'application/json',
           'X-User-ID': userId || 'anonymous',

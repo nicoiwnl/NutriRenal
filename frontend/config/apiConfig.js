@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 // Base URLs para diferentes entornos
 export const BASE_URL = Platform.OS === 'web' 
   ? 'http://127.0.0.1:8000'
-  : 'http://192.168.100.37:8000';
+  : 'http://192.168.1.51:8000';
   
 export const API_BASE = `${BASE_URL}/api`;
 
@@ -30,6 +30,10 @@ export const ENDPOINTS = {
   
   // Registros de comida
   REGISTRAR_CONSUMO: `${API_BASE}/registros-alimentos/`, // Corregida la ruta
+
+  // Selecciones de análisis
+  SELECCIONES_ANALISIS: `${API_BASE}/selecciones-analisis/`,
+  SELECCIONES_POR_ANALISIS: (analisisId) => `${API_BASE}/selecciones-analisis/?analisis=${analisisId}`,
 };
 
 // Función para obtener la URL completa de una imagen

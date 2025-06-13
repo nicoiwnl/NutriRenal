@@ -416,6 +416,25 @@ class AnalisisImagen(models.Model):
     def __str__(self):
         return f"{self.id_persona.nombres if self.id_persona else 'Sin persona'} - {self.fecha_analisis}"
 
+# Nueva tabla para manejar selecciones de alimentos en análisis
+class SeleccionesAnalisis(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    analisis = models.ForeignKey(AnalisisImagen, on_delete=models.CASCADE, related_name='selecciones')
+    persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name='selecciones_analisis')
+    alimento_original = models.CharField(max_length=100, help_text="Nombre del alimento detectado originalmente")
+    alimento_seleccionado = models.ForeignKey(Alimento, on_delete=models.CASCADE, related_name='selecciones_analisis')
+    unidad_medida = models.ForeignKey(UnidadMedida, on_delete=models.CASCADE, related_name='selecciones_analisis')
+    cantidad = models.DecimalField(max_digits=6, decimal_places=2, default=1)
+    fecha_seleccion = models.DateTimeField(auto_now_add=True)
+        
+    class Meta:
+        unique_together = ('analisis', 'alimento_original')
+        verbose_name = "Selección de Análisis"
+        verbose_name_plural = "Selecciones de Análisis"
+    
+    def __str__(self):
+        return f"{self.analisis.nombre if self.analisis.nombre else 'Análisis'}: {self.alimento_original} → {self.alimento_seleccionado.nombre} ({self.cantidad} {self.unidad_medida.nombre})"
+
 # Fin Seccion de Minutas
 # Inicio Seccion de Ayudas
 class CentroMedico(models.Model):

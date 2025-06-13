@@ -47,6 +47,8 @@ export default function ScanResultScreen() {
   const [loadingImage, setLoadingImage] = useState(true);
   const [platoDetectado, setPlatoDetectado] = useState('');
   const [detectionLoading, setDetectionLoading] = useState(false);
+  // Add the serverImageUrl state variable
+  const [serverImageUrl, setServerImageUrl] = useState(null);
   const [valoresNutricionales, setValoresNutricionales] = useState({
     energia: 0,
     proteinas: 0,
@@ -56,6 +58,9 @@ export default function ScanResultScreen() {
     potasio: 0,
     fosforo: 0
   });
+  
+  // Add the missing analisisId state
+  const [analisisId, setAnalisisId] = useState(null);
   
   // Add the missing state variable for nutritional values source
   const [fuenteValoresNutricionales, setFuenteValoresNutricionales] = useState('base_datos');
@@ -91,36 +96,27 @@ export default function ScanResultScreen() {
   // Extract parameters from route
   const imageUri = route.params?.imageUri;
   const results = route.params?.results;
-  const analisisId = results?.id;
   const userId = route.params?.userId;
+  // Add the isReadOnly parameter from route params, defaulting to false
+  const isReadOnly = route.params?.isReadOnly || false;
   
-  // NEW: Add a flag to determine if we're in read-only mode
-  const isReadOnly = route.params?.isReadOnly === true;
+  // NEW: Set analisisId from results when component mounts
+  useEffect(() => {
+    if (results && results.id) {
+      console.log("Setting analisisId:", results.id);
+      setAnalisisId(results.id);
+    }
+  }, [results]);
 
-  const updateCompatibilidadSafely = (newValues) => {
-    console.log("Updating compatibilidad with:", JSON.stringify(newValues));
-    
-    setCompatibilidad(prev => ({
-      sodio: {
-        compatible: newValues?.sodio?.compatible ?? prev.sodio.compatible,
-        valor: newValues?.sodio?.valor ?? prev.sodio.valor,
-      },
-      potasio: {
-        compatible: newValues?.potasio?.compatible ?? prev.potasio.compatible,
-        valor: newValues?.potasio?.valor ?? prev.potasio.valor,
-      },
-      fosforo: {
-        compatible: newValues?.fosforo?.compatible ?? prev.fosforo.compatible,
-        valor: newValues?.fosforo?.valor ?? prev.fosforo.valor,
-      }
-    }));
-  };
-  
-  // Usar getImageUrl para obtener la URL correcta de la imagen
-  const serverImageUrl = results?.imagen_analizada ? 
-    getImageUrl(results.imagen_analizada) : null;
-  
-  // Logging para debugging
+  // NEW: Update serverImageUrl when results change
+  useEffect(() => {
+    if (results?.imagen_analizada) {
+      const url = getImageUrl(results.imagen_analizada);
+      setServerImageUrl(url);
+    }
+  }, [results]);
+
+  // Logging para debugging - Updated with dependency on serverImageUrl
   useEffect(() => {
     console.log("ScanResultScreen - Datos recibidos:", {
       analisisId: analisisId || "No disponible",
@@ -128,9 +124,10 @@ export default function ScanResultScreen() {
       tieneIdPersona: !!results?.id_persona || !!results?.persona_id,
       personaId: results?.id_persona || results?.persona_id || "No disponible",
       imageUri: imageUri,
-      serverImageUrl: serverImageUrl
+      serverImageUrl: serverImageUrl,
+      isReadOnly: isReadOnly  // Log the isReadOnly value for debugging
     });
-  }, []);
+  }, [analisisId, userId, results, imageUri, serverImageUrl]);
 
   // Cargar el token de autenticación al inicio
   useEffect(() => {
@@ -392,10 +389,17 @@ export default function ScanResultScreen() {
           return updatedSelections;
         });
 
-        // Track selected units and quantities for display
-        const unidadTexto = varianteSeleccionada.unidad_seleccionada ? 
-          `${varianteSeleccionada.cantidad_seleccionada} ${varianteSeleccionada.unidad_seleccionada.abreviacion}` : 
-          '100g/ml';
+        // Track selected units and quantities for display - FIXED to handle undefined abreviacion
+        let unidadTexto = "100g/ml"; // Default fallback
+        
+        if (varianteSeleccionada.unidad_seleccionada) {
+          const cantidad = varianteSeleccionada.cantidad_seleccionada || 1;
+          const unidadNombre = varianteSeleccionada.unidad_seleccionada.abreviacion || 
+                              varianteSeleccionada.unidad_seleccionada.nombre || 
+                              "unidades";
+          
+          unidadTexto = `${cantidad} ${unidadNombre}`;
+        }
         
         // Store the quantity and unit information with the food
         setFoodsWithUnits(prev => {
@@ -831,6 +835,7 @@ export default function ScanResultScreen() {
           onScanAgain={handleScanAgain}
           onGoHome={handleGoHome}
         />
+
       )}
       
       {/* Modals - ONLY shown when not in read-only mode */}
@@ -850,6 +855,7 @@ export default function ScanResultScreen() {
             alimentoGenerico={alimentoSeleccionando}
             onSelectAlimento={handleSelectVarianteEspecifica}
             titulo="Seleccionar tipo específico"
+            analisisId={analisisId} // Pass the properly initialized analisisId
           />
         </>
       )}
