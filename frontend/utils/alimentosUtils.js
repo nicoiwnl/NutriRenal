@@ -11,8 +11,7 @@ const terminosChilenos = {
   'chícharos': 'arvejas',
   'cacahuate': 'maní',
   'pastel': 'torta',
-  'fresa': 'frutilla',
-  // Añade más términos según necesites
+  'fresa': 'frutilla'
 };
 
 // Función para adaptar los términos alimenticios al español chileno

@@ -5,7 +5,8 @@ import {
   ScrollView, 
   Image, 
   TouchableOpacity,
-  StyleSheet 
+  StyleSheet,
+  Platform
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import ResumenNutricionalCard from './ResumenNutricionalCard';
