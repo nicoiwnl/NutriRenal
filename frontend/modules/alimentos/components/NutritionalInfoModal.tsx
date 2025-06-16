@@ -44,6 +44,8 @@ const NutritionalInfoModal: React.FC<NutritionalInfoModalProps> = ({
             contentContainerStyle={styles.scrollContentContainer}
             showsVerticalScrollIndicator={true}>
             <NutrientItem label="Energía" value={`${formatNumber(alimento.energia, 1)} kcal`} />
+            <NutrientItem label="Humedad" value={`${formatNumber(alimento.humedad, 1)} g`} />
+            <NutrientItem label="Cenizas" value={`${formatNumber(alimento.cenizas, 1)} g`} />
             <NutrientItem label="Proteínas" value={`${formatNumber(alimento.proteinas, 1)} g`} />
             <NutrientItem label="Carbohidratos" value={`${formatNumber(alimento.hidratos_carbono, 1)} g`} />
             <NutrientItem label="Azúcares" value={`${formatNumber(alimento.azucares_totales, 1)} g`} />
@@ -52,6 +54,7 @@ const NutritionalInfoModal: React.FC<NutritionalInfoModalProps> = ({
             <NutrientItem label="Ác. grasos saturados" value={`${formatNumber(alimento.acidos_grasos_saturados, 1)} g`} />
             <NutrientItem label="Ác. grasos monoinsaturados" value={`${formatNumber(alimento.acidos_grasos_monoinsaturados, 1)} g`} />
             <NutrientItem label="Ác. grasos poliinsaturados" value={`${formatNumber(alimento.acidos_grasos_poliinsaturados, 1)} g`} />
+            <NutrientItem label="Ác. grasos trans" value={`${formatNumber(alimento.acidos_grasos_trans, 1)} g`} />
             <NutrientItem label="Colesterol" value={`${formatNumber(alimento.colesterol, 1)} mg`} />
             
             <Divider style={styles.modalDivider} />
@@ -77,6 +80,10 @@ const NutritionalInfoModal: React.FC<NutritionalInfoModalProps> = ({
             />
             <NutrientItem label="Calcio" value={`${formatNumber(alimento.calcio, 1) || 'N/D'} mg`} />
             <NutrientItem label="Hierro" value={`${formatNumber(alimento.hierro, 1) || 'N/D'} mg`} />
+            <NutrientItem label="Magnesio" value={`${formatNumber(alimento.magnesio, 1) || 'N/D'} mg`} />
+            <NutrientItem label="Zinc" value={`${formatNumber(alimento.zinc, 1) || 'N/D'} mg`} />
+            <NutrientItem label="Cobre" value={`${formatNumber(alimento.cobre, 1) || 'N/D'} mg`} />
+            <NutrientItem label="Selenio" value={`${formatNumber(alimento.selenio, 1) || 'N/D'} µg`} />
 
             <Divider style={styles.modalDivider} />
             <Text style={styles.sectionHeader}>Vitaminas</Text>
@@ -84,6 +91,23 @@ const NutritionalInfoModal: React.FC<NutritionalInfoModalProps> = ({
             <NutrientItem label="Vitamina A" value={`${formatNumber(alimento.vitamina_A, 1) || 'N/D'} μg`} />
             <NutrientItem label="Vitamina C" value={`${formatNumber(alimento.vitamina_C, 1) || 'N/D'} mg`} />
             <NutrientItem label="Vitamina D" value={`${formatNumber(alimento.vitamina_D, 1) || 'N/D'} μg`} />
+            <NutrientItem label="Vitamina E" value={`${formatNumber(alimento.vitamina_E, 1) || 'N/D'} mg`} />
+            <NutrientItem label="Vitamina K" value={`${formatNumber(alimento.vitamina_K, 1) || 'N/D'} μg`} />
+            <NutrientItem label="Vitamina B1 (Tiamina)" value={`${formatNumber(alimento.vitamina_B1, 1) || 'N/D'} mg`} />
+            <NutrientItem label="Vitamina B2 (Riboflavina)" value={`${formatNumber(alimento.vitamina_B2, 1) || 'N/D'} mg`} />
+            <NutrientItem label="Niacina" value={`${formatNumber(alimento.niacina, 1) || 'N/D'} mg`} />
+            <NutrientItem label="Vitamina B6" value={`${formatNumber(alimento.vitamina_B6, 1) || 'N/D'} mg`} />
+            <NutrientItem label="Ácido pantoténico" value={`${formatNumber(alimento.acido_pantotenico, 1) || 'N/D'} mg`} />
+            <NutrientItem label="Vitamina B12" value={`${formatNumber(alimento.vitamina_B12, 1) || 'N/D'} μg`} />
+            <NutrientItem label="Folatos" value={`${formatNumber(alimento.folatos, 1) || 'N/D'} μg`} />
+            
+            {alimento.alcohol > 0 && (
+              <>
+                <Divider style={styles.modalDivider} />
+                <Text style={styles.sectionHeader}>Otros</Text>
+                <NutrientItem label="Alcohol" value={`${formatNumber(alimento.alcohol, 1)} g`} />
+              </>
+            )}
           </ScrollView>
           
           <TouchableOpacity
