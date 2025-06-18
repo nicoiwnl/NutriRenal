@@ -5,7 +5,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 const MultipleMatchesAlert = ({ alimentos, onSelectAlimento }) => {
   const [expanded, setExpanded] = useState(false);
 
-  // Only show this alert if there are multiple alimentos
+  // Si no hay alimentos o solo uno, no mostrar el componente
   if (!alimentos || alimentos.length <= 1) {
     return null;
   }

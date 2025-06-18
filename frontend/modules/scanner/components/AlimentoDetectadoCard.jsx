@@ -12,7 +12,7 @@ const AlimentoDetectadoCard = ({ alimento }) => {
     navigation.navigate('AlimentoDetailScreen', { id: alimento.id });
   };
   
-  // Función para registrar consumo (pendiente de implementación)
+  // Función para registrar consumo 
   const registrarConsumo = () => {
     // Esta función podría navegar a una pantalla de registro o llamar a una API
     alert(`Registrar consumo: ${alimento.nombre}`);

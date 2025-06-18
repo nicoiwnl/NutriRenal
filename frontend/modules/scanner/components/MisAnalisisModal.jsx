@@ -37,13 +37,13 @@ const MisAnalisisModal = ({
       const unidadesRegistradas = {};
       
       try {
-        // IMPROVED: Add timeout to ensure API responds
+        // tiempo para que la API responda
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
         
         console.log("Realizando llamada API a selecciones-analisis...");
         
-        // FIXED: Use the correct URL format without duplicating "api/" prefix
+        // Url arreglada para la seleccion de analisis por api
         const response = await api.get('selecciones-analisis/', { 
           signal: controller.signal 
         });
@@ -53,13 +53,13 @@ const MisAnalisisModal = ({
         if (response.data && Array.isArray(response.data)) {
           console.log(`Éxito! Recibidas ${response.data.length} selecciones de la API`);
           
-          // Log the first few items for debugging
+          
           if (response.data.length > 0) {
             console.log("Muestra de selecciones:", 
               JSON.stringify(response.data.slice(0, 2)));
           }
           
-          // Group selections by analysis ID
+          // Selecciones por ID
           response.data.forEach(seleccion => {
             const analisisId = seleccion.analisis;
             
@@ -67,13 +67,13 @@ const MisAnalisisModal = ({
             if (!selecciones[analisisId]) selecciones[analisisId] = {};
             if (!unidadesRegistradas[analisisId]) unidadesRegistradas[analisisId] = {};
             
-            // Log each matching selection for clarity
+            
             console.log(`Guardando selección: ${seleccion.alimento_original} -> ${seleccion.alimento_nombre} para análisis ${analisisId}`);
             
-            // Store as key-value: "leche" -> "Leche de burra"
+            // "leche" -> "Leche de burra"
             selecciones[analisisId][seleccion.alimento_original] = seleccion.alimento_nombre;
             
-            // Store unit text: "Leche de burra" -> "2 vasos"
+            // "Leche de burra" -> "2 vasos"
             const unidadTexto = `${seleccion.cantidad} ${seleccion.unidad_nombre}`;
             unidadesRegistradas[analisisId][seleccion.alimento_nombre] = unidadTexto;
           });
@@ -186,13 +186,13 @@ const MisAnalisisModal = ({
                           const seleccionesFormato = analisisConSelecciones[item.id] || {};
                           const unidadesFormato = unidadesRegistradas[item.id] || {};
                           
-                          // IMPROVED: Log more details about what we're sending
+                          // Logs para errores de seleccion de analisis
                           console.log(`Seleccionando análisis ${item.id}, enviando:`, {
                             selecciones: JSON.stringify(seleccionesFormato),
                             unidades: JSON.stringify(unidadesFormato)
                           });
                           
-                          // Ensure the specific selections are added to the item being passed
+                          // Asegurarse de que las selecciones y unidades estén en el formato correcto
                           const itemWithSelecciones = {
                             ...item,
                             seleccionesEspecificas: seleccionesFormato,

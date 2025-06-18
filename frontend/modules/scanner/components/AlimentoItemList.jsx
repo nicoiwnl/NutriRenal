@@ -37,7 +37,7 @@ const AlimentoItemList = ({
         data={alimentos}
         keyExtractor={(item, index) => `alimento-${index}`}
         renderItem={({ item }) => {
-          // Check if there's a specific selection for this item
+          // Verifica si hay una selección específica para este item
           const nombreEspecifico = seleccionesEspecificas[item] || item;
           const unidadTexto = foodsWithUnits[nombreEspecifico];
           const isUpdated = seleccionesEspecificas[item] && seleccionesEspecificas[item] !== item;
@@ -69,14 +69,14 @@ const AlimentoItemList = ({
                     {unidadTexto ? ` (${unidadTexto})` : ''}
                   </Text>
                   
-                  {/* If there's a different specific selection, show the original detected term */}
+                  {/* Si hay una selección específica diferente, muestra el término original detectado.*/}
                   {nombreEspecifico !== item && (
                     <Text style={styles.detectedAs}>
                       Detectado como: <Text style={styles.detectedTerm}>{item}</Text>
                     </Text>
                   )}
                   
-                  {/* Show "Actualizado" badge when food is updated */}
+                  {/* Show "Actualizado" cuando la comida es actualizada */}
                   {isUpdated && (
                     <View style={styles.updatedBadge}>
                       <Text style={styles.updatedBadgeText}>Actualizado</Text>
@@ -85,7 +85,7 @@ const AlimentoItemList = ({
                 </View>
               </View>
               
-              {/* Only show edit button if not in read-only mode */}
+              {/* Solo se muestra en el modo ReadOnly para mis analisis*/}
               {!isReadOnly && (
                 <View style={styles.actionContainer}>
                   <MaterialIcons name="edit" size={24} color="#690B22" />

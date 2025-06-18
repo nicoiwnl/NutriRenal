@@ -22,7 +22,7 @@ const ScanResultView = ({
   compatibilidad, 
   onSelectAlimento,
   isReadOnly = false,
-  seleccionesEspecificas = {}, // Accept the new props with defaults
+  seleccionesEspecificas = {}, 
   foodsWithUnits = {},
   fuenteValores = 'base_datos',
   children,
@@ -32,7 +32,7 @@ const ScanResultView = ({
                              results?.texto_original?.alimentos_detectados || 
                              [];
   
-  // ADDED: Better logging for debugging selections
+  
   useEffect(() => {
     console.log("ScanResultView renderizando con:", {
       totalAlimentos: alimentosDetectados.length,
@@ -43,17 +43,16 @@ const ScanResultView = ({
     });
   }, [alimentosDetectados, seleccionesEspecificas, foodsWithUnits]);
 
-  // Extract all necessary data
   const displayImageUri = serverImageUrl || imageUri;
   
-  // FIXED: Define safeCompatibilidad to prevent the ReferenceError
+  
   const safeCompatibilidad = compatibilidad || {
     sodio: { compatible: false, valor: 0 },
     potasio: { compatible: false, valor: 0 },
     fosforo: { compatible: false, valor: 0 }
   };
   
-  // ADDED: Debug image URL handling
+  
   useEffect(() => {
     console.log("ScanResultView - image display details:", {
       serverImageUrl: serverImageUrl,
@@ -62,7 +61,7 @@ const ScanResultView = ({
     });
   }, [serverImageUrl, imageUri, displayImageUri]);
 
-  // If there are no results, show error message
+  
   if (!results || !alimentosDetectados.length) {
     // Simple version for error case
     return (
@@ -84,7 +83,7 @@ const ScanResultView = ({
     );
   }
 
-  // Add debugging useEffect to log selection data
+  
   useEffect(() => {
     if (seleccionesEspecificas && Object.keys(seleccionesEspecificas).length > 0) {
       console.log("ScanResultView - Mostrando selecciones específicas:", 
@@ -94,13 +93,13 @@ const ScanResultView = ({
     }
   }, [seleccionesEspecificas, foodsWithUnits]);
 
-  // Use ScrollView instead of FlatList for better content rendering
+  
   return (
     <ScrollView 
       style={styles.resultContainer} 
       contentContainerStyle={[styles.resultContent, { paddingBottom: 75 }]}
     >
-      {/* Display the food image with improved error handling */}
+      
       {displayImageUri ? (
         <Image 
           source={{ uri: displayImageUri }} 
@@ -132,7 +131,7 @@ const ScanResultView = ({
       {/* Alimentos Detectados section */}
       <Text style={styles.resultTitle}>Alimentos Detectados</Text>
       
-      {/* Show instruction banner */}
+      
       {!isReadOnly && (
         <View style={localStyles.instructionBanner}>
           <MaterialIcons name="touch-app" size={22} color="#1B4D3E" />
@@ -142,14 +141,13 @@ const ScanResultView = ({
         </View>
       )}
       
-      {/* Show detected foods */}
+      
       {alimentosDetectados.map((alimento, index) => {
-        // Get specific selection info
+        
         const nombreEspecifico = seleccionesEspecificas[alimento] || alimento;
         const unidadTexto = foodsWithUnits[nombreEspecifico];
         const isUpdated = seleccionesEspecificas[alimento] && seleccionesEspecificas[alimento] !== alimento;
         
-        // ADDED: Log each food item for debugging
         console.log(`Renderizando alimento #${index}: ${alimento} -> ${nombreEspecifico} (${isUpdated ? 'actualizado' : 'original'})`);
         
         return (
@@ -217,13 +215,11 @@ const ScanResultView = ({
         resultadoCompleto={results}
       />
       
-      {/* Any additional children */}
       {children}
     </ScrollView>
   );
 };
 
-// Local styles for the component
 const localStyles = StyleSheet.create({
   instructionBanner: {
     flexDirection: 'row',
@@ -449,8 +445,6 @@ const localStyles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#1B4D3E',
   },
-
-  // Add missing styles referenced in the component
   noImageContainer: {
     alignItems: 'center',
     justifyContent: 'center',

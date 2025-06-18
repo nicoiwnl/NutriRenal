@@ -3,30 +3,29 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const RecomendacionesCard = ({ analisisTexto, resultadoCompleto }) => {
-  // Add state to track if text is expanded
+  // Agregar estado para manejar la expansión del texto
   const [expanded, setExpanded] = useState(false);
   
   // Find recommendations from all possible sources
   const getRecomendaciones = () => {
-    // Check all possible places where recommendations might be stored
+    // Mirar en todos los posibles lugares donde se pueden encontrar recomendaciones
     if (resultadoCompleto?.recomendaciones) {
       // First priority: top-level recomendaciones field
       return resultadoCompleto.recomendaciones;
     } else if (analisisTexto?.recomendaciones) {
-      // Second priority: inside texto_original object
+      
       return analisisTexto.recomendaciones;
     } else if (typeof analisisTexto === 'string' && analisisTexto.includes('recomienda')) {
-      // Third priority: directly in the texto_original if it's a string containing recommendations
       return analisisTexto;
     }
     
-    // No recommendations found
+   
     return null;
   };
 
-  // Find compatibility status from all possible sources
+  
   const isCompatible = () => {
-    // Check all possible places where compatibility might be stored
+    
     if (resultadoCompleto?.compatibilidad_renal !== undefined) {
       return resultadoCompleto.compatibilidad_renal;
     } else if (analisisTexto?.compatibilidad_renal !== undefined) {
@@ -34,16 +33,16 @@ const RecomendacionesCard = ({ analisisTexto, resultadoCompleto }) => {
     } else if (resultadoCompleto?.compatible_con_perfil !== undefined) {
       return resultadoCompleto.compatible_con_perfil;
     }
-    return null; // Unknown compatibility
+    return null; 
   };
 
   const recomendaciones = getRecomendaciones();
   const compatible = isCompatible();
   
-  // Skip rendering if no recommendations are found
+  
   if (!recomendaciones) return null;
   
-  // Check if text is longer than 100 characters to determine if we need expansion option
+  
   const isLongText = recomendaciones.length > 100;
 
   return (
@@ -73,13 +72,12 @@ const RecomendacionesCard = ({ analisisTexto, resultadoCompleto }) => {
       
       <Text 
         style={styles.recomendacionText}
-        // Remove numberOfLines restriction to show all text
         numberOfLines={expanded || !isLongText ? null : 4}
       >
         {recomendaciones}
       </Text>
       
-      {/* Add "Ver más" / "Ver menos" option for long text */}
+      {/* Agregar ver mas a los menus*/}
       {isLongText && (
         <TouchableOpacity 
           style={styles.expandButton}
@@ -105,7 +103,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 16, // Increased from 8 to give more space
+    marginBottom: 16, 
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },

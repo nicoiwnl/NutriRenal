@@ -3,11 +3,11 @@ import { View, Image, ActivityIndicator, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const ScanResultHeader = ({ imageUri, serverImageUrl, loadingImage, setLoadingImage }) => {
-  // Track the loading state internally if not provided
+  
   const [internalLoading, setInternalLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
   
-  // Use the provided state handlers or internal ones
+  
   const isLoading = loadingImage !== undefined ? loadingImage : internalLoading;
   const handleLoadStart = () => {
     if (setLoadingImage) setLoadingImage(true);
@@ -27,17 +27,17 @@ const ScanResultHeader = ({ imageUri, serverImageUrl, loadingImage, setLoadingIm
     console.log("Error loading image from:", displayUrl);
   };
   
-  // Choose which URL to display
+  // URL a display
   const useServerImage = !!serverImageUrl;
   const displayUrl = serverImageUrl || imageUri;
   
-  // Set a timeout to force loading to end if it takes too long
+  
   useEffect(() => {
     if (isLoading) {
       const timer = setTimeout(() => {
         if (setLoadingImage) setLoadingImage(false);
         setInternalLoading(false);
-      }, 10000); // 10 seconds timeout
+      }, 10000); // 10 segundos de timeout
       
       return () => clearTimeout(timer);
     }
@@ -54,7 +54,7 @@ const ScanResultHeader = ({ imageUri, serverImageUrl, loadingImage, setLoadingIm
             onLoadStart={handleLoadStart}
             onLoadEnd={handleLoadEnd}
             onError={handleError}
-            // Add advanced image loading properties
+            // Agrega props para mejorar la experiencia de carga
             progressiveRenderingEnabled={true}
             fadeDuration={300}
           />

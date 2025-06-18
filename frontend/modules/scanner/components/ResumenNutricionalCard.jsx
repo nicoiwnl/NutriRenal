@@ -3,39 +3,35 @@ import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { formatMinerales } from '../../../utils/formatUtils';
 
-// Define new threshold constants for visual consistency
+// Definir los límites de minerales actualizados
 const THRESHOLDS = {
   SODIO: 375,    // Actualizado de 800 a 375
   POTASIO: 500,  // Actualizado de 1000 a 500
   FOSFORO: 250   // Actualizado de 700 a 250
 };
 
-// Define warning thresholds (middle values) for yellow indicator
+// Definir los límites de advertencia como la mitad de los límites máximos
 const WARNING_THRESHOLDS = {
   SODIO: THRESHOLDS.SODIO / 2,    // 187.5
   POTASIO: THRESHOLDS.POTASIO / 2, // 250
   FOSFORO: THRESHOLDS.FOSFORO / 2  // 125
 };
 
-// Create a focused component that only displays the three key minerals
+//Crear el componente ResumenNutricionalCard
 const ResumenNutricionalCard = (props) => {
-  // Remove excessive logging
-  // console.log("ResumenNutricionalCard rendering with props:", JSON.stringify(props, null, 2));
-  
-  // Step 1: Handle undefined props completely safely
+
+
   if (!props) props = {};
   
-  // Step 2: Ensure totales and compatibilidad exist as objects
+
   const totales = props.totales || {};
   
-  // Step 3: Create fully-defined compatibilidad with safe defaults
   const safeCompatibilidad = {
     sodio: { compatible: false, valor: 0 },
     potasio: { compatible: false, valor: 0 },
     fosforo: { compatible: false, valor: 0 }
   };
   
-  // More cautious merging of properties
   if (props.compatibilidad) {
     if (props.compatibilidad.sodio) {
       safeCompatibilidad.sodio.compatible = !!props.compatibilidad.sodio.compatible;
@@ -53,33 +49,28 @@ const ResumenNutricionalCard = (props) => {
     }
   }
   
-  // Step 5: Extract all values we need with defaults
   const safeValues = {
     sodio: safeCompatibilidad.sodio.valor,
     potasio: safeCompatibilidad.potasio.valor,
     fosforo: safeCompatibilidad.fosforo.valor
   };
   
-  // Track previous values to animate changes
   const [prevValues, setPrevValues] = useState(safeValues);
   
-  // Initialize animation hook
   const animatedValue = new Animated.Value(0);
   
-  // Use effect for animation and to track value changes
   useEffect(() => {
-    // Check if values actually changed to trigger animation
+
     const hasChanged = 
       safeValues.sodio !== prevValues.sodio || 
       safeValues.potasio !== prevValues.potasio || 
       safeValues.fosforo !== prevValues.fosforo;
     
     if (hasChanged) {
-      // Remove excessive logging
-      // console.log("Values changed! Animating from:", prevValues, "to:", safeValues);
+
       setPrevValues(safeValues);
       
-      // Only run animation if we're not on web platform and values changed
+
       if (Platform.OS !== 'web') {
         Animated.sequence([
           Animated.timing(animatedValue, {
@@ -111,15 +102,13 @@ const ResumenNutricionalCard = (props) => {
     outputRange: ['rgba(255,255,255,0)', 'rgba(106, 11, 34, 0.1)']
   });
   
-  // Format values for display - MAKE SURE to use values directly from props
+
   const sodioFormatted = formatMinerales(safeValues.sodio);
   const potasioFormatted = formatMinerales(safeValues.potasio);
   const fosforoFormatted = formatMinerales(safeValues.fosforo);
   
-  // Remove excessive logging
-  // console.log("Displaying values - Sodio:", sodioFormatted, "Potasio:", potasioFormatted, "Fósforo:", fosforoFormatted);
-  
-  // Determine mineral status (0: good, 1: warning, 2: exceeded)
+
+  // Determinar el estado de cada mineral
   const getMineralStatus = (mineral, value) => {
     if (mineral === 'sodio') {
       if (value < WARNING_THRESHOLDS.SODIO) return 0; // Good - Green
@@ -163,11 +152,10 @@ const ResumenNutricionalCard = (props) => {
       { backgroundColor: highlightBackground }
     ]}>
       <View style={styles.headerContainer}>
-        {/* Title now occupies its own row at top */}
         <Text style={styles.cardTitle}>Minerales relevantes en enfermedad renal</Text>
       </View>
       
-      {/* Source badge now in its own container below title */}
+      
       <View style={styles.sourceContainer}>
         <View style={[
           styles.sourceBadge,
@@ -265,7 +253,7 @@ const ResumenNutricionalCard = (props) => {
         </View>
       </View>
       
-      {/* Legend for values - UPDATED with yellow indicator */}
+      
       <View style={styles.legendContainer}>
         <View style={styles.legendItem}>
           <View style={[styles.legendColor, {backgroundColor: '#4CAF50'}]}></View>
@@ -280,7 +268,7 @@ const ResumenNutricionalCard = (props) => {
           <Text style={styles.legendText}>Excede el límite recomendado</Text>
         </View>
         
-        {/* Add a note about estimated values if applicable */}
+        
         {esEstimacionIA && (
           <Text style={styles.estimadoNota}>
             Los valores mostrados son estimaciones de IA basadas en el análisis de imagen y 
@@ -297,26 +285,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 8, // Reduced for more compact layout
+    marginBottom: 8, 
     elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15, // Slightly enhanced shadow for depth
+    shadowOpacity: 0.15, 
     shadowRadius: 3,
-    borderWidth: 0, // Ensure no border
+    borderWidth: 0, 
   },
   cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#1B4D3E',
-    textAlign: 'center', // Center title
+    textAlign: 'center', 
   },
   headerContainer: {
     alignItems: 'center',
     marginBottom: 8,
   },
   sourceContainer: {
-    alignItems: 'center', // Center the badge
+    alignItems: 'center', 
     marginBottom: 16,
   },
   sourceBadge: {
@@ -346,12 +334,12 @@ const styles = StyleSheet.create({
   realText: {
     color: '#388E3C',
   },
-  // Warning text style for yellow level
+  
   mineralValueWarning: {
     color: '#FFA000',
     fontWeight: '600',
   },
-  // Legacy styles
+  
   estimadoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -446,10 +434,7 @@ const styles = StyleSheet.create({
   }
 });
 
-// Use React.memo to prevent unnecessary re-renders but with a deep comparison function
 export default memo(ResumenNutricionalCard, (prevProps, nextProps) => {
-  // Custom comparison function to ensure component updates when nutritional values change
-  // Return true only if the props should be considered equal (no re-render needed)
   if (!prevProps || !nextProps) return false;
   
   const prevCompatibilidad = prevProps.compatibilidad || {};
