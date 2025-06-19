@@ -18,7 +18,7 @@ export default function useScanResult(route) {
   const [perfilMedico, setPerfilMedico] = useState(null);
   // Estado para almacenar la URL de imagen guardada en el servidor
   const [serverImageUrl, setServerImageUrl] = useState(null);
-  // Add state for thresholds
+  // Añadir estado para umbrales
   const [thresholds, setThresholds] = useState({
     sodio: 500,
     potasio: 500,
@@ -54,24 +54,24 @@ export default function useScanResult(route) {
     cargarPerfilMedico();
   }, []);
   
-  // Load thresholds from user profile or default settings
+  // Cargar umbrales del perfil de usuario o de la configuración predeterminada
   useEffect(() => {
     const loadThresholds = async () => {
       try {
-        // Try to get thresholds from profile or settings
+        // Intentar obtener umbrales del perfil o configuración
         const userData = await AsyncStorage.getItem('userData');
         if (userData) {
           const userDataObj = JSON.parse(userData);
           if (userDataObj.perfil_medico && userDataObj.perfil_medico.restricciones) {
-            // If user has medical profile with restrictions, use those values
+            // Si el usuario tiene perfil médico con restricciones, usar esos valores
             const restricciones = userDataObj.perfil_medico.restricciones;
             setThresholds({
-              sodio: restricciones.sodio_max || 375,  // Actualizado de 500 a 375
+              sodio: restricciones.sodio_max || 375,
               potasio: restricciones.potasio_max || 500,
-              fosforo: restricciones.fosforo_max || 250  // Actualizado de 300 a 250
+              fosforo: restricciones.fosforo_max || 250
             });
           } else {
-            // Set the new default values if no user profile restrictions
+            // Establecer los nuevos valores predeterminados si no hay restricciones de perfil de usuario
             setThresholds({
               sodio: 375,
               potasio: 500,
@@ -80,7 +80,7 @@ export default function useScanResult(route) {
           }
         }
       } catch (error) {
-        console.error('Error loading thresholds:', error);
+        console.error('Error al cargar umbrales:', error);
       }
     };
     

@@ -13,7 +13,7 @@ const useScanner = () => {
   const navigation = useNavigation();
   const isWeb = Platform.OS === 'web';
   
-  // Función para abrir la cámara - corregida para usar la API correctamente
+  // Función para abrir la cámara
   const handleOpenCamera = async () => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -23,9 +23,9 @@ const useScanner = () => {
         return;
       }
       
-      // Usar la API correcta para expo-image-picker (sin MediaType)
+      // Usar la API para expo-image-picker 
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images, // Dejarlo como estaba originalmente
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, 
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -40,7 +40,7 @@ const useScanner = () => {
     }
   };
 
-  // Función para abrir la galería - corregida para usar la API correctamente
+  // Función para abrir la galería
   const handleOpenGallery = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -50,9 +50,9 @@ const useScanner = () => {
         return;
       }
       
-      // Usar la API correcta para expo-image-picker (sin MediaType)
+      // Usar la API para expo-image-picker
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images, // Dejarlo como estaba originalmente
+        mediaTypes: ImagePicker.MediaTypeOptions.Images, 
         allowsEditing: true,
         aspect: [4, 3],
         quality: 0.8,
@@ -159,7 +159,7 @@ const useScanner = () => {
       console.error('Error al analizar la imagen:', error);
       console.error('Detalles del error:', error.response?.data || error.message);
       
-      // Más información sobre el error para debugging
+      // Más información sobre el error para depuración
       const errorDetails = {
         message: error.message,
         status: error.response?.status,

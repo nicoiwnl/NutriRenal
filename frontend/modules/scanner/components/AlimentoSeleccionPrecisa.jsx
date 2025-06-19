@@ -29,7 +29,7 @@ const AlimentoSeleccionPrecisa = ({
   onSelectAlimento,
   titulo = "Seleccionar tipo específico",
   analisisId = null,
-  // Añadir prop para recibir unidades desde componente padre
+  // Prop para recibir unidades desde componente padre
   unidadesMedidaProp = null 
 }) => {
   const [loading, setLoading] = useState(true);
@@ -220,7 +220,7 @@ const AlimentoSeleccionPrecisa = ({
     setAjustedNutrientes(null);
   };
 
-  // MEJORADO: Efecto para detectar cambios en el alimento genérico
+  //Efecto para detectar cambios en el alimento genérico
   useEffect(() => {
     if (visible) {
       // Si el alimento genérico cambió, resetear todo
@@ -359,12 +359,8 @@ const AlimentoSeleccionPrecisa = ({
 
   // Función para seleccionar un alimento específico
   const handleSelectFood = (item) => {
-    // Añadir logging para ver qué se está seleccionando
-    console.log("Alimento seleccionado:", item);
-    
     if (!item.id) {
       // Si es el genérico sin ID, cierra directamente
-      console.log("Usando alimento genérico sin ID");
       onSelectAlimento(item);
       return;
     }
@@ -414,7 +410,6 @@ const AlimentoSeleccionPrecisa = ({
   const guardarSeleccionEspecifica = async (alimentoSeleccionado) => {
     // Add a safety check to prevent errors
     if (!analisisId || typeof analisisId !== 'string') {
-      console.log("No se puede guardar la selección: ID de análisis no válido", analisisId);
       return null;
     }
     
@@ -422,13 +417,11 @@ const AlimentoSeleccionPrecisa = ({
       // Obtener ID de usuario
       const userData = await AsyncStorage.getItem('userData');
       if (!userData) {
-        console.log("No se encontró información del usuario");
         return;
       }
       
       const { persona_id } = JSON.parse(userData);
       if (!persona_id) {
-        console.log("No se encontró ID de persona");
         return;
       }
       
@@ -444,18 +437,14 @@ const AlimentoSeleccionPrecisa = ({
         cantidad: cantidad || "1.00"
       };
       
-      console.log("Guardando selección específica:", seleccion);
       const endpoint = ENDPOINTS.SELECCIONES_ANALISIS || '/selecciones-analisis/';
       
       // Enviar a la API usando path relativo (no URL absoluta)
       const response = await api.post(endpoint, seleccion);
       
-      console.log("Selección guardada exitosamente:", response.data);
-      
       return response.data;
     } catch (error) {
       console.error("Error al guardar selección específica:", error);
-      console.error("Detalles:", error.response?.data);
       return null;
     }
   };
@@ -475,7 +464,6 @@ const AlimentoSeleccionPrecisa = ({
       valores_ajustados: ajustedNutrientes
     };
     
-    console.log("Confirmando selección de alimento:", alimentoFinal);
     
     // Guardar la selección en la BD si hay analisisId
     if (analisisId) {
@@ -608,7 +596,6 @@ const AlimentoSeleccionPrecisa = ({
     </TouchableOpacity>
   );
 
-  // En el pie de página, si hay una opción genérica, cambiar su texto y AÑADIR BOTÓN VER TODOS
   const renderFooter = () => (
     <View>
       <TouchableOpacity
@@ -674,7 +661,7 @@ const AlimentoSeleccionPrecisa = ({
         <View style={styles.unitSelectorContainer}>
           <View style={styles.unitSelectorHeader}>
             <Text style={styles.unitSelectorTitle}>
-              Seleccionar unidad de medida ({unidadesMedida.length})
+              Seleccionar unidad de medida
             </Text>
             <TouchableOpacity 
               onPress={() => setShowUnitModal(false)}
@@ -684,55 +671,98 @@ const AlimentoSeleccionPrecisa = ({
             </TouchableOpacity>
           </View>
 
-          <FlatList
-            data={unidadesMedida}
-            keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
-            renderItem={({ item }) => {
-              // Determinar si el ítem es la unidad seleccionada
-              const isSelected = selectedUnit?.id === item.id;
-              
-              // Obtener texto de equivalencia
-              let equivalenciaText = '';
-              
-              if (item.equivalencia_g) {
-                equivalenciaText = `(${item.equivalencia_g} g)`;
-              } else if (item.equivalencia_ml) {
-                equivalenciaText = `(${item.equivalencia_ml} ml)`;
-              }
-              
-              return (
-                <TouchableOpacity 
-                  style={[
-                    styles.unitItem, 
-                    isSelected && styles.selectedUnitItem
-                  ]}
-                  onPress={() => {
-                    setSelectedUnit(item);
-                    setShowUnitModal(false);
-                    calcularNutrientesAjustados(selectedFood, item, parseFloat(cantidad) || 1);
-                  }}
-                >
-                  <View style={styles.unitItemContent}>
-                    <Text style={[
-                      styles.unitItemText,
-                      isSelected && styles.selectedUnitItemText
-                    ]}>
-                      {item.nombre}
-                    </Text>
-                    {equivalenciaText && (
-                      <Text style={styles.equivalenciaMedida}>
-                        {equivalenciaText}
+          <View style={styles.unitSelectorCount}>
+            <MaterialIcons name="category" size={16} color="#690B22" />
+            <Text style={styles.unitSelectorCountText}>
+              {unidadesMedida.length} unidades disponibles
+            </Text>
+          </View>
+
+          {loadingUnidades ? (
+            <View style={styles.unitLoadingContainer}>
+              <ActivityIndicator size="large" color="#690B22" />
+              <Text style={styles.unitLoadingText}>
+                Cargando unidades de medida...
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={unidadesMedida}
+              keyExtractor={(item) => item.id?.toString() || Math.random().toString()}
+              contentContainerStyle={styles.unitListContent}
+              renderItem={({ item }) => {
+                // Determinar si el ítem es la unidad seleccionada
+                const isSelected = selectedUnit?.id === item.id;
+                
+                // Obtener texto de equivalencia
+                let equivalenciaText = '';
+                
+                if (item.equivalencia_g) {
+                  equivalenciaText = `${item.equivalencia_g} g`;
+                } else if (item.equivalencia_ml) {
+                  equivalenciaText = `${item.equivalencia_ml} ml`;
+                }
+                
+                return (
+                  <TouchableOpacity 
+                    style={[
+                      styles.unitItem, 
+                      isSelected && styles.selectedUnitItem
+                    ]}
+                    onPress={() => {
+                      setSelectedUnit(item);
+                      setShowUnitModal(false);
+                      calcularNutrientesAjustados(selectedFood, item, parseFloat(cantidad) || 1);
+                    }}
+                  >
+                    <View style={styles.unitItemLeft}>
+                      <MaterialIcons 
+                        name={isSelected ? "radio-button-checked" : "radio-button-unchecked"} 
+                        size={22} 
+                        color={isSelected ? "#690B22" : "#999"} 
+                      />
+                    </View>
+                    
+                    <View style={styles.unitItemContent}>
+                      <Text style={[
+                        styles.unitItemText,
+                        isSelected && styles.selectedUnitItemText
+                      ]}>
+                        {item.nombre}
                       </Text>
+                      {equivalenciaText && (
+                        <View style={styles.equivalenciaTag}>
+                          <MaterialIcons name="straighten" size={12} color="#555" />
+                          <Text style={styles.equivalenciaMedida}>
+                            {equivalenciaText}
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                    
+                    {isSelected && (
+                      <MaterialIcons name="check" size={20} color="#690B22" />
                     )}
-                  </View>
-                  
-                  {isSelected && (
-                    <MaterialIcons name="check" size={20} color="#690B22" />
-                  )}
-                </TouchableOpacity>
-              );
-            }}
-          />
+                  </TouchableOpacity>
+                );
+              }}
+              ListEmptyComponent={
+                <View style={styles.emptyUnitsContainer}>
+                  <MaterialIcons name="error-outline" size={24} color="#666" />
+                  <Text style={styles.emptyUnitsText}>
+                    No hay unidades de medida disponibles
+                  </Text>
+                </View>
+              }
+            />
+          )}
+          
+          <TouchableOpacity 
+            style={styles.unitSelectorConfirmButton}
+            onPress={() => setShowUnitModal(false)}
+          >
+            <Text style={styles.unitSelectorConfirmText}>Cerrar</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
@@ -757,52 +787,55 @@ const AlimentoSeleccionPrecisa = ({
                 </TouchableOpacity>
               </View>
               
-              <View style={styles.selectedFoodContainer}>
-                <Text style={styles.selectedFoodLabel}>Alimento seleccionado:</Text>
-                <Text style={styles.selectedFoodName}>{selectedFood.nombre}</Text>
-                <Text style={styles.baseReferenceText}>
-                  Valores base por 100g
-                </Text>
-              </View>
-              
-              <View style={styles.cantidadContainer}>
-                <Text style={styles.cantidadLabel}>Cantidad:</Text>
-                <View style={styles.cantidadInputContainer}>
-                  <TextInput
-                    style={styles.cantidadInput}
-                    value={cantidad}
-                    onChangeText={(text) => {
-                      setCantidad(text);
-                      const cantidadValue = parseFloat(text) || 1;
-                      calcularNutrientesAjustados(selectedFood, selectedUnit, cantidadValue);
-                    }}
-                    keyboardType="numeric"
-                    maxLength={5}
-                    blurOnSubmit={true}
-                  />
+              {/* Sección de alimento seleccionado más compacta */}
+              <View style={styles.selectedFoodContainerCompact}>
+                <MaterialIcons name="check-circle" size={18} color="#1B4D3E" style={styles.selectedFoodIcon} />
+                <View style={styles.selectedFoodTextContainer}>
+                  <Text style={styles.selectedFoodName} numberOfLines={2}>
+                    {selectedFood.nombre}
+                  </Text>
+                  <Text style={styles.baseReferenceText}>
+                    (Valores base por 100g)
+                  </Text>
                 </View>
               </View>
               
-              <View style={styles.formGroup}>
-                <Text style={styles.formLabel}>Unidad de medida:</Text>
-                <TouchableOpacity 
-                  style={styles.unitSelector}
-                  onPress={() => setShowUnitModal(true)}
-                >
-                  <Text style={styles.unitSelectorText}>
-                    {selectedUnit?.nombre || 'Seleccionar unidad'}
-                  </Text>
-                  <MaterialIcons name="arrow-drop-down" size={24} color="#690B22" />
-                </TouchableOpacity>
-                
-                {/* Mostrar equivalencia si existe */}
-                {(selectedUnit?.equivalencia_g || selectedUnit?.equivalencia_ml) && (
-                  <View style={styles.equivalenciaContainer}>
-                    <Text style={styles.equivalenciaLabel}>
-                      Equivale a {selectedUnit.equivalencia_g || selectedUnit.equivalencia_ml} {selectedUnit.equivalencia_g ? 'g' : 'ml'}
-                    </Text>
+              {/* Contenedor unificado para cantidad y unidad */}
+              <View style={styles.cantidadUnidadContainer}>
+                <View style={styles.cantidadContainer}>
+                  <Text style={styles.unidadLabel}>Cantidad:</Text>
+                  <View style={styles.cantidadInputWrapper}>
+                    <MaterialIcons name="edit" size={20} color="#690B22" style={styles.unitIcon} />
+                    <TextInput
+                      style={styles.cantidadInput}
+                      value={cantidad}
+                      onChangeText={(text) => {
+                        setCantidad(text);
+                        const cantidadValue = parseFloat(text) || 1;
+                        calcularNutrientesAjustados(selectedFood, selectedUnit, cantidadValue);
+                      }}
+                      keyboardType="numeric"
+                      maxLength={5}
+                      blurOnSubmit={true}
+                    />
                   </View>
-                )}
+                </View>
+                
+                <View style={styles.unidadContainer}>
+                  <Text style={styles.unidadLabel}>Unidad:</Text>
+                  <TouchableOpacity 
+                    style={styles.unitSelector}
+                    onPress={() => setShowUnitModal(true)}
+                  >
+                    <View style={styles.unitSelectorInner}>
+                      <MaterialIcons name="straighten" size={20} color="#690B22" style={styles.unitIcon} />
+                      <Text style={styles.unitSelectorText}>
+                        {selectedUnit?.nombre || 'Seleccionar unidad'}
+                      </Text>
+                    </View>
+                    <MaterialIcons name="arrow-drop-down" size={24} color="#690B22" />
+                  </TouchableOpacity>
+                </View>
               </View>
               
               {/* Mantener el resumen nutricional mejorado */}
@@ -1166,46 +1199,68 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     margin: 16,
   },
-  selectedFoodLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  selectedFoodName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#690B22',
-    marginTop: 4,
-  },
-  cantidadContainer: {
+  selectedFoodContainerCompact: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F1E3D3',
+    borderRadius: 8,
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#690B22',
+  },
+  selectedFoodIcon: {
+    marginRight: 10,
+  },
+  selectedFoodTextContainer: {
+    flex: 1,
+  },
+  selectedFoodName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#690B22',
+  },
+  baseReferenceText: {
+    fontSize: 11,
+    color: '#666',
+    fontStyle: 'italic',
+  },
+  cantidadUnidadContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
     marginBottom: 16,
   },
-  cantidadLabel: {
-    fontSize: 16,
-    color: '#333',
-    marginRight: 10,
+  cantidadContainer: {
+    flex: 1,
+    marginRight: 8,
   },
-  cantidadInputContainer: {
+  unidadContainer: {
+    flex: 1,
+    marginLeft: 8,
+  },
+  cantidadInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#F8F0E8',
+    padding: 12,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 5,
+    borderColor: '#E9ECEF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
   cantidadInput: {
     fontSize: 16,
-    color: '#333',
-    width: 50,
-    textAlign: 'center',
-    padding: 5,
-  },
-  cantidadUnidad: {
-    fontSize: 16,
-    color: '#690B22',
-    marginLeft: 5,
+    fontWeight: '500',
+    color: '#1B4D3E',
+    flex: 1,
   },
   unidadesTitle: {
     fontSize: 16,
@@ -1282,10 +1337,18 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     fontSize: 12,
   },
-  resumenItem: {
+  resumenGrid: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
+    flexWrap: 'wrap',
+    justifyContent: 'space-between'
+  },
+  resumenItem: {
+    width: '48%',
+    backgroundColor: 'white',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 6
   },
   resumenLabel: {
     fontSize: 14,
@@ -1329,106 +1392,139 @@ const styles = StyleSheet.create({
   },
   
   // Nuevos estilos para selector de unidades mejorado
-  unitSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#F1E3D3',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E9ECEF',
-    marginTop: 8
-  },
-  unitSelectorText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1B4D3E'
-  },
-  formGroup: {
-    padding: 16,
-    marginBottom: 10
-  },
-  formLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1B4D3E',
-    marginBottom: 8
-  },
   unitSelectorOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 20
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    padding: 20,
   },
   unitSelectorContainer: {
     width: '100%',
-    maxWidth: 500,
+    maxWidth: 420,
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
-    maxHeight: '80%'
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 10,
   },
   unitSelectorHeader: {
     backgroundColor: '#690B22',
-    padding: 15,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center'
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   unitSelectorTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white'
+    color: 'white',
   },
   unitSelectorCloseButton: {
-    padding: 5
+    padding: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+  },
+  unitSelectorCount: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    backgroundColor: '#F1E3D3',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E9ECEF',
+  },
+  unitSelectorCountText: {
+    fontSize: 14,
+    color: '#333',
+    marginLeft: 6,
+  },
+  unitListContent: {
+    paddingVertical: 8,
   },
   unitItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E9ECEF'
+    borderBottomColor: '#EFEFEF',
+  },
+  unitItemLeft: {
+    marginRight: 12,
   },
   unitItemContent: {
-    flex: 1
+    flex: 1,
+    marginRight: 8,
   },
   selectedUnitItem: {
     backgroundColor: '#F8F0E8',
     borderLeftWidth: 4,
-    borderLeftColor: '#690B22'
+    borderLeftColor: '#690B22',
   },
   unitItemText: {
     fontSize: 16,
-    color: '#1B4D3E'
+    color: '#333',
   },
   selectedUnitItemText: {
-    fontWeight: 'bold'
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+  },
+  equivalenciaTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    backgroundColor: '#F0F0F0',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
   },
   equivalenciaMedida: {
     fontSize: 13,
-    color: '#666',
-    marginTop: 2
+    color: '#555',
+    marginLeft: 4,
   },
-  inappropriateUnit: {
-    opacity: 0.5
-  },
-  resumenGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between'
-  },
-  resumenItem: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 10,
-    borderRadius: 8,
+  unitSelectorConfirmButton: {
+    backgroundColor: '#1B4D3E',
+    padding: 15,
     alignItems: 'center',
-    marginBottom: 10
+    marginTop: 10,
+    marginHorizontal: 20,
+    marginBottom: 15,
+    borderRadius: 8,
   },
+  unitSelectorConfirmText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  unitLoadingContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  unitLoadingText: {
+    marginTop: 12,
+    color: '#666',
+  },
+  emptyUnitsContainer: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyUnitsText: {
+    marginTop: 10,
+    color: '#666',
+    textAlign: 'center',
+  },
+  
   searchContainer: {
     padding: 16,
     borderBottomWidth: 1,
@@ -1573,8 +1669,62 @@ const styles = StyleSheet.create({
     color: '#6c757d',
     fontWeight: 'bold',
     fontSize: 12,
-    marginBottom: 4,
+    marginBottom: 2,
+  },
+  // Mejoras en los estilos del selector de unidades
+  formGroup: {
+    padding: 16,
+    backgroundColor: '#FFFFFF',
+  },
+  formLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1B4D3E',
+    marginBottom: 8,
+  },
+  unitSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F8F0E8',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  unitSelectorInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  unitIcon: {
+    marginRight: 8,
+  },
+  unitSelectorText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#1B4D3E',
+  },
+  equivalenciaContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: '#F1E3D3',
+    padding: 8,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  equivalenciaLabel: {
+    fontSize: 12,
+    color: '#690B22',
+    fontStyle: 'italic',
   },
 });
 
 export default AlimentoSeleccionPrecisa;
+

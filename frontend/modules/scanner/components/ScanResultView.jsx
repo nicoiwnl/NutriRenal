@@ -1,19 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
   ScrollView, 
   Image, 
   TouchableOpacity,
-  StyleSheet,
-  Platform
+  Platform,
+  StyleSheet
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import ResumenNutricionalCard from './ResumenNutricionalCard';
 import styles from '../styles/scannerStyles';
 import RecomendacionesCard from './RecomendacionesCard';
+import AlimentoItemList from './AlimentoItemList';
+import RegistroConsumoScanModal from './RegistroConsumoScanModal';
 
-// Added onSelectAlimento prop to make food items interactive
 const ScanResultView = ({ 
   results, 
   imageUri, 
@@ -26,182 +27,125 @@ const ScanResultView = ({
   foodsWithUnits = {},
   fuenteValores = 'base_datos',
   children,
+  alimentosActualizados = [] 
 }) => {
-  // Extract alimentos_detectados from results
+  // Estado para el modal de registro de consumo
+  const [registroModalVisible, setRegistroModalVisible] = useState(false);
+  const [alimentoRegistrando, setAlimentoRegistrando] = useState('');
+  const [unidadRegistrando, setUnidadRegistrando] = useState('');
+  const [alimentoObjetoRegistrando, setAlimentoObjetoRegistrando] = useState(null);
+  
+  // Estado para llevar registro de alimentos ya registrados (consumidos)
+  const [alimentosRegistrados, setAlimentosRegistrados] = useState({});
+  
+  // Extraer alimentos_detectados desde los resultados
   const alimentosDetectados = results?.alimentos_detectados || 
                              results?.texto_original?.alimentos_detectados || 
                              [];
   
-  
-  useEffect(() => {
-    console.log("ScanResultView renderizando con:", {
-      totalAlimentos: alimentosDetectados.length,
-      alimentos: alimentosDetectados,
-      tieneSelecciones: Object.keys(seleccionesEspecificas || {}).length > 0,
-      selecciones: JSON.stringify(seleccionesEspecificas),
-      unidades: JSON.stringify(foodsWithUnits)
-    });
-  }, [alimentosDetectados, seleccionesEspecificas, foodsWithUnits]);
-
+  // Usar la URL de la imagen del servidor si está disponible, de lo contrario usar la local
   const displayImageUri = serverImageUrl || imageUri;
   
-  
+  // Valores de compatibilidad seguros
   const safeCompatibilidad = compatibilidad || {
     sodio: { compatible: false, valor: 0 },
     potasio: { compatible: false, valor: 0 },
     fosforo: { compatible: false, valor: 0 }
   };
   
-  
-  useEffect(() => {
-    console.log("ScanResultView - image display details:", {
-      serverImageUrl: serverImageUrl,
-      imageUri: imageUri,
-      finalDisplayUrl: displayImageUri
-    });
-  }, [serverImageUrl, imageUri, displayImageUri]);
+  // Función para manejar el registro de consumo y marcar como registrado
+  const handleRegistrarConsumo = (nombreAlimento, unidad, objetoAlimento) => {
+    setAlimentoRegistrando(nombreAlimento);
+    setUnidadRegistrando(unidad);
+    setAlimentoObjetoRegistrando(objetoAlimento);
+    setRegistroModalVisible(true);
+  };
 
-  
-  if (!results || !alimentosDetectados.length) {
-    // Simple version for error case
-    return (
-      <View style={styles.resultContainer}>
-        <Text style={styles.errorMessage}>No se pudieron detectar alimentos en la imagen.</Text>
-        <Image 
-          source={{ uri: displayImageUri }} 
-          style={styles.resultImageSmall}
-          resizeMode="cover"
-        />
-        <TouchableOpacity
-          style={styles.scanAgainButton}
-          onPress={onScanAgain}
-        >
-          <MaterialIcons name="camera-alt" size={20} color="#FFFFFF" />
-          <Text style={styles.scanAgainButtonText}>Escanear de nuevo</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  
-  useEffect(() => {
-    if (seleccionesEspecificas && Object.keys(seleccionesEspecificas).length > 0) {
-      console.log("ScanResultView - Mostrando selecciones específicas:", 
-        JSON.stringify(seleccionesEspecificas));
-      console.log("ScanResultView - Con unidades:", 
-        JSON.stringify(foodsWithUnits));
+  // Función para manejar finalización exitosa del registro
+  const handleRegistroExitoso = (alimentoId) => {
+    // Marcar el alimento como registrado
+    if (alimentoId) {
+      setAlimentosRegistrados(prev => ({
+        ...prev,
+        [alimentoId]: true
+      }));
     }
-  }, [seleccionesEspecificas, foodsWithUnits]);
+  };
 
-  
+  // Estilos locales para elementos específicos como la imagen
+  const localStyles = StyleSheet.create({
+    noImageContainer: {
+      backgroundColor: '#f0f0f0',
+      justifyContent: 'center',
+      alignItems: 'center'
+    }
+  });
+
   return (
     <ScrollView 
       style={styles.resultContainer} 
       contentContainerStyle={[styles.resultContent, { paddingBottom: 75 }]}
     >
-      
+      {/* Sección de imagen y resultado */}
       {displayImageUri ? (
-        <Image 
-          source={{ uri: displayImageUri }} 
-          style={styles.resultImage}
-          resizeMode="cover"
-          onError={(e) => console.error("Error en la carga de imagen:", e.nativeEvent.error)}
-          onLoad={() => console.log("✓ Imagen cargada correctamente")}
-          // Add a key to force reload when URL changes
-          key={`img-${String(displayImageUri).split('/').pop()}`}
-        />
+        <View style={styles.imageContainer}>
+          <Image 
+            source={{ uri: displayImageUri }} 
+            style={styles.resultImage}
+            resizeMode="cover"
+            key={`img-${String(displayImageUri).split('/').pop()}`}
+          />
+        </View>
       ) : (
-        <View style={[styles.resultImage, localStyles.noImageContainer]}>
-          <MaterialIcons name="image-not-supported" size={40} color="#ddd" />
-          <Text style={localStyles.noImageText}>No hay imagen disponible</Text>
+        <View style={[styles.imageContainer, localStyles.noImageContainer]}>
+          <MaterialIcons name="image-not-supported" size={40} color="#ccc" />
+          <Text style={{color: '#999', marginTop: 8}}>Sin imagen</Text>
         </View>
       )}
+
+      {/* Título de resultados */}
+      <Text style={styles.resultTitle}>
+        {results.nombre || results.plato_detectado || "Resultado del análisis"}
+      </Text>
       
-      {/* Banner simple para alimentos detectados */}
-      <View style={localStyles.detectadoBanner}>
-        <MaterialIcons name="restaurant" size={20} color="#690B22" />
-        <View style={localStyles.detectadoTexto}>
-          <Text style={localStyles.detectadoLabel}>Detectado:</Text>
-          <Text style={localStyles.detectadoValor}>
-            {results?.plato_detectado || results?.nombre || alimentosDetectados.join(", ")}
-          </Text>
-        </View>
-      </View>
-      
-      {/* Alimentos Detectados section */}
+      {/* Lista de alimentos detectados con el manejo de registro */}
       <Text style={styles.resultTitle}>Alimentos Detectados</Text>
       
-      
-      {!isReadOnly && (
-        <View style={localStyles.instructionBanner}>
-          <MaterialIcons name="touch-app" size={22} color="#1B4D3E" />
-          <Text style={localStyles.instructionText}>
-            Toca cada alimento para seleccionar la versión correcta y obtener información nutricional precisa
-          </Text>
-        </View>
-      )}
-      
-      
-      {alimentosDetectados.map((alimento, index) => {
-        
-        const nombreEspecifico = seleccionesEspecificas[alimento] || alimento;
-        const unidadTexto = foodsWithUnits[nombreEspecifico];
-        const isUpdated = seleccionesEspecificas[alimento] && seleccionesEspecificas[alimento] !== alimento;
-        
-        console.log(`Renderizando alimento #${index}: ${alimento} -> ${nombreEspecifico} (${isUpdated ? 'actualizado' : 'original'})`);
-        
-        return (
-          <TouchableOpacity
-            key={`alimento-${index}`}
-            style={[
-              localStyles.alimentoItem,
-              isUpdated ? localStyles.alimentoItemUpdated : {}
-            ]}
-            onPress={() => onSelectAlimento(alimento)}
-            disabled={isReadOnly}
-          >
-            <View style={localStyles.alimentoContent}>
-              <View style={[
-                localStyles.iconContainer,
-                isUpdated ? localStyles.iconContainerUpdated : {}
-              ]}>
-                <MaterialIcons 
-                  name={isUpdated ? "check-circle" : "restaurant"} 
-                  size={20} 
-                  color={isUpdated ? "#FFFFFF" : "#690B22"} 
-                />
-              </View>
-              
-              <View style={localStyles.alimentoTextContainer}>
-                <Text style={localStyles.alimentoNombre}>
-                  {nombreEspecifico}
-                  {unidadTexto ? ` (${unidadTexto})` : ''}
-                </Text>
-                
-                {nombreEspecifico !== alimento && (
-                  <Text style={localStyles.detectedAs}>
-                    Detectado como: <Text style={localStyles.detectedTerm}>{alimento}</Text>
-                  </Text>
-                )}
-                
-                {isUpdated && (
-                  <View style={localStyles.updatedBadge}>
-                    <Text style={localStyles.updatedBadgeText}>Actualizado</Text>
-                  </View>
-                )}
-              </View>
-            </View>
+      <AlimentoItemList 
+        alimentos={alimentosDetectados}
+        results={results}
+        seleccionesEspecificas={seleccionesEspecificas}
+        foodsWithUnits={foodsWithUnits}
+        onSelectAlimento={onSelectAlimento}
+        alimentosRegistrados={alimentosRegistrados} // Pasar el estado de registros
+        alimentosActualizados={alimentosActualizados}
+        onRegistrarConsumo={(nombre, unidad) => {
+            // Buscar el objeto completo del alimento en alimentosActualizados
+            let alimentoObjeto = null;
             
-            {!isReadOnly && (
-              <View style={localStyles.actionContainer}>
-                <MaterialIcons name="edit" size={24} color="#690B22" />
-              </View>
-            )}
-          </TouchableOpacity>
-        );
-      })}
+            if (Array.isArray(alimentosActualizados) && alimentosActualizados.length > 0) {
+              // Buscar por nombre específico
+              const alimento = alimentosActualizados.find(a => 
+                (a && a.nombre === nombre) || 
+                (a && a.info && a.info.nombre === nombre)
+              );
+              if (alimento) {
+                alimentoObjeto = alimento.info || alimento;
+                
+                // Verificar si el alimento ya fue registrado
+                if (alimentoObjeto.id && alimentosRegistrados[alimentoObjeto.id]) {
+                  return;
+                }
+              }
+            }
+            
+            // Llamar a handleRegistrarConsumo con todos los datos
+            handleRegistrarConsumo(nombre, unidad, alimentoObjeto);
+          }}
+        isReadOnly={isReadOnly}
+      />
       
-      {/* Nutritional information section */}
+      {/* Información nutricional */}
       <Text style={styles.resultTitle}>Información Nutricional</Text>
       <ResumenNutricionalCard 
         totales={results.totales} 
@@ -209,13 +153,24 @@ const ScanResultView = ({
         fuenteValores={fuenteValores}
       />
       
-      {/* Recommendations section */}
+      {/* Recomendaciones */}
       <RecomendacionesCard 
         analisisTexto={results.texto_original}
         resultadoCompleto={results}
       />
       
       {children}
+      
+      {/* Modal para registrar consumo */}
+      <RegistroConsumoScanModal 
+        visible={registroModalVisible}
+        onClose={() => setRegistroModalVisible(false)}
+        nombreAlimento={alimentoRegistrando}
+        unidadTexto={unidadRegistrando}
+        nombreAnalisis={results?.nombre || results?.plato_detectado || "Análisis de alimentos"}
+        alimentoSeleccionado={alimentoObjetoRegistrando} // Pasar el objeto completo al modal
+        onSuccess={handleRegistroExitoso}
+      />
     </ScrollView>
   );
 };
@@ -312,7 +267,7 @@ const localStyles = StyleSheet.create({
     borderRadius: 20,
   },
   
-  // Nuevos estilos para el panel de detección mejorado
+  // Nuevos estilos para el panel de detección mejorada
   detectionPanel: {
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
@@ -458,3 +413,4 @@ const localStyles = StyleSheet.create({
 });
 
 export default ScanResultView;
+

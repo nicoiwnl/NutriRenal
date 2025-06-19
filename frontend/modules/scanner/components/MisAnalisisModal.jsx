@@ -41,8 +41,6 @@ const MisAnalisisModal = ({
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
         
-        console.log("Realizando llamada API a selecciones-analisis...");
-        
         // Url arreglada para la seleccion de analisis por api
         const response = await api.get('selecciones-analisis/', { 
           signal: controller.signal 
@@ -51,14 +49,6 @@ const MisAnalisisModal = ({
         clearTimeout(timeoutId);
         
         if (response.data && Array.isArray(response.data)) {
-          console.log(`Éxito! Recibidas ${response.data.length} selecciones de la API`);
-          
-          
-          if (response.data.length > 0) {
-            console.log("Muestra de selecciones:", 
-              JSON.stringify(response.data.slice(0, 2)));
-          }
-          
           // Selecciones por ID
           response.data.forEach(seleccion => {
             const analisisId = seleccion.analisis;
@@ -66,9 +56,6 @@ const MisAnalisisModal = ({
             // Inicializar estructuras si no existen
             if (!selecciones[analisisId]) selecciones[analisisId] = {};
             if (!unidadesRegistradas[analisisId]) unidadesRegistradas[analisisId] = {};
-            
-            
-            console.log(`Guardando selección: ${seleccion.alimento_original} -> ${seleccion.alimento_nombre} para análisis ${analisisId}`);
             
             // "leche" -> "Leche de burra"
             selecciones[analisisId][seleccion.alimento_original] = seleccion.alimento_nombre;
@@ -80,25 +67,9 @@ const MisAnalisisModal = ({
           
           setAnalisisConSelecciones(selecciones);
           setUnidadesRegistradas(unidadesRegistradas);
-          
-          // Log counts for each analysis
-          analisis.forEach(item => {
-            if (item && item.id && selecciones[item.id]) {
-              const count = Object.keys(selecciones[item.id]).length;
-              console.log(`Análisis ${item.id}: ${count} selecciones específicas`);
-            }
-          });
         }
       } catch (error) {
         console.error('Error al cargar selecciones específicas:', error);
-        // Log more details about the error
-        console.error('Detalles del error:', JSON.stringify({
-          status: error.response?.status,
-          data: error.response?.data,
-          message: error.message,
-          method: error.config?.method,
-          url: error.config?.url
-        }));
       } finally {
         setLoadingSelecciones(false);
       }
@@ -186,12 +157,6 @@ const MisAnalisisModal = ({
                           const seleccionesFormato = analisisConSelecciones[item.id] || {};
                           const unidadesFormato = unidadesRegistradas[item.id] || {};
                           
-                          // Logs para errores de seleccion de analisis
-                          console.log(`Seleccionando análisis ${item.id}, enviando:`, {
-                            selecciones: JSON.stringify(seleccionesFormato),
-                            unidades: JSON.stringify(unidadesFormato)
-                          });
-                          
                           // Asegurarse de que las selecciones y unidades estén en el formato correcto
                           const itemWithSelecciones = {
                             ...item,
@@ -209,7 +174,7 @@ const MisAnalisisModal = ({
                               source={{ uri: getImageUrl(item.url_imagen || item.imagen_analizada) }}
                               style={styles.analisisImage}
                               resizeMode="cover"
-                              onError={() => console.log("Error cargando miniatura:", item.url_imagen || item.imagen_analizada)}
+                              onError={() => {}} // Eliminar el console.log
                             />
                           ) : (
                             <View style={styles.noImagePlaceholder}>
@@ -419,3 +384,4 @@ const styles = StyleSheet.create({
 });
 
 export default MisAnalisisModal;
+ 

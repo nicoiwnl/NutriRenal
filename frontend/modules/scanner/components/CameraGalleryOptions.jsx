@@ -33,11 +33,6 @@ const CameraGalleryOptions = ({ onCameraPress, onGalleryPress }) => {
           <Text style={styles.buttonLabel}>Galería</Text>
         </TouchableOpacity>
       </View>
-      
-      <TouchableOpacity style={styles.backButton}>
-        <MaterialIcons name="arrow-back" size={24} color="white" />
-        <Text style={styles.backButtonText}>Volver</Text>
-      </TouchableOpacity>
     </View>
   );
 };

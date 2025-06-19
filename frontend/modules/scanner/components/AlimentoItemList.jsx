@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 
 const AlimentoItemList = ({ 
@@ -8,6 +8,9 @@ const AlimentoItemList = ({
   seleccionesEspecificas, 
   foodsWithUnits,
   onSelectAlimento,
+  onRegistrarConsumo,
+  alimentosRegistrados = {}, // Nuevo prop para alimentos ya registrados
+  alimentosActualizados = [], // NUEVO: Inicialización por defecto para evitar error
   isReadOnly = false
 }) => {
   if (!alimentos || alimentos.length === 0) {
@@ -33,17 +36,35 @@ const AlimentoItemList = ({
         </View>
       )}
       
-      <FlatList
-        data={alimentos}
-        keyExtractor={(item, index) => `alimento-${index}`}
-        renderItem={({ item }) => {
+      {/* MODIFICADO: Reemplazar FlatList con View para evitar nesting de VirtualizedLists */}
+      <View>
+        {alimentos.map((item, index) => {
           // Verifica si hay una selección específica para este item
           const nombreEspecifico = seleccionesEspecificas[item] || item;
           const unidadTexto = foodsWithUnits[nombreEspecifico];
           const isUpdated = seleccionesEspecificas[item] && seleccionesEspecificas[item] !== item;
           
+          // Buscar si el alimento está registrado
+          let isRegistered = false;
+          
+          // Intentar encontrar el ID del alimento en las selecciones específicas
+          if (isUpdated && Array.isArray(alimentosActualizados)) {
+            const alimentoObj = alimentosActualizados.find(a => 
+              a?.nombre === nombreEspecifico || 
+              a?.info?.nombre === nombreEspecifico
+            );
+            
+            if (alimentoObj) {
+              const alimentoId = alimentoObj.id || alimentoObj.info?.id;
+              if (alimentoId && alimentosRegistrados) {
+                isRegistered = alimentosRegistrados[alimentoId] === true;
+              }
+            }
+          }
+          
           return (
             <TouchableOpacity
+              key={`alimento-${index}`}
               style={[
                 styles.alimentoItem,
                 isUpdated ? styles.alimentoItemUpdated : {}
@@ -69,7 +90,7 @@ const AlimentoItemList = ({
                     {unidadTexto ? ` (${unidadTexto})` : ''}
                   </Text>
                   
-                  {/* Si hay una selección específica diferente, muestra el término original detectado.*/}
+                  {/* Si hay una selección específica diferente, muestra el término original detectado */}
                   {nombreEspecifico !== item && (
                     <Text style={styles.detectedAs}>
                       Detectado como: <Text style={styles.detectedTerm}>{item}</Text>
@@ -85,16 +106,39 @@ const AlimentoItemList = ({
                 </View>
               </View>
               
-              {/* Solo se muestra en el modo ReadOnly para mis analisis*/}
-              {!isReadOnly && (
-                <View style={styles.actionContainer}>
-                  <MaterialIcons name="edit" size={24} color="#690B22" />
-                </View>
-              )}
+              <View style={styles.actionContainer}>
+                {/* Mostrar botón de edición para todos los alimentos cuando no es de solo lectura */}
+                {!isReadOnly && (
+                  <MaterialIcons name="edit" size={24} color="#690B22" style={styles.actionIcon} />
+                )}
+                
+                {/* Mostrar botón de registro SOLO para alimentos actualizados y no registrados previamente */}
+                {!isReadOnly && isUpdated && (
+                  isRegistered ? (
+                    // Si ya está registrado, mostrar un icono de verificación
+                    <View style={styles.registeredContainer}>
+                      <MaterialIcons name="check-circle" size={24} color="#4CAF50" style={styles.actionIcon} />
+                      <Text style={styles.registeredText}>Registrado</Text>
+                    </View>
+                  ) : (
+                    // Si no está registrado, mostrar botón para registrar
+                    <TouchableOpacity
+                      onPress={() => onRegistrarConsumo && onRegistrarConsumo(nombreEspecifico, unidadTexto)}
+                    >
+                      <MaterialIcons 
+                        name="playlist-add" 
+                        size={24} 
+                        color="#4CAF50" 
+                        style={styles.actionIcon} 
+                      />
+                    </TouchableOpacity>
+                  )
+                )}
+              </View>
             </TouchableOpacity>
           );
-        }}
-      />
+        })}
+      </View>
     </View>
   );
 };
@@ -174,9 +218,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   actionContainer: {
-    padding: 6,
-    backgroundColor: '#F9F9F9',
-    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionIcon: {
+    marginLeft: 10,
   },
   noResultsContainer: {
     alignItems: 'center',
@@ -205,6 +251,17 @@ const styles = StyleSheet.create({
     color: '#1B4D3E',
     marginLeft: 8,
     lineHeight: 18,
+  },
+  // Estilos para el indicador "Registrado"
+  registeredContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  registeredText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    marginLeft: 4,
+    fontWeight: 'bold',
   },
 });
 

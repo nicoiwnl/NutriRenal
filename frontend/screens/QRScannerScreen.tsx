@@ -23,7 +23,7 @@ import styles from '../modules/scanner/styles/scannerStyles';
 import api from '../api';
 import { ENDPOINTS, getImageUrl } from '../config/apiConfig';
 
-// Define the analisisStyles here instead of using alimentoStyles
+// Definir los estilos de análisis aquí en lugar de usar los estilos de alimento
 const analisisStyles = StyleSheet.create({
   modalContainer: {
     flex: 1,
@@ -144,7 +144,7 @@ const analisisStyles = StyleSheet.create({
   },
 });
 
-// Nuevo componente para la lista de análisis previos
+// Componente para la lista de análisis previos
 const MisAnalisisModal = ({ visible, onClose, onSelectAnalisis, analisis, loading }) => {
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -215,7 +215,7 @@ const MisAnalisisModal = ({ visible, onClose, onSelectAnalisis, analisis, loadin
                             </Text>
                           )}
                           
-                          {/* UPDATED: Display specific analysis name when available, fall back to conclusion or generic text */}
+                          {/* ACTUALIZADO: Mostrar nombre específico del análisis cuando está disponible, o usar conclusión o texto genérico */}
                           <Text style={analisisStyles.analisisConclusion} numberOfLines={2}>
                             {item.nombre || item.conclusion || "Análisis de alimentos"}
                           </Text>
@@ -310,7 +310,7 @@ export default function QRScannerScreen({ navigation }) {
     loadUserId();
   }, []);
 
-  // Función para cargar análisis previos - Mejorada para Debug
+  // Función para cargar análisis previos
   const loadAnalisisPrevios = async () => {
     if (!userId) {
       Alert.alert('Aviso', 'Necesitas iniciar sesión para ver tus análisis previos');
@@ -319,17 +319,13 @@ export default function QRScannerScreen({ navigation }) {
     
     try {
       setLoadingAnalisis(true);
-      console.log("Cargando análisis para usuario ID:", userId);
-      console.log("Tipo de userId:", typeof userId);
       
-      // Log para ver qué endpoint exacto se está usando
+      // Obtener endpoint desde la configuración
       const endpointUrl = ENDPOINTS.MIS_ANALISIS(userId);
-      console.log(`Endpoint completo: ${endpointUrl}`);
       
-      // Use the configured endpoint that includes all possible parameter variations
+      // Usar el endpoint configurado
       const response = await api.get(ENDPOINTS.MIS_ANALISIS(userId), {
         headers: {
-          // Add additional headers to emphasize user filtering
           'X-User-Filter': 'true',
           'X-User-ID': userId,
           'X-Persona-ID': userId
@@ -337,14 +333,10 @@ export default function QRScannerScreen({ navigation }) {
       });
       
       if (response.data) {
-        console.log("Análisis previos recibidos:", response.data.length);
-        console.log("Muestra del primer análisis:", response.data.length > 0 ? JSON.stringify(response.data[0], null, 2) : "No hay análisis");
-        
-        // Filtro mejorado con logging detallado
         let filteredAnalysis = [];
         
         if (Array.isArray(response.data)) {
-          // Verificar cada análisis con logs detallados
+          // Filtrar análisis por usuario
           filteredAnalysis = response.data.filter(analysis => {
             const analysisUserId = 
               analysis.persona_id || 
@@ -352,13 +344,19 @@ export default function QRScannerScreen({ navigation }) {
               analysis.usuario_id || 
               analysis.id_usuario;
             
-            const matches = String(analysisUserId) === String(userId);
-            console.log(`Análisis ID ${analysis.id}: usuarioID=${analysisUserId}, currentUserID=${userId}, matches=${matches}`);
-            
-            return matches;
+            return String(analysisUserId) === String(userId);
           });
           
-          console.log(`De ${response.data.length} análisis totales, ${filteredAnalysis.length} pertenecen al usuario ${userId}`);
+          // Ordenar análisis desde el más reciente al más antiguo
+          filteredAnalysis.sort((a, b) => {
+            // Manejar casos donde fecha_analisis es null o undefined
+            if (!a.fecha_analisis) return 1;  // Mover al final los que no tienen fecha
+            if (!b.fecha_analisis) return -1; // Mover al final los que no tienen fecha
+            
+            const fechaA = new Date(a.fecha_analisis).getTime();
+            const fechaB = new Date(b.fecha_analisis).getTime();
+            return fechaB - fechaA; // Orden descendente (más reciente primero)
+          });
         }
         
         setAnalisisPrevios(filteredAnalysis);
@@ -389,25 +387,32 @@ export default function QRScannerScreen({ navigation }) {
           if (success) break; // Si ya tuvimos éxito, salimos del ciclo
           
           try {
-            console.log(`Intentando con endpoint: ${endpoint.url}`);
             const alternativeResponse = await api.get(endpoint.url, 
               endpoint.params ? { params: endpoint.params } : undefined
             );
             
             if (alternativeResponse.data && Array.isArray(alternativeResponse.data)) {
-              console.log(`Análisis recibidos desde endpoint alternativo: ${alternativeResponse.data.length}`);
-              setAnalisisPrevios(alternativeResponse.data);
+              // Ordenar análisis desde el más reciente al más antiguo
+              const ordenados = [...alternativeResponse.data].sort((a, b) => {
+                // Manejar casos donde fecha_analisis es null o undefined
+                if (!a.fecha_analisis) return 1;
+                if (!b.fecha_analisis) return -1;
+                
+                const fechaA = new Date(a.fecha_analisis).getTime();
+                const fechaB = new Date(b.fecha_analisis).getTime();
+                return fechaB - fechaA; // Orden descendente
+              });
+              
+              setAnalisisPrevios(ordenados);
               success = true;
             }
           } catch (err) {
-            // Solo logging, seguimos intentando con otros endpoints
-            console.log(`Endpoint ${endpoint.url} falló:`, err.message);
+            // Continuar con el siguiente endpoint
           }
         }
         
         if (!success) {
           // Si ningún endpoint funcionó
-          console.log("Todos los endpoints fallaron");
           setAnalisisPrevios([]);
         }
       } catch (err) {
@@ -422,7 +427,7 @@ export default function QRScannerScreen({ navigation }) {
   // Abrir modal y cargar análisis
   const handleShowAnalisisModal = () => {
     setShowAnalisisModal(true);
-    loadAnalisisPrevios(); // Ahora llamamos a la función local
+    loadAnalisisPrevios();
   };
 
   // Navegar a la pantalla de resultados con un análisis seleccionado
@@ -436,10 +441,6 @@ export default function QRScannerScreen({ navigation }) {
       id_persona: analisis.id_persona || analisis.persona_id || userId,
       persona_id: analisis.persona_id || analisis.id_persona || userId,
     };
-    
-    console.log("Seleccionó análisis con ID:", analisisConId.id);
-    console.log("ID de persona asociado:", analisisConId.persona_id || analisisConId.id_persona);
-    console.log("Selecciones específicas recibidas:", JSON.stringify(seleccionesEspecificas));
     
     // Añadir las selecciones específicas y unidades al objeto de análisis
     const procesado = processAnalysisData(analisisConId);
@@ -455,7 +456,7 @@ export default function QRScannerScreen({ navigation }) {
 
   // Procesar datos de análisis para adaptarlos al formato esperado
   const processAnalysisData = (data) => {
-    // Create a consistent format regardless of source
+    // Crear un formato consistente independientemente de la fuente
     const processed = {
       id: data.id || Date.now().toString(),
       id_persona: data.id_persona || data.persona_id || userId,
@@ -465,24 +466,24 @@ export default function QRScannerScreen({ navigation }) {
       nombre: data.nombre || data.conclusion || "Análisis de alimentos",
       conclusion: data.conclusion,
       compatible_con_perfil: data.compatible_con_perfil,
-      // Include stored specific selections if available
+      // Incluir selecciones específicas almacenadas si están disponibles
       seleccionesEspecificas: data.seleccionesEspecificas || {},
       foodsWithUnits: data.foodsWithUnits || {}
     };
     
-    // Extract alimentos_detectados - check all possible locations
+    // Extraer alimentos_detectados - verificar todas las ubicaciones posibles
     let alimentos = [];
     let totales = {
       energia: 0, proteinas: 0, hidratos_carbono: 0, 
       lipidos: 0, sodio: 0, potasio: 0, fosforo: 0
     };
     
-    // Extract data from resultado field if available
+    // Extraer datos del campo resultado si está disponible
     if (data.resultado) {
-      // Try texto_original first
+      // Intentar primero con texto_original
       if (data.resultado.texto_original) {
         if (typeof data.resultado.texto_original === 'string') {
-          // If it's a string, try to parse it as JSON
+          // Si es una cadena, intentar analizarla como JSON
           try {
             const parsed = JSON.parse(data.resultado.texto_original);
             if (parsed.alimentos_detectados) {
@@ -492,10 +493,10 @@ export default function QRScannerScreen({ navigation }) {
               totales = { ...totales, ...parsed.totales };
             }
           } catch (e) {
-            console.log("Could not parse texto_original as JSON");
+            console.log("No se pudo analizar texto_original como JSON");
           }
         } else if (typeof data.resultado.texto_original === 'object') {
-          // If it's already an object
+          // Si ya es un objeto
           if (data.resultado.texto_original.alimentos_detectados) {
             alimentos = data.resultado.texto_original.alimentos_detectados;
           }
@@ -506,37 +507,37 @@ export default function QRScannerScreen({ navigation }) {
         processed.texto_original = data.resultado.texto_original;
       }
       
-      // If no alimentos found yet, try resultado directly
+      // Si no se encontraron alimentos aún, intentar con resultado directamente
       if (alimentos.length === 0 && data.resultado.alimentos_detectados) {
         alimentos = data.resultado.alimentos_detectados;
       }
       
-      // If no totales found yet, try resultado directly
+      // Si no se encontraron totales aún, intentar con resultado directamente
       if (!totales.energia && data.resultado.totales) {
         totales = { ...totales, ...data.resultado.totales };
       }
       
-      // If we have recomendaciones in resultado, use them
+      // Si tenemos recomendaciones en resultado, úsalas
       if (data.resultado.recomendaciones) {
         processed.recomendaciones = data.resultado.recomendaciones;
       }
     }
     
-    // Fallback to data fields directly if not found in resultado
+    // Fallback a campos de datos directamente si no se encuentran en resultado
     if (alimentos.length === 0 && data.alimentos_detectados) {
       alimentos = data.alimentos_detectados;
     }
     
-    // Final fallback for texto_original
+    // Fallback final para texto_original
     if (!processed.texto_original && typeof data.texto_original === 'object') {
       processed.texto_original = data.texto_original;
     }
     
-    // Ensure we have alimentos_detectados and totales fields
+    // Asegurarse de que tenemos campos alimentos_detectados y totales
     processed.alimentos_detectados = alimentos;
     processed.totales = totales;
     
-    // Also ensure compatibility renal info
+    // También asegurar información de compatibilidad renal
     if (data.compatibilidad_renal !== undefined) {
       processed.compatibilidad_renal = data.compatibilidad_renal;
     } else if (data.resultado?.compatibilidad_renal !== undefined) {

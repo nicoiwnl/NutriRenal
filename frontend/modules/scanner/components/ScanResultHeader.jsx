@@ -24,10 +24,9 @@ const ScanResultHeader = ({ imageUri, serverImageUrl, loadingImage, setLoadingIm
     if (setLoadingImage) setLoadingImage(false);
     setInternalLoading(false);
     setImageError(true);
-    console.log("Error loading image from:", displayUrl);
   };
   
-  // URL a display
+  // URL para mostrar
   const useServerImage = !!serverImageUrl;
   const displayUrl = serverImageUrl || imageUri;
   
@@ -54,7 +53,7 @@ const ScanResultHeader = ({ imageUri, serverImageUrl, loadingImage, setLoadingIm
             onLoadStart={handleLoadStart}
             onLoadEnd={handleLoadEnd}
             onError={handleError}
-            // Agrega props para mejorar la experiencia de carga
+            // Propiedades para mejorar la experiencia de carga
             progressiveRenderingEnabled={true}
             fadeDuration={300}
           />
@@ -121,3 +120,4 @@ const styles = StyleSheet.create({
 });
 
 export default ScanResultHeader;
+
