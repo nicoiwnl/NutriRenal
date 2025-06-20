@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet , Platform} from 'react-native';
 import { Modal, Portal } from 'react-native-paper';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
 interface UnitSelectorModalProps {
   visible: boolean;
@@ -41,12 +42,22 @@ const UnitSelectorModal: React.FC<UnitSelectorModalProps> = ({
                   onDismiss();
                 }}
               >
-                <Text style={[
-                  styles.unitItemText,
-                  selectedUnit?.id === unit.id && styles.selectedUnitItemText
-                ]}>
-                  {unit.nombre}
-                </Text>
+                <View style={styles.unitItemContainer}>
+                  <Text style={[
+                    styles.unitItemText,
+                    selectedUnit?.id === unit.id && styles.selectedUnitItemText
+                  ]}>
+                    {unit.nombre}
+                  </Text>
+                  <Text style={styles.unitEquivalence}>
+                    {unit.es_volumen 
+                      ? `Equivale a ${unit.equivalencia_ml} ml` 
+                      : `Equivale a ${unit.equivalencia_g} g`}
+                  </Text>
+                </View>
+                {selectedUnit?.id === unit.id && (
+                  <MaterialIcons name="check" size={20} color="#690B22" />
+                )}
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -148,6 +159,15 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  unitItemContainer: {
+    flex: 1,
+  },
+  unitEquivalence: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+    fontStyle: 'italic',
   },
 });
 

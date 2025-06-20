@@ -32,15 +32,6 @@ export default function useAlimentoDetail(alimentoId) {
   });
   const [showReferenceInfo, setShowReferenceInfo] = useState(false);
 
-  // Valor por defecto (default unit for 100ml/g)
-  const defaultUnit = {
-    id: 0,
-    nombre: '100ml/g (valor por defecto)',
-    equivalencia_ml: 100,
-    equivalencia_g: 100,
-    es_volumen: true
-  };
-
   // Efecto para cargar datos del alimento
   useEffect(() => {
     const fetchAlimento = async () => {
@@ -73,12 +64,36 @@ export default function useAlimentoDetail(alimentoId) {
           id: typeof unit.id === 'string' ? parseInt(unit.id, 10) : unit.id
         }));
         
-        setUnidadesMedida([defaultUnit, ...processedUnits]);
-        setSelectedUnit(defaultUnit);
+        setUnidadesMedida(processedUnits);
+        
+        // Buscar la unidad "Plato Normal" (ID 4) para establecerla como predeterminada
+        const platoNormal = processedUnits.find(unit => unit.id === 4);
+        
+        // Establecer la unidad predeterminada: Plato Normal si existe, o la primera unidad disponible
+        if (platoNormal) {
+          console.log('Usando Plato Normal como unidad predeterminada');
+          setSelectedUnit(platoNormal);
+          setSelectedPortion(platoNormal);
+        } else if (processedUnits.length > 0) {
+          console.log('No se encontró Plato Normal, usando primera unidad como predeterminada');
+          setSelectedUnit(processedUnits[0]);
+          setSelectedPortion(processedUnits[0]);
+        }
       } catch (error) {
         console.error('Error al obtener unidades de medida:', error);
-        setUnidadesMedida([defaultUnit]);
-        setSelectedUnit(defaultUnit);
+        
+        // Si hay error, intentar crear una unidad básica como fallback
+        const fallbackUnit = {
+          id: 4,
+          nombre: 'Plato Normal',
+          equivalencia_ml: 250,
+          equivalencia_g: 250,
+          es_volumen: false
+        };
+        
+        setUnidadesMedida([fallbackUnit]);
+        setSelectedUnit(fallbackUnit);
+        setSelectedPortion(fallbackUnit);
       } finally {
         setLoading(false);
       }
@@ -224,8 +239,9 @@ export default function useAlimentoDetail(alimentoId) {
     }
   };
 
-  // Seleccionar la primera unidad por defecto cuando se cargan
-  useEffect(() => {
+  // Seleccionar la primera unidad por defecto cuando se cargan 
+  // Podemos eliminar este useEffect ya que ahora lo manejamos directamente en fetchUnidades
+  /* useEffect(() => {
     if (unidadesMedida.length > 0 && !selectedUnit) {
       // Asegúrate de que haya un ID válido en la primera unidad
       const defaultUnit = unidadesMedida[0];
@@ -234,7 +250,7 @@ export default function useAlimentoDetail(alimentoId) {
         setSelectedPortion(defaultUnit);
       }
     }
-  }, [unidadesMedida]);
+  }, [unidadesMedida]); */
 
   // Objeto con valores actuales
   const currentValues = Object.keys(adjustedValues).length > 0 ? adjustedValues : alimento;

@@ -6,7 +6,7 @@ from .models import (
     MinutaNutricional, ComidaTipo, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
     NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, ForoPersona, Minuta,
-    SeleccionesAnalisis
+    SeleccionesAnalisis, AnalisisIngredientes
 )
 from .serializers import (
     UserSerializer, PersonaSerializer, PerfilMedicoSerializer, CondicionPreviaSerializer, UsuarioCondicionSerializer, CategoriaAlimentoSerializer,
@@ -15,7 +15,7 @@ from .serializers import (
     CentroMedicoSerializer, ConsejoNutricionalSerializer, RolSerializer, UsuarioRolSerializer, PublicacionSerializer,
     ComentarioSerializer, RespuestaComentarioSerializer, AnalisisImagenSerializer, VinculoPacienteCuidadorSerializer,
     NutrienteMinutaSerializer, RestriccionAlimentosSerializer, RestriccionMinutaNutrienteSerializer, MinutasRestriccionesSerializer, ForoSerializer,
-    ForoPersonaSerializer, MinutaSerializer, SeleccionesAnalisisSerializer
+    ForoPersonaSerializer, MinutaSerializer, SeleccionesAnalisisSerializer, AnalisisIngredientesSerializer
 )
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -1343,3 +1343,138 @@ def guardar_seleccion_analisis(request):
             
     except Exception as e:
         return Response({'error': f'Error al guardar selección: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def analizar_ingredientes(request):
+    """
+    Endpoint para analizar una imagen con ingredientes y devolver información sobre ellos.
+    """
+    try:
+        # Extraer ID de persona
+        persona_id = None
+        id_field_names = ['id_persona', 'persona_id', 'id_persona_id', 'usuario_id', 'userId', 'user_id']
+        for field_name in id_field_names:
+            if field_name in request.data and request.data[field_name]:
+                persona_id = request.data[field_name]
+                break
+        
+        # Validar que la imagen está presente
+        if 'imagen' not in request.data:
+            return Response({"error": "No se proporcionó una imagen para analizar"}, 
+                           status=status.HTTP_400_BAD_REQUEST)
+            
+        imagen_base64 = request.data.get('imagen')
+        
+        # Procesar la imagen
+        formato_imagen = "jpeg"
+        base64_str = imagen_base64
+        if "data:image" in imagen_base64:
+            formato, base64_str = imagen_base64.split(';base64,')
+            formato_imagen = formato.split('/')[-1]
+        
+        # Guardar la imagen
+        upload_dir = os.path.join(settings.MEDIA_ROOT, 'analisis_ingredientes')
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"ingredientes_analysis_{timestamp}_{str(uuid.uuid4())[:8]}.{formato_imagen}"
+        filepath = os.path.join(upload_dir, filename)
+        
+        try:
+            with open(filepath, "wb") as img_file:
+                img_file.write(base64.b64decode(base64_str))
+        except Exception as e:
+            return Response({"error": f"Error al guardar la imagen: {str(e)}"}, 
+                          status=status.HTTP_400_BAD_REQUEST)
+        
+        # Crear URL relativa para acceso frontend
+        relative_path = os.path.join('analisis_ingredientes', filename)
+        image_url = relative_path.replace('\\', '/')
+        
+        # Análisis de la imagen con GPT Vision para ingredientes
+        from gpt.vision import analizar_ingredientes_alimentos
+        
+        try:
+            # Realizar análisis de ingredientes
+            resultado_analisis = analizar_ingredientes_alimentos(base64_str)
+            
+            # Procesar el resultado y obtener los ingredientes con su información
+            if resultado_analisis:
+                # Crear objeto de analisis con la persona
+                persona = None
+                if persona_id:
+                    try:
+                        from .models import Persona, AnalisisIngredientes
+                        persona = Persona.objects.get(id=persona_id)
+                        
+                        # Modificar aquí para usar un nombre más descriptivo por defecto
+                        nombre_producto = resultado_analisis.get('nombre_producto')
+                        if not nombre_producto or nombre_producto == 'No disponible':
+                            # Intentar crear un nombre basado en ingredientes identificados
+                            ingredientes = resultado_analisis.get('ingredientes_detectados', [])
+                            if ingredientes and len(ingredientes) > 0:
+                                # Usar hasta 2 ingredientes principales para nombrar el producto
+                                nombres_ingredientes = [i.get('nombre', '') for i in ingredientes[:2] if i.get('nombre')]
+                                if nombres_ingredientes:
+                                    nombre_producto = f"Alimento con {', '.join(nombres_ingredientes)}"
+                                else:
+                                    nombre_producto = "Análisis de Alimento no Identificado"
+                            else:
+                                nombre_producto = "Análisis de Alimento no Identificado"
+                        
+                        # Crear registro en la base de datos con el nombre mejorado
+                        analisis = AnalisisIngredientes(
+                            id_persona=persona,
+                            url_imagen=image_url,
+                            resultado=resultado_analisis,
+                            nombre_producto=nombre_producto
+                        )
+                        analisis.save()
+                        
+                    except Persona.DoesNotExist:
+                        print(f"No se encontró persona con ID {persona_id}")
+                    except Exception as e:
+                        print(f"Error al crear análisis de ingredientes: {e}")
+                
+                # Añadir URL de imagen al resultado y actualizar el nombre del producto si era "No disponible"
+                if resultado_analisis.get('nombre_producto') == 'No disponible':
+                    resultado_analisis['nombre_producto'] = "Análisis de Alimento no Identificado"
+                resultado_analisis['imagen_analizada'] = image_url
+                
+                return Response(resultado_analisis, status=status.HTTP_200_OK)
+            else:
+                return Response({"error": "No se pudieron analizar los ingredientes"}, 
+                               status=status.HTTP_400_BAD_REQUEST)
+            
+        except Exception as e:
+            print(f"Error al analizar ingredientes: {str(e)}")
+            return Response({
+                "error": f"Error al analizar ingredientes: {str(e)}",
+                "imagen_analizada": image_url,
+                "ingredientes_detectados": ["No se pudieron detectar ingredientes"],
+                "recomendacion": "No fue posible analizar la imagen. Por favor, intente con otra imagen más clara de los ingredientes.",
+                "es_recomendado": False
+            }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response({"error": f"Error en el servidor: {str(e)}"}, 
+                       status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AnalisisIngredientesViewSet(viewsets.ModelViewSet):
+    queryset = AnalisisIngredientes.objects.all()
+    serializer_class = AnalisisIngredientesSerializer
+    permission_classes = [AllowAny]
+    
+    def get_queryset(self):
+        """
+        Override para filtrar por id_persona si se proporciona en los parámetros de consulta
+        """
+        qs = super().get_queryset()
+        
+        # Filtrar por persona_id
+        persona_id = self.request.query_params.get('persona_id')
+        if persona_id:
+            qs = qs.filter(id_persona__id=persona_id)
+            
+        return qs

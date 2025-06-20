@@ -26,6 +26,8 @@ import PublicacionDetailScreen from './screens/PublicacionDetailScreen';
 import NuevaPublicacionScreen from './screens/NuevaPublicacionScreen';
 import ForosScreen from './screens/ForosScreen';
 import MisPublicacionesScreen from './screens/MisPublicacionesScreen';
+import IngredientesAlimentosScreen from './screens/IngredientesAlimentosScreen';
+import IngredientesResultScreen from './screens/IngredientesResultScreen';
 
 // Log the imported component to verify it's loaded correctly
 console.log('NuevaPublicacionScreen imported:', NuevaPublicacionScreen);
@@ -200,6 +202,20 @@ export default function App() {
                 title: 'Mis Publicaciones',
                 presentation: 'card',
                 animation: 'slide_from_right'
+              }}
+            />
+            <Stack.Screen 
+              name="IngredientesAlimentos"
+              component={IngredientesAlimentosScreen}
+              options={{ title: 'Analizar Ingredientes' }}
+            />
+            <Stack.Screen 
+              name="IngredientesResultScreen" 
+              component={IngredientesResultScreen} 
+              options={{ 
+                title: 'Análisis de Ingredientes',
+                presentation: 'card',
+                animation: 'slide_from_bottom'
               }}
             />
 

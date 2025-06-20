@@ -16,8 +16,8 @@ const CentroMap = ({
   // Estado para almacenar el centro seleccionado para mostrar opciones
   const [selectedCentro, setSelectedCentro] = useState(null);
   
-  // Función para manejar el toque en el callout
-  const handleCalloutPress = (centro) => {
+  // Función para manejar el toque en el marcador o callout
+  const handleMarkerPress = (centro) => {
     // Mostrar un diálogo con opciones
     Alert.alert(
       centro.nombre,
@@ -71,53 +71,63 @@ const CentroMap = ({
               title={centro.nombre}
               description={centro.direccion}
               pinColor={centro.servicio_dialisis ? '#990000' : '#1a75ff'}
-              // Manejar el toque en el marcador directamente
-              onCalloutPress={() => {
-                // Mostrar opciones en un Alert
-                Alert.alert(
-                  centro.nombre,
-                  centro.direccion,
-                  [
-                    {
-                      text: "Cómo llegar",
-                      onPress: () => onOpenMaps(centro.latitud, centro.longitud, centro.nombre),
-                      style: "default"
-                    },
-                    centro.telefono ? {
-                      text: "Llamar",
-                      onPress: () => onCallPhone(centro.telefono),
-                      style: "default"
-                    } : null,
-                    { text: "Cancelar", style: "cancel" }
-                  ].filter(Boolean) // Eliminar elementos null
-                );
-              }}
+              // Manejar directamente el toque en el marcador para Android
+              onPress={Platform.OS === 'android' ? () => handleMarkerPress(centro) : undefined}
             >
-              <Callout tooltip style={{padding: 0, margin: 0}}>
-                <View style={styles.calloutContainer}>
-                  <Text style={styles.calloutTitle}>{centro.nombre}</Text>
-                  
-                  {centro.servicio_dialisis && (
-                    <View style={styles.calloutBadge}>
-                      <MaterialIcons name="water-drop" size={14} color="#721C24" />
-                      <Text style={styles.calloutBadgeText}>Servicio de Diálisis</Text>
+              {/* En iOS seguimos usando el Callout para la interacción */}
+              {Platform.OS === 'ios' && (
+                <Callout 
+                  tooltip 
+                  style={{padding: 0, margin: 0}}
+                  onPress={() => handleMarkerPress(centro)}
+                >
+                  <View style={styles.calloutContainer}>
+                    <Text style={styles.calloutTitle}>{centro.nombre}</Text>
+                    
+                    {centro.servicio_dialisis && (
+                      <View style={styles.calloutBadge}>
+                        <MaterialIcons name="water-drop" size={14} color="#721C24" />
+                        <Text style={styles.calloutBadgeText}>Servicio de Diálisis</Text>
+                      </View>
+                    )}
+                    
+                    <Text style={styles.calloutText}>{centro.direccion}</Text>
+                    
+                    {centro.telefono && (
+                      <Text style={styles.calloutText}>Tel: {centro.telefono}</Text>
+                    )}
+                    
+                    <View style={styles.callToActionContainer}>
+                      <Text style={styles.callToActionText}>
+                        Toca para opciones
+                      </Text>
+                      <MaterialIcons name="touch-app" size={20} color="#690B22" />
                     </View>
-                  )}
-                  
-                  <Text style={styles.calloutText}>{centro.direccion}</Text>
-                  
-                  {centro.telefono && (
-                    <Text style={styles.calloutText}>Tel: {centro.telefono}</Text>
-                  )}
-                  
-                  <View style={styles.callToActionContainer}>
-                    <Text style={styles.callToActionText}>
-                      Toca para opciones
-                    </Text>
-                    <MaterialIcons name="touch-app" size={20} color="#690B22" />
                   </View>
-                </View>
-              </Callout>
+                </Callout>
+              )}
+              
+              {/* Para Android, usamos un Callout solo para mostrar información */}
+              {Platform.OS === 'android' && (
+                <Callout tooltip style={{padding: 0, margin: 0}}>
+                  <View style={styles.calloutContainer}>
+                    <Text style={styles.calloutTitle}>{centro.nombre}</Text>
+                    
+                    {centro.servicio_dialisis && (
+                      <View style={styles.calloutBadge}>
+                        <MaterialIcons name="water-drop" size={14} color="#721C24" />
+                        <Text style={styles.calloutBadgeText}>Servicio de Diálisis</Text>
+                      </View>
+                    )}
+                    
+                    <Text style={styles.calloutText}>{centro.direccion}</Text>
+                    
+                    {centro.telefono && (
+                      <Text style={styles.calloutText}>Tel: {centro.telefono}</Text>
+                    )}
+                  </View>
+                </Callout>
+              )}
             </Marker>
           );
         })}

@@ -33,6 +33,7 @@ import MisRegistrosScreen from '../screens/MisRegistrosScreen';
 import RecetaDetailScreen from '../screens/RecetaDetailScreen';
 import IngredientesAlimentosScreen from '../screens/IngredientesAlimentosScreen';
 import ScanResultScreen from '../screens/ScanResultScreen'; // Añade esta importación
+import IngredientesResultScreen from '../screens/IngredientesResultScreen'; // Add this import
 
 // New: Define the navigators
 const Stack = createNativeStackNavigator();
@@ -178,9 +179,37 @@ function TabNavigator({ navigation }) {
         tabBarActiveTintColor: '#690B22',
         tabBarInactiveTintColor: '#1B4D3E',
         headerShown: true,
-        headerTitle: route.name,
         headerTitleAlign: 'center',
         headerRight: () => <HeaderRight navigation={navigation} />,
+        tabBarLabel: ({ focused, color }) => {
+          let label = '';
+          
+          if (route.name === 'FichaMedica') {
+            label = 'Ficha Médica';
+          } else if (route.name === 'Comunidad') {
+            label = 'Comunidad';
+          } else if (route.name === 'QRScanner') {
+            label = 'Análisis IA';
+          } else if (route.name === 'Alimentos') {
+            label = 'Alimentos';
+          } else if (route.name === 'Consejos') {
+            label = 'Consejos';
+          }
+          
+          return (
+            <Text 
+              style={{
+                color: color,
+                fontSize: 12,
+                textAlign: 'center',
+                marginTop: 4,
+                fontWeight: focused ? 'bold' : 'normal'
+              }}
+            >
+              {label}
+            </Text>
+          );
+        },
         tabBarStyle: ({ focused }) => ({
           backgroundColor: '#F1E3D3',
           borderTopWidth: 0,
@@ -202,7 +231,7 @@ function TabNavigator({ navigation }) {
       })}
     >
       <Tab.Screen 
-        name="FichaMedica" //cambiar despues
+        name="FichaMedica"
         component={FichaMedicaScreen}
         options={{ title: 'Ficha Médica' }}
       />
@@ -212,9 +241,9 @@ function TabNavigator({ navigation }) {
         options={{ title: 'Comunidad' }}
       />
       <Tab.Screen 
-        name="QRScanner" // cambiar despues
+        name="QRScanner"
         component={QRScannerScreen}
-        options={{ title: 'Análisis IA' }}
+        options={{ title: 'Análisis de Alimentos con IA' }}
       />
       <Tab.Screen 
         name="Alimentos" 
@@ -346,6 +375,15 @@ function RootStack() {
         name="Foro" 
         component={ForosScreen} 
         options={{ title: 'Foros de la Comunidad' }}
+      />
+      <Stack.Screen 
+        name="IngredientesResultScreen" 
+        component={IngredientesResultScreen} 
+        options={{ 
+          title: 'Análisis de Ingredientes',
+          presentation: 'card',
+          animation: 'slide_from_bottom'
+        }}
       />
     </Stack.Navigator>
   );

@@ -9,17 +9,17 @@ import {
   StyleSheet,
   Modal,
   Image,
-  Alert
+  Alert,
+  ScrollView,
+  Dimensions
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Importar componentes, hooks, estilos y configuración
 import WebPlaceholder from '../modules/scanner/components/WebPlaceholder';
-import CameraGalleryOptions from '../modules/scanner/components/CameraGalleryOptions';
 import ImagePreview from '../modules/scanner/components/ImagePreview';
 import useScanner from '../modules/scanner/hooks/useScanner';
-import styles from '../modules/scanner/styles/scannerStyles';
 import api from '../api';
 import { ENDPOINTS, getImageUrl } from '../config/apiConfig';
 
@@ -215,7 +215,7 @@ const MisAnalisisModal = ({ visible, onClose, onSelectAnalisis, analisis, loadin
                             </Text>
                           )}
                           
-                          {/* ACTUALIZADO: Mostrar nombre específico del análisis cuando está disponible, o usar conclusión o texto genérico */}
+                          {/* Mostrar nombre específico del análisis cuando está disponible, o usar conclusión o texto genérico */}
                           <Text style={analisisStyles.analisisConclusion} numberOfLines={2}>
                             {item.nombre || item.conclusion || "Análisis de alimentos"}
                           </Text>
@@ -431,7 +431,7 @@ export default function QRScannerScreen({ navigation }) {
   };
 
   // Navegar a la pantalla de resultados con un análisis seleccionado
-  const handleSelectAnalisis = async (analisis, seleccionesEspecificas = {}, unidadesRegistradas = {}) => {
+  const handleSelectAnalisis = async (analisis) => {
     setShowAnalisisModal(false);
     
     // Asegurar que se pasa correctamente el ID
@@ -567,25 +567,89 @@ export default function QRScannerScreen({ navigation }) {
     );
   }
   
-  // Vista normal para seleccionar cámara o galería
+  // Vista mejorada para seleccionar cámara o galería - similar a IngredientesAlimentosScreen
   return (
     <SafeAreaView style={styles.container}>
-      <View style={scannerStyles.header}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {/* Header con botón de historial */}
+        <View style={styles.headerContainer}>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerSubtitle}>
+              Analiza tu comida para conocer si es adecuada para tu salud renal
+            </Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.historyButton}
+            onPress={handleShowAnalisisModal}
+          >
+            <MaterialIcons name="history" size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+
+
+
+        {/* Instrucciones con tarjetas */}
+        <View style={styles.instructionsContainer}>
+          <Text style={styles.sectionTitle}>¿Cómo funciona?</Text>
+          
+          <View style={styles.instructionCard}>
+            <View style={[styles.instructionIconContainer, {backgroundColor: '#F9D9E5'}]}>
+              <MaterialIcons name="photo-camera" size={28} color="#690B22" />
+            </View>
+            <View style={styles.instructionTextContainer}>
+              <Text style={styles.instructionTitle}>Toma una foto clara</Text>
+              <Text style={styles.instructionText}>
+                Fotografía tu plato o alimento para analizarlo
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.instructionCard}>
+            <View style={[styles.instructionIconContainer, {backgroundColor: '#F9E4D9'}]}>
+              <MaterialIcons name="analytics" size={28} color="#690B22" />
+            </View>
+            <View style={styles.instructionTextContainer}>
+              <Text style={styles.instructionTitle}>Análisis con IA</Text>
+              <Text style={styles.instructionText}>
+                Nuestra tecnología identificará los alimentos y su compatibilidad renal
+              </Text>
+            </View>
+          </View>
+          
+          <View style={styles.instructionCard}>
+            <View style={[styles.instructionIconContainer, {backgroundColor: '#D9F9E4'}]}>
+              <MaterialIcons name="check-circle" size={28} color="#690B22" />
+            </View>
+            <View style={styles.instructionTextContainer}>
+              <Text style={styles.instructionTitle}>Resultados instantáneos</Text>
+              <Text style={styles.instructionText}>
+                Recibe información nutricional y recomendaciones personalizadas
+              </Text>
+            </View>
+          </View>
+        </View>
         
-        {/* Botón para ver análisis previos */}
-        <TouchableOpacity 
-          style={scannerStyles.historyButton}
-          onPress={handleShowAnalisisModal}
-        >
-          <MaterialIcons name="history" size={24} color="#690B22" />
-          <Text style={scannerStyles.historyButtonText}>Mis Análisis</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <CameraGalleryOptions
-        onCameraPress={handleOpenCamera}
-        onGalleryPress={handleOpenGallery}
-      />
+        {/* Contenedor de acciones */}
+        <View style={styles.actionContainer}>
+          <Text style={styles.sectionTitle}>¡Comencemos!</Text>
+          
+          <TouchableOpacity 
+            style={styles.mainButton}
+            onPress={handleOpenCamera}
+          >
+            <MaterialIcons name="camera-alt" size={24} color="#FFFFFF" />
+            <Text style={styles.buttonText}>Tomar foto ahora</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.secondaryButton}
+            onPress={handleOpenGallery}
+          >
+            <MaterialIcons name="photo-library" size={22} color="#690B22" />
+            <Text style={styles.secondaryButtonText}>Seleccionar de la galería</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
       
       {/* Modal para mostrar análisis previos */}
       <MisAnalisisModal 
@@ -599,30 +663,169 @@ export default function QRScannerScreen({ navigation }) {
   );
 }
 
-// Estilos adicionales
-const scannerStyles = StyleSheet.create({
-  header: {
-    padding: 16,
+// Nuevos estilos inspirados en IngredientesAlimentosScreen
+const { width } = Dimensions.get('window');
+const cardWidth = width * 0.9;
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  headerContainer: {
+    backgroundColor: '#690B22',
+    padding: 24,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.27,
+    shadowRadius: 4.65,
+    elevation: 6,
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 22,
+  headerTextContainer: {
+    flex: 1,
+  },
+  historyButton: {
+    width: 40,
+    height: 40, 
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    opacity: 0.9,
+    lineHeight: 22,
+  },
+
+  iconCircle: {
+    width: 150,
+    height: 150,
+    borderRadius: 75,
+    backgroundColor: '#690B22',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#1B4D3E',
     marginBottom: 16,
+    paddingHorizontal: 20,
   },
-  historyButton: {
+  instructionsContainer: {
+    marginVertical: 10,
+  },
+  instructionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 20,
+    marginBottom: 12,
+    flexDirection: 'row',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 2,
+  },
+  instructionIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  instructionTextContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  instructionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 4,
+  },
+  instructionText: {
+    fontSize: 14,
+    color: '#666666',
+    lineHeight: 20,
+  },
+  actionContainer: {
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  mainButton: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: '#690B22',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F1E3D3',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginBottom: 20,
+    justifyContent: 'center',
+    paddingVertical: 12, // Reduced from 16 to 12
+    shadowColor: "#690B22",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 6,
   },
-  historyButtonText: {
-    marginLeft: 8,
-    color: '#690B22',
+  buttonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
     fontWeight: 'bold',
+    marginLeft: 10,
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    paddingVertical: 12, // Reduced from 16 to 12
+    borderWidth: 1,
+    borderColor: '#690B22',
+    borderRadius: 12,
+  },
+  secondaryButtonText: {
+    color: '#690B22',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });

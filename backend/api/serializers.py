@@ -3,7 +3,7 @@ from .models import (
     PerfilMedico, CondicionPrevia, UsuarioCondicion, CategoriaAlimento, UnidadMedida, Alimento, PorcionAlimento,
     MinutaNutricional, ComidaTipo, Minuta, Receta, IngredienteReceta, DetalleMinuta, RegistroComida, CentroMedico,
     ConsejoNutricional, Rol, UsuarioRol, Publicacion, Comentario, RespuestaComentario, AnalisisImagen, VinculoPacienteCuidador,
-    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, User, Persona, ForoPersona, SeleccionesAnalisis # Make sure these imports match your actual models
+    NutrienteMinuta, RestriccionAlimentos, RestriccionMinutaNutriente, MinutasRestricciones, Foro, User, Persona, ForoPersona, SeleccionesAnalisis, AnalisisIngredientes # Make sure these imports match your actual models
 )
 from django.conf import settings
 from datetime import datetime
@@ -313,3 +313,8 @@ class SeleccionesAnalisisSerializer(serializers.ModelSerializer):
         
     def get_unidad_nombre(self, obj):
         return obj.unidad_medida.nombre if obj.unidad_medida else None
+
+class AnalisisIngredientesSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AnalisisIngredientes
+        fields = '__all__'

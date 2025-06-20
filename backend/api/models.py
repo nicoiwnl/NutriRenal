@@ -560,3 +560,18 @@ class ForoPersona(models.Model):
         return f"{self.persona.nombres} {self.persona.apellidos} - {self.foro.nombre}"
 
 # Fin Seccion Comunidad
+
+class AnalisisIngredientes(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="analisis_ingredientes", null=True, blank=True)
+    url_imagen = models.CharField(max_length=255)
+    fecha_analisis = models.DateTimeField(auto_now_add=True)
+    resultado = models.JSONField()
+    nombre_producto = models.CharField(max_length=255, blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.id_persona.nombres if self.id_persona else 'Sin persona'} - {self.nombre_producto} - {self.fecha_analisis}"
+
+    class Meta:
+        verbose_name = "Análisis de Ingredientes"
+        verbose_name_plural = "Análisis de Ingredientes"

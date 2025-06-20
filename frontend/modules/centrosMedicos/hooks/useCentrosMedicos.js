@@ -149,30 +149,49 @@ export default function useCentrosMedicos() {
     try {
       console.log('Abriendo mapa para:', nombre, 'en', latitud, longitud);
       
-      const scheme = Platform.select({
-        ios: 'maps:0,0?q=',
-        android: 'geo:0,0?q=',
-        web: 'https://maps.google.com/?q='
-      });
+      // Asegurarnos de que son números
+      const lat = parseFloat(latitud);
+      const lng = parseFloat(longitud);
       
-      const latLng = `${latitud},${longitud}`;
-      const label = encodeURIComponent(nombre);
-      const url = Platform.select({
-        ios: `${scheme}${label}@${latLng}`,
-        android: `${scheme}${latLng}(${label})`,
-        web: `${scheme}${latLng}(${label})`
-      });
-
-      console.log('Opening URL:', url);
+      if (isNaN(lat) || isNaN(lng)) {
+        Alert.alert('Error', 'Coordenadas no válidas');
+        return;
+      }
       
-      Linking.canOpenURL(url).then(supported => {
-        if (!supported) {
-          Alert.alert('Error', 'No se puede abrir el mapa en este dispositivo');
-          console.log('Cannot open maps URL:', url);
-        } else {
-          return Linking.openURL(url);
-        }
-      });
+      // Estrategia específica por plataforma
+      if (Platform.OS === 'android') {
+        // En Android, intentar primero con Google Maps directamente
+        const googleMapsUrl = `google.navigation:q=${lat},${lng}`;
+        const googleMapsWebUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+        
+        Linking.canOpenURL(googleMapsUrl).then(supported => {
+          if (supported) {
+            return Linking.openURL(googleMapsUrl);
+          } else {
+            // Intentar abrir web si la app no está disponible
+            return Linking.openURL(googleMapsWebUrl);
+          }
+        }).catch(() => {
+          // Si falla, intentar con geo:
+          const geoUrl = `geo:${lat},${lng}?q=${encodeURIComponent(nombre)}`;
+          Linking.openURL(geoUrl).catch(err => {
+            Alert.alert('Error', 'No se pudo abrir la aplicación de mapas');
+          });
+        });
+      } else {
+        // iOS y Web
+        const scheme = Platform.OS === 'ios' ? 'maps:0,0?q=' : 'https://maps.google.com/?q=';
+        const label = encodeURIComponent(nombre);
+        const url = `${scheme}${label}@${lat},${lng}`;
+        
+        Linking.canOpenURL(url).then(supported => {
+          if (!supported) {
+            Alert.alert('Error', 'No se puede abrir el mapa en este dispositivo');
+          } else {
+            return Linking.openURL(url);
+          }
+        });
+      }
     } catch (error) {
       console.error('Error al abrir mapas:', error);
       Alert.alert('Error', 'No se pudo abrir la aplicación de mapas');

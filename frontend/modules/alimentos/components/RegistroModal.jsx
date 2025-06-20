@@ -223,12 +223,19 @@ const RegistroModal = ({
                   setShowUnitSelector(false);
                 }}
               >
-                <Text style={[
-                  styles.unitItemText,
-                  currentSelectedUnit?.id === item.id && styles.selectedUnitItemText
-                ]}>
-                  {item.nombre}
-                </Text>
+                <View style={styles.unitItemContent}>
+                  <Text style={[
+                    styles.unitItemText,
+                    currentSelectedUnit?.id === item.id && styles.selectedUnitItemText
+                  ]}>
+                    {item.nombre}
+                  </Text>
+                  <Text style={styles.unitEquivalenceText}>
+                    {item.es_volumen 
+                      ? `(${item.equivalencia_ml} ml)` 
+                      : `(${item.equivalencia_g} g)`}
+                  </Text>
+                </View>
                 {currentSelectedUnit?.id === item.id && (
                   <MaterialIcons name="check" size={20} color="#690B22" />
                 )}
@@ -329,7 +336,12 @@ const RegistroModal = ({
                 onPress={() => setShowUnitSelector(true)}
               >
                 <Text style={styles.unitSelectorText}>
-                  1 {currentSelectedUnit?.nombre || 'unidad'}
+                  1 {currentSelectedUnit?.nombre || 'unidad'} 
+                  <Text style={styles.unitSelectorEquivalence}>
+                    {currentSelectedUnit && ` (${currentSelectedUnit.es_volumen 
+                      ? `${currentSelectedUnit.equivalencia_ml} ml` 
+                      : `${currentSelectedUnit.equivalencia_g} g`})`}
+                  </Text>
                 </Text>
                 <MaterialIcons name="arrow-drop-down" size={24} color="#690B22" />
               </TouchableOpacity>
@@ -713,6 +725,20 @@ const styles = StyleSheet.create({
     borderRadius: '5px',
     border: '1px solid #ccc',
     backgroundColor: '#fff',
+  },
+  unitItemContent: {
+    flex: 1,
+  },
+  unitEquivalenceText: {
+    fontSize: 14,
+    color: '#666666',
+    fontStyle: 'italic',
+    marginTop: 2,
+  },
+  unitSelectorEquivalence: {
+    fontSize: 14,
+    color: '#666666', 
+    fontStyle: 'italic',
   },
 });
 

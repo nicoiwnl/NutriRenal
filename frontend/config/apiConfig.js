@@ -34,6 +34,10 @@ export const ENDPOINTS = {
   // Selecciones de análisis
   SELECCIONES_ANALISIS: `${API_BASE}/selecciones-analisis/`,
   SELECCIONES_POR_ANALISIS: (analisisId) => `${API_BASE}/selecciones-analisis/?analisis=${analisisId}`,
+
+  // Añadir endpoint para análisis de ingredientes
+  ANALIZAR_INGREDIENTES: `${API_BASE}/analizar-ingredientes/`,
+  MIS_ANALISIS_INGREDIENTES: (userId) => `${API_BASE}/analisis-ingredientes/?persona_id=${userId}`,
 };
 
 // Improved image URL helper function that adds domain when needed
