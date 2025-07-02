@@ -90,7 +90,11 @@ const AlimentosRecientesCard = ({
                         style={styles.cantidadIcon}
                       />
                       <Text style={styles.cantidadText}>
-                        {registro.cantidad || 1} {unidadInfo.abreviacion} ({unidadInfo.nombre})
+                        {(() => {
+                          const cantidad = registro.cantidad || 1;
+                          const cantidadFormateada = cantidad % 1 === 0 ? cantidad.toString() : cantidad.toFixed(2).replace(/\.?0+$/, '');
+                          return `${cantidadFormateada} ${unidadInfo.abreviacion} (${unidadInfo.nombre})`;
+                        })()}
                       </Text>
                     </View>
                     

@@ -16,7 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AuthForm from '../modules/auth/components/AuthForm';
 import useLogin from '../modules/auth/hooks/useLogin';
 import styles from '../modules/auth/styles/loginStyles';
-
+import Logo from '../assets/images/logo-sinfondo.png';
 export default function LoginScreen({ navigation }) {
   // Obtener estado y funciones del hook personalizado
   const {
@@ -54,19 +54,12 @@ export default function LoginScreen({ navigation }) {
             contentContainerStyle={styles.scrollContainer}
             keyboardShouldPersistTaps="handled"
           >
-            <View style={styles.logoContainer}>
-              {/* Usar un texto como logo temporalmente si no hay imagen */}
-              <Text style={{
-                fontSize: 32,
-                fontWeight: 'bold',
-                color: '#690B22',
-                textAlign: 'center'
-              }}>
-                NutriRenal
-              </Text>
-            </View>
 
             <View style={styles.loginContainer}>
+              <Image
+                source={Logo}
+                style={styles.logo}
+              />
               <Text style={styles.title}>
                 {isLogin ? 'Iniciar Sesión' : 'Registro'}
               </Text>

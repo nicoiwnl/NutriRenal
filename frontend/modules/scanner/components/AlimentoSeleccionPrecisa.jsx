@@ -456,6 +456,13 @@ const AlimentoSeleccionPrecisa = ({
       return;
     }
     
+    // Función helper para formatear cantidad
+    const formatCantidad = (cantidad) => {
+      const num = parseFloat(cantidad);
+      // Si es un número entero, mostrar sin decimales, sino con hasta 2 decimales
+      return num % 1 === 0 ? num.toString() : num.toFixed(2).replace(/\.?0+$/, '');
+    };
+    
     // Añadir información de cantidad y unidad al objeto del alimento
     const alimentoFinal = {
       ...selectedFood,

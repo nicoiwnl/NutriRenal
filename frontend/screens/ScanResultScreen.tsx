@@ -555,7 +555,9 @@ export default function ScanResultScreen() {
                               varianteSeleccionada.unidad_seleccionada.nombre || 
                               "unidades";
           
-          unidadTexto = `${cantidad} ${unidadNombre}`;
+          // Formatear cantidad sin decimales innecesarios
+          const cantidadFormateada = cantidad % 1 === 0 ? cantidad.toString() : cantidad.toFixed(2).replace(/\.?0+$/, '');
+          unidadTexto = `${cantidadFormateada} ${unidadNombre}`;
         }
         
         // Almacenar la información de cantidad y unidad con el alimento
@@ -915,7 +917,7 @@ export default function ScanResultScreen() {
   };
 
   // Helpers para navegación
-  const handleScanAgain = () => navigation.navigate('QRScanner');
+  const handleScanAgain = () => navigation.navigate('Home', { screen: 'QRScanner' });
   const handleGoHome = () => navigation.navigate('Home');
 
   // Mostrar pantallas de carga o error si corresponde

@@ -130,7 +130,8 @@ export default function useScanResult(route) {
 
   // Función para volver a escanear
   const handleScanAgain = () => {
-    navigation.navigate('QRScanner');
+    // Navigate back to the QRScanner tab within Home
+    navigation.navigate('Home', { screen: 'QRScanner' });
   };
   
   // Función para volver a la pantalla principal

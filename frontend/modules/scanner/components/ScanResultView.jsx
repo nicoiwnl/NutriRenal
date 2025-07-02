@@ -55,9 +55,25 @@ const ScanResultView = ({
   
   // Función para manejar el registro de consumo y marcar como registrado
   const handleRegistrarConsumo = (nombreAlimento, unidad, objetoAlimento) => {
+    // Extraer información de cantidad de la unidad si está disponible
+    let cantidad = 1;
+    let unidadNombre = unidad;
+    
+    // Si la unidad tiene formato "2.50 tazas", extraer cantidad y unidad
+    if (unidad && typeof unidad === 'string') {
+      const match = unidad.match(/^(\d*\.?\d+)\s+(.+)$/);
+      if (match) {
+        cantidad = parseFloat(match[1]) || 1;
+        unidadNombre = match[2];
+      }
+    }
+    
     setAlimentoRegistrando(nombreAlimento);
-    setUnidadRegistrando(unidad);
-    setAlimentoObjetoRegistrando(objetoAlimento);
+    setUnidadRegistrando(unidadNombre);
+    setAlimentoObjetoRegistrando({
+      ...objetoAlimento,
+      cantidad_seleccionada: cantidad
+    });
     setRegistroModalVisible(true);
   };
 

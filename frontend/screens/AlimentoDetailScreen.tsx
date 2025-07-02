@@ -39,6 +39,7 @@ import NutrientSemaphore from '../modules/alimentos/components/NutrientSemaphore
 import RegistroButton from '../modules/alimentos/components/RegistroButton';
 import UnitSelectorModal from '../modules/alimentos/components/UnitSelectorModal';
 import NutritionalInfoModal from '../modules/alimentos/components/NutritionalInfoModal';
+import ReferenceInfoModal from '../modules/alimentos/components/ReferenceInfoModal';
 import useAlimentoDetail from '../modules/alimentos/hooks/useAlimentoDetail';
 import RegistroModal from '../modules/alimentos/components/RegistroModal';
 
@@ -52,7 +53,7 @@ export default function AlimentoDetailScreen({ route, navigation }) {
     unidadesMedida,
     selectedUnit,
     setSelectedUnit,
-    selectedPortion, // Make sure this is destructured
+    selectedPortion,
     setSelectedPortion,
     currentValues,
     categoryName,
@@ -62,6 +63,8 @@ export default function AlimentoDetailScreen({ route, navigation }) {
     setShowUnitSelector,
     showRegistroModal,
     setShowRegistroModal,
+    showReferenceInfo,
+    setShowReferenceInfo,
     formatNumber,
     getSemaphoreColor
   } = useAlimentoDetail(alimentoId);
@@ -180,9 +183,9 @@ export default function AlimentoDetailScreen({ route, navigation }) {
             top: 15,
             right: 15,
             backgroundColor: '#690B22',
-            width: Platform.OS === 'web' ? 44 : 40,
-            height: Platform.OS === 'web' ? 44 : 40,
-            borderRadius: Platform.OS === 'web' ? 22 : 20,
+            width: 36,
+            height: 36,
+            borderRadius: 18,
             justifyContent: 'center',
             alignItems: 'center',
             elevation: 4,
@@ -194,7 +197,7 @@ export default function AlimentoDetailScreen({ route, navigation }) {
           }}
           onPress={() => setShowReferenceInfo(true)}
         >
-          <MaterialIcons name="help" size={24} color="#FFFFFF" />
+          <MaterialIcons name="help" size={20} color="#FFFFFF" />
         </TouchableOpacity>
 
         {/* Modal de selección de unidad */}
@@ -221,14 +224,18 @@ export default function AlimentoDetailScreen({ route, navigation }) {
           formatNumber={formatNumber}
         />
 
+        {/* Modal de información de referencia */}
+        <ReferenceInfoModal
+          visible={showReferenceInfo}
+          onDismiss={() => setShowReferenceInfo(false)}
+        />
+
         <RegistroModal
           visible={showRegistroModal}
           onDismiss={() => setShowRegistroModal(false)}
           alimento={alimento}
           selectedUnit={selectedPortion || selectedUnit} 
           onSuccess={() => {
-            // Una función vacía o una función que no usa window.scrollTo
-            // Las operaciones específicas para web se harían con comprobaciones de plataforma
             if (Platform.OS === 'web' && typeof window !== 'undefined' && window.scrollTo) {
               window.scrollTo(0, 0);
             }

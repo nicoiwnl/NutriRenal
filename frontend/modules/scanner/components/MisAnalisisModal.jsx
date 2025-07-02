@@ -61,7 +61,9 @@ const MisAnalisisModal = ({
             selecciones[analisisId][seleccion.alimento_original] = seleccion.alimento_nombre;
             
             // "Leche de burra" -> "2 vasos"
-            const unidadTexto = `${seleccion.cantidad} ${seleccion.unidad_nombre}`;
+            const cantidad = parseFloat(seleccion.cantidad) || 1;
+            const cantidadFormateada = cantidad % 1 === 0 ? cantidad.toString() : cantidad.toFixed(2).replace(/\.?0+$/, '');
+            const unidadTexto = `${cantidadFormateada} ${seleccion.unidad_nombre}`;
             unidadesRegistradas[analisisId][seleccion.alimento_nombre] = unidadTexto;
           });
           
@@ -157,11 +159,22 @@ const MisAnalisisModal = ({
                           const seleccionesFormato = analisisConSelecciones[item.id] || {};
                           const unidadesFormato = unidadesRegistradas[item.id] || {};
                           
+                          // Crear array de alimentos actualizados desde las selecciones
+                          const alimentosActualizadosArray = Object.keys(seleccionesFormato).map(alimentoOriginal => ({
+                            nombreOriginal: alimentoOriginal,
+                            nombre: seleccionesFormato[alimentoOriginal],
+                            info: {
+                              nombre: seleccionesFormato[alimentoOriginal],
+                              id: Math.random() // ID temporal para identificación
+                            }
+                          }));
+                          
                           // Asegurarse de que las selecciones y unidades estén en el formato correcto
                           const itemWithSelecciones = {
                             ...item,
                             seleccionesEspecificas: seleccionesFormato,
-                            foodsWithUnits: unidadesFormato
+                            foodsWithUnits: unidadesFormato,
+                            alimentosActualizados: alimentosActualizadosArray
                           };
                           
                           onSelectAnalisis(itemWithSelecciones, seleccionesFormato, unidadesFormato);
@@ -384,4 +397,3 @@ const styles = StyleSheet.create({
 });
 
 export default MisAnalisisModal;
- 

@@ -50,10 +50,12 @@ const RegistroConsumoScanModal = ({
   // Extraer información de unidad desde el texto proporcionado
   useEffect(() => {
     if (unidadTexto) {
-      // Extraer cantidad y unidad del texto (ej: "2 tazas")
+      // Extraer cantidad y unidad del texto (ej: "2.50 tazas")
       const match = unidadTexto.match(/^(\d*\.?\d*)\s+(.+)$/);
       if (match) {
-        setCantidad(match[1] || '1');
+        const cantidad = parseFloat(match[1]) || 1;
+        const cantidadFormateada = cantidad % 1 === 0 ? cantidad.toString() : cantidad.toFixed(2).replace(/\.?0+$/, '');
+        setCantidad(cantidadFormateada);
         setUnidadNombre(match[2] || '');
       } else {
         setUnidadNombre(unidadTexto);

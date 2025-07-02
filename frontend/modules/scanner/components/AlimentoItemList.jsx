@@ -24,6 +24,34 @@ const AlimentoItemList = ({
     );
   }
 
+  // Función helper para formatear texto de unidades
+  const formatUnidadTexto = (unidadTexto) => {
+    if (!unidadTexto) return '';
+    
+    // Si el texto ya está formateado correctamente, devolverlo
+    if (typeof unidadTexto === 'string') {
+      // Buscar patrones como "1.00 tazas" y convertir a "1 taza"
+      const match = unidadTexto.match(/^(\d+\.?\d*)\s+(.+)$/);
+      if (match) {
+        const cantidad = parseFloat(match[1]);
+        const unidad = match[2];
+        
+        // Formatear cantidad sin decimales innecesarios
+        const cantidadFormateada = cantidad % 1 === 0 ? cantidad.toString() : cantidad.toFixed(2).replace(/\.?0+$/, '');
+        
+        // Singularizar/pluralizar unidad si es necesario
+        let unidadFormateada = unidad;
+        if (cantidad === 1 && unidad.endsWith('s') && !['vasos', 'platos'].includes(unidad.toLowerCase())) {
+          unidadFormateada = unidad.slice(0, -1); // Remover 's' final para singular
+        }
+        
+        return `${cantidadFormateada} ${unidadFormateada}`;
+      }
+    }
+    
+    return unidadTexto;
+  };
+
   return (
     <View style={styles.container}>
       {/* Instructivo para una mejor UX */}
@@ -87,7 +115,7 @@ const AlimentoItemList = ({
                 <View style={styles.alimentoTextContainer}>
                   <Text style={styles.alimentoNombre}>
                     {nombreEspecifico}
-                    {unidadTexto ? ` (${unidadTexto})` : ''}
+                    {unidadTexto ? ` (${formatUnidadTexto(unidadTexto)})` : ''}
                   </Text>
                   
                   {/* Si hay una selección específica diferente, muestra el término original detectado */}

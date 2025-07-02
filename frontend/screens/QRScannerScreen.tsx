@@ -444,13 +444,23 @@ export default function QRScannerScreen({ navigation }) {
     
     // Añadir las selecciones específicas y unidades al objeto de análisis
     const procesado = processAnalysisData(analisisConId);
-    procesado.seleccionesEspecificas = seleccionesEspecificas || {};
-    procesado.foodsWithUnits = unidadesRegistradas || {};
+    
+    // Si el análisis tiene selecciones específicas, preservarlas
+    if (analisis.seleccionesEspecificas) {
+      procesado.seleccionesEspecificas = analisis.seleccionesEspecificas;
+    }
+    if (analisis.foodsWithUnits) {
+      procesado.foodsWithUnits = analisis.foodsWithUnits;
+    }
+    if (analisis.alimentosActualizados) {
+      procesado.alimentosActualizados = analisis.alimentosActualizados;
+    }
     
     navigation.navigate('ScanResult', {
       results: procesado,
       userId: userId,
-      isReadOnly: true
+      isReadOnly: true,
+      analisisId: analisisConId.id
     });
   };
 

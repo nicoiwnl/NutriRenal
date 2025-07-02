@@ -19,7 +19,9 @@ export default StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 0,
+    paddingVertical: 20,
+    justifyContent: 'center',
   },
   loginContainer: {
     backgroundColor: 'white',
@@ -51,7 +53,15 @@ export default StyleSheet.create({
         shadowRadius: 3.84,
       }
     }),
-    marginVertical: Platform.select({ ios: 30, android: 40 }), // mayor separación vertical en móviles
+    marginVertical: Platform.select({ ios: 30, android: 40 }),
+  },
+  logo: {
+    width: 120,
+    height: 120,
+    resizeMode: 'contain',
+    alignSelf: 'center',
+    marginBottom: 20,
+    marginTop: 10,
   },
   title: {
     fontSize: 32,

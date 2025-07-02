@@ -284,10 +284,10 @@ export default function useAlimentoDetail(alimentoId) {
     getSemaphoreColor,
     registrarConsumo,
     onSuccess: () => {
-      // Verificar si estamos en web antes de usar window.scrollTo
       if (Platform.OS === 'web' && typeof window !== 'undefined' && window.scrollTo) {
         window.scrollTo(0, 0);
       }
     }
   };
 }
+
