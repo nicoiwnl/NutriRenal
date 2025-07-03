@@ -459,15 +459,15 @@ export default function ScanResultScreen() {
             // Actualizar la compatibilidad con valores numéricos garantizados y límites
             setCompatibilidad({
               sodio: {
-                compatible: valoresConvertidos.sodio < 375,
+                compatible: valoresConvertidos.sodio < 570,
                 valor: valoresConvertidos.sodio,
               },
               potasio: {
-                compatible: valoresConvertidos.potasio < 500,
+                compatible: valoresConvertidos.potasio < 700,
                 valor: valoresConvertidos.potasio,
               },
               fosforo: {
-                compatible: valoresConvertidos.fosforo < 250,
+                compatible: valoresConvertidos.fosforo < 330,
                 valor: valoresConvertidos.fosforo,
               }
             });
@@ -526,6 +526,10 @@ export default function ScanResultScreen() {
         // Establecer el indicador a verdadero cuando el usuario selecciona un alimento específico
         const isFirstSelection = !userHasSelectedFood;
         setUserHasSelectedFood(true);
+        
+        // Cuando se selecciona un alimento específico con ID, actualizamos la fuente a 'base_datos'
+        // ya que proviene directamente de la base de datos
+        setFuenteValoresNutricionales('base_datos');
         
         // Debug log para verificar valores
         console.log("VALORES DEL ALIMENTO SELECCIONADO:", 
@@ -668,15 +672,15 @@ export default function ScanResultScreen() {
         // Actualizar compatibilidad inmediatamente con un objeto directo (no actualización funcional)
         const newCompatibilidad = {
           sodio: { 
-            compatible: safeNewValues.sodio < 375,
+            compatible: safeNewValues.sodio < 570,
             valor: safeNewValues.sodio,
           },
           potasio: {
-            compatible: safeNewValues.potasio < 500,
+            compatible: safeNewValues.potasio < 700,
             valor: safeNewValues.potasio,
           },
           fosforo: {
-            compatible: safeNewValues.fosforo < 250,
+            compatible: safeNewValues.fosforo < 330,
             valor: safeNewValues.fosforo,
           }
         };
@@ -1022,4 +1026,25 @@ export default function ScanResultScreen() {
     </SafeAreaView>
   );
 }
+
+// Actualizar la función para verificar compatibilidad con los límites por comida
+const updateCompatibilidadSafely = (safeNewValues) => {
+  return {
+    sodio: {
+      compatible: safeNewValues.sodio < 570, // Umbral de sodio por comida
+      valor: safeNewValues.sodio,
+      porcentajeUmbral: Math.min(100, Math.round((safeNewValues.sodio / 570) * 100))
+    },
+    potasio: {
+      compatible: safeNewValues.potasio < 700, // Umbral de potasio por comida
+      valor: safeNewValues.potasio,
+      porcentajeUmbral: Math.min(100, Math.round((safeNewValues.potasio / 700) * 100))
+    },
+    fosforo: {
+      compatible: safeNewValues.fosforo < 330, // Umbral de fósforo por comida
+      valor: safeNewValues.fosforo,
+      porcentajeUmbral: Math.min(100, Math.round((safeNewValues.fosforo / 330) * 100))
+    }
+  };
+};
 

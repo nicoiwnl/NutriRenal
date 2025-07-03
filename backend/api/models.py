@@ -1,5 +1,6 @@
 from django.db import models
 import uuid
+from django.utils import timezone
 
 # Inicio de la seccion de Usuario
 
@@ -21,30 +22,23 @@ class Persona(models.Model):
     foto_perfil = models.CharField(max_length=255)
     fecha_nacimiento = models.DateField()
     activo = models.BooleanField(default=True)
-    edad = models.PositiveIntegerField()
     genero = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
         fecha_formateada = self.fecha_nacimiento.strftime('%d-%m-%Y') if self.fecha_nacimiento else ''
         return f"{self.nombres} {self.apellidos} ({fecha_formateada})"
     
-    def calcular_edad(self):
+    @property
+    def edad(self):
         """
-        Calcula la edad en años basada en la fecha de nacimiento
+        Calcula la edad en tiempo real, sin almacenarla
         """
         from datetime import date
+        if not self.fecha_nacimiento:
+            return 0
         today = date.today()
         born = self.fecha_nacimiento
-        age = today.year - born.year - ((today.month, today.day) < (born.month, born.day))
-        return age
-    
-    def save(self, *args, **kwargs):
-        """
-        Sobreescribir el método save para actualizar automáticamente la edad
-        """
-        if self.fecha_nacimiento:
-            self.edad = self.calcular_edad()
-        super(Persona, self).save(*args, **kwargs)
+        return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
 
 # perfil medico del usuario
 class PerfilMedico(models.Model):
@@ -398,7 +392,7 @@ class RegistroComida(models.Model):
     id_persona = models.ForeignKey(Persona, on_delete=models.CASCADE, related_name="registros_comida", null=True, blank=True)
     alimento = models.ForeignKey(Alimento, on_delete=models.SET_NULL, null=True, blank=True)
     unidad_medida = models.ForeignKey(UnidadMedida, on_delete=models.SET_NULL, null=True, blank=True)
-    fecha_consumo = models.DateTimeField(auto_now_add=True)
+    fecha_consumo = models.DateTimeField(default=timezone.now)  # Cambiado de auto_now_add a default
     notas = models.TextField(blank=True, null=True)
 
     def __str__(self):

@@ -3,18 +3,18 @@ import { View, Text, StyleSheet, Animated, Platform } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { formatMinerales } from '../../../utils/formatUtils';
 
-// Definir los límites de minerales actualizados
+// Definir los límites de minerales actualizados para comidas individuales
 const THRESHOLDS = {
-  SODIO: 375,    // Actualizado de 800 a 375
-  POTASIO: 500,  // Actualizado de 1000 a 500
-  FOSFORO: 250   // Actualizado de 700 a 250
+  SODIO: 570,    // Límite máximo por comida
+  POTASIO: 700,  // Límite máximo por comida
+  FOSFORO: 330   // Límite máximo por comida
 };
 
-// Definir los límites de advertencia como la mitad de los límites máximos
+// Definir los límites de advertencia como aproximadamente 2/3 del valor máximo
 const WARNING_THRESHOLDS = {
-  SODIO: THRESHOLDS.SODIO / 2,    // 187.5
-  POTASIO: THRESHOLDS.POTASIO / 2, // 250
-  FOSFORO: THRESHOLDS.FOSFORO / 2  // 125
+  SODIO: 380,    // Advertencia para comida individual
+  POTASIO: 470,  // Advertencia para comida individual
+  FOSFORO: 220   // Advertencia para comida individual
 };
 
 //Crear el componente ResumenNutricionalCard
@@ -146,6 +146,17 @@ const ResumenNutricionalCard = (props) => {
   const potasioStatus = getMineralStatus('potasio', safeValues.potasio);
   const fosforoStatus = getMineralStatus('fosforo', safeValues.fosforo);
   
+  // Función para calcular el porcentaje del límite
+  const calcularPorcentajeLimite = (valor, limite) => {
+    const porcentaje = Math.min(100, Math.round((valor / limite) * 100));
+    return porcentaje;
+  };
+
+  // Calcular porcentajes para mostrar
+  const sodioPorcentaje = calcularPorcentajeLimite(safeValues.sodio, THRESHOLDS.SODIO);
+  const potasioPorcentaje = calcularPorcentajeLimite(safeValues.potasio, THRESHOLDS.POTASIO);
+  const fosforoPorcentaje = calcularPorcentajeLimite(safeValues.fosforo, THRESHOLDS.FOSFORO);
+  
   return (
     <Animated.View style={[
       styles.card, 
@@ -175,7 +186,7 @@ const ResumenNutricionalCard = (props) => {
         </View>
       </View>
       
-      {/* Semáforo de minerales - ACTUALIZADO con nuevos límites y colores */}
+      {/* Semáforo de minerales - ACTUALIZADO con nuevos límites y visualización */}
       <View style={styles.mineralSection}>
         <View style={styles.mineralItem}>
           <View style={styles.mineralLabelContainer}>
@@ -183,15 +194,38 @@ const ResumenNutricionalCard = (props) => {
             <Text style={styles.mineralLimit}>Límite: {THRESHOLDS.SODIO}mg</Text>
           </View>
           <View style={styles.mineralBarContainer}>
+            {/* Marcador del umbral de advertencia */}
+            <View style={[
+              styles.warningThresholdMarker, 
+              { left: `${(WARNING_THRESHOLDS.SODIO / THRESHOLDS.SODIO) * 100}%` }
+            ]} />
+            
+            {/* Barra principal - ajustada para llegar a 100% en el límite exacto */}
             <View 
               style={[
-                styles.mineralBar, 
-                { 
-                  backgroundColor: getMineralColor(sodioStatus),
-                  width: `${Math.min(100, Math.max(10, safeValues.sodio / (THRESHOLDS.SODIO * 1.5) * 100))}%`
-                }
+                styles.mineralBarBackground,
+                sodioStatus > 0 && styles.mineralBarBackgroundWarning
               ]} 
-            />
+            >
+              <View 
+                style={[
+                  styles.mineralBar, 
+                  { 
+                    backgroundColor: getMineralColor(sodioStatus),
+                    width: `${Math.min(100, Math.max(5, safeValues.sodio / THRESHOLDS.SODIO * 100))}%`
+                  }
+                ]} 
+              />
+            </View>
+            
+            {/* Porcentaje consumido del límite */}
+            <Text style={[
+              styles.percentageLabel,
+              sodioStatus === 2 ? styles.percentageLabelDanger : 
+              sodioStatus === 1 ? styles.percentageLabelWarning : {}
+            ]}>
+              {sodioPorcentaje}%
+            </Text>
           </View>
           <Text style={[
             styles.mineralValue,
@@ -208,15 +242,38 @@ const ResumenNutricionalCard = (props) => {
             <Text style={styles.mineralLimit}>Límite: {THRESHOLDS.POTASIO}mg</Text>
           </View>
           <View style={styles.mineralBarContainer}>
+            {/* Marcador del umbral de advertencia */}
+            <View style={[
+              styles.warningThresholdMarker, 
+              { left: `${(WARNING_THRESHOLDS.POTASIO / THRESHOLDS.POTASIO) * 100}%` }
+            ]} />
+            
+            {/* Barra principal - ajustada para llegar a 100% en el límite exacto */}
             <View 
               style={[
-                styles.mineralBar, 
-                { 
-                  backgroundColor: getMineralColor(potasioStatus),
-                  width: `${Math.min(100, Math.max(10, safeValues.potasio / (THRESHOLDS.POTASIO * 1.5) * 100))}%`
-                }
+                styles.mineralBarBackground,
+                potasioStatus > 0 && styles.mineralBarBackgroundWarning
               ]} 
-            />
+            >
+              <View 
+                style={[
+                  styles.mineralBar, 
+                  { 
+                    backgroundColor: getMineralColor(potasioStatus),
+                    width: `${Math.min(100, Math.max(5, safeValues.potasio / THRESHOLDS.POTASIO * 100))}%`
+                  }
+                ]} 
+              />
+            </View>
+            
+            {/* Porcentaje consumido del límite */}
+            <Text style={[
+              styles.percentageLabel,
+              potasioStatus === 2 ? styles.percentageLabelDanger : 
+              potasioStatus === 1 ? styles.percentageLabelWarning : {}
+            ]}>
+              {potasioPorcentaje}%
+            </Text>
           </View>
           <Text style={[
             styles.mineralValue,
@@ -233,15 +290,38 @@ const ResumenNutricionalCard = (props) => {
             <Text style={styles.mineralLimit}>Límite: {THRESHOLDS.FOSFORO}mg</Text>
           </View>
           <View style={styles.mineralBarContainer}>
+            {/* Marcador del umbral de advertencia */}
+            <View style={[
+              styles.warningThresholdMarker, 
+              { left: `${(WARNING_THRESHOLDS.FOSFORO / THRESHOLDS.FOSFORO) * 100}%` }
+            ]} />
+            
+            {/* Barra principal - ajustada para llegar a 100% en el límite exacto */}
             <View 
               style={[
-                styles.mineralBar, 
-                { 
-                  backgroundColor: getMineralColor(fosforoStatus),
-                  width: `${Math.min(100, Math.max(10, safeValues.fosforo / (THRESHOLDS.FOSFORO * 1.5) * 100))}%`
-                }
+                styles.mineralBarBackground,
+                fosforoStatus > 0 && styles.mineralBarBackgroundWarning
               ]} 
-            />
+            >
+              <View 
+                style={[
+                  styles.mineralBar, 
+                  { 
+                    backgroundColor: getMineralColor(fosforoStatus),
+                    width: `${Math.min(100, Math.max(5, safeValues.fosforo / THRESHOLDS.FOSFORO * 100))}%`
+                  }
+                ]} 
+              />
+            </View>
+            
+            {/* Porcentaje consumido del límite */}
+            <Text style={[
+              styles.percentageLabel,
+              fosforoStatus === 2 ? styles.percentageLabelDanger : 
+              fosforoStatus === 1 ? styles.percentageLabelWarning : {}
+            ]}>
+              {fosforoPorcentaje}%
+            </Text>
           </View>
           <Text style={[
             styles.mineralValue,
@@ -382,10 +462,44 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     overflow: 'hidden',
   },
+  mineralBarBackground: {
+    flex: 1,
+    height: 14,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 7,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  mineralBarBackgroundWarning: {
+    backgroundColor: '#FFECB3', // Fondo amarillo claro cuando está en advertencia o excedido
+  },
   mineralBar: {
     height: '100%',
-    width: '100%',
-    borderRadius: 6,
+    borderRadius: 7,
+  },
+  warningThresholdMarker: {
+    position: 'absolute',
+    height: 14,
+    width: 2,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    zIndex: 2,
+  },
+  percentageLabel: {
+    position: 'absolute',
+    right: 5,
+    fontSize: 10,
+    fontWeight: 'bold',
+    color: '#333',
+    textShadowColor: 'rgba(255,255,255,0.6)',
+    textShadowOffset: { width: 0.5, height: 0.5 },
+    textShadowRadius: 1,
+    zIndex: 3,
+  },
+  percentageLabelWarning: {
+    color: '#F57F17',
+  },
+  percentageLabelDanger: {
+    color: '#FFFFFF',
   },
   mineralValue: {
     fontSize: 14,

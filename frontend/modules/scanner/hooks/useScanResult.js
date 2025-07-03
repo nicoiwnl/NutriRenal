@@ -98,22 +98,22 @@ export default function useScanResult(route) {
     const compatibilidadInfo = {
       sodio: {
         valor: totales.sodio,
-        compatible: totales.sodio < thresholds.sodio,
-        mensaje: totales.sodio < thresholds.sodio ? 
+        compatible: totales.sodio < 570,
+        mensaje: totales.sodio < 570 ? 
           'Nivel de sodio aceptable' : 
           'Nivel de sodio elevado para tu condición'
       },
       potasio: {
         valor: totales.potasio,
-        compatible: totales.potasio < thresholds.potasio,
-        mensaje: totales.potasio < thresholds.potasio ? 
+        compatible: totales.potasio < 700,
+        mensaje: totales.potasio < 700 ? 
           'Nivel de potasio aceptable' : 
           'Nivel de potasio elevado para tu condición'
       },
       fosforo: {
         valor: totales.fosforo,
-        compatible: totales.fosforo < thresholds.fosforo,
-        mensaje: totales.fosforo < thresholds.fosforo ? 
+        compatible: totales.fosforo < 330,
+        mensaje: totales.fosforo < 330 ? 
           'Nivel de fósforo aceptable' : 
           'Nivel de fósforo elevado para tu condición'
       }

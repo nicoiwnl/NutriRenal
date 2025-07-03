@@ -22,7 +22,7 @@ const NutrientSemaphore: React.FC<NutrientSemaphoreProps> = ({
 }) => {
   return (
     <>
-      <Text style={styles.sectionTitle}>Relevante en dieta renal:</Text>
+      <Text style={styles.sectionTitle}>Relevantes en dieta renal:</Text>
       
       <View style={styles.semaphoreContainer}>
         <View style={styles.semaphoreItem}>
@@ -81,6 +81,12 @@ const styles = StyleSheet.create({
   semaphoreLabel: {
     fontSize: Platform.OS === 'web' ? 12 : 11,
     color: '#666',
+    marginBottom: 3,
+  },
+  semaphoreThresholds: {
+    fontSize: Platform.OS === 'web' ? 10 : 9,
+    color: '#888',
+    fontStyle: 'italic',
   }
 });
 

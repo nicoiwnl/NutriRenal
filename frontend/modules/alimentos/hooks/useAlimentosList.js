@@ -48,16 +48,16 @@ export default function useAlimentosList() {
   // Función para obtener color del semáforo nutricional
   const getSemaphoreColor = (nutrient, value) => {
     if (nutrient === 'potasio') {
-      if (value > 300) return 'red';
-      else if (value >= 151) return 'yellow';
+      if (value > 350) return 'red';
+      else if (value >= 200) return 'yellow';
       else return 'green';
     } else if (nutrient === 'sodio') {
-      if (value > 600) return 'red';
-      else if (value >= 500) return 'yellow';
+      if (value > 250) return 'red';
+      else if (value >= 120) return 'yellow';
       else return 'green';
     } else if (nutrient === 'fosforo') {
-      if (value > 300) return 'red';
-      else if (value >= 91) return 'yellow';
+      if (value > 170) return 'red';
+      else if (value >= 100) return 'yellow';
       else return 'green';
     }
     return 'grey';

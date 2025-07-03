@@ -108,9 +108,10 @@ export default function AlimentoDetailScreen({ route, navigation }) {
   const potasio = currentValues.potasio || 0;
   const fosforo = currentValues.fosforo || 0;
   
-  const sodioColor = getSemaphoreColor(sodio, 120, 500);
-  const potasioColor = getSemaphoreColor(potasio, 200, 800);
-  const fosforoColor = getSemaphoreColor(fosforo, 100, 300);
+  // Usar los umbrales específicos para cada nutriente
+  const sodioColor = getSemaphoreColor('sodio', sodio);
+  const potasioColor = getSemaphoreColor('potasio', potasio);
+  const fosforoColor = getSemaphoreColor('fosforo', fosforo);
 
   return (
     <Provider>

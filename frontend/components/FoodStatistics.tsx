@@ -18,22 +18,22 @@ const FoodStatistics = ({ nutritionData }) => {
     return Math.round(sum / nutritionData.length);
   };
   
-  // Get semaphore color based on value thresholds
+  // Get semaphore color based on value thresholds for daily averages
   const getSemaphoreColor = (nutrient, value) => {
     if (nutrient === 'sodio') {
-      if (value > 500) return '#F44336'; // Red
-      if (value > 300) return '#FFC107'; // Yellow
-      return '#4CAF50'; // Green
+      if (value > 1700) return '#F44336'; // Red - Above daily maximum
+      if (value > 1300) return '#FFC107'; // Yellow - Above daily minimum
+      return '#4CAF50'; // Green - Below daily minimum
     } 
     else if (nutrient === 'potasio') {
-      if (value > 800) return '#F44336'; // Red
-      if (value > 500) return '#FFC107'; // Yellow
-      return '#4CAF50'; // Green
+      if (value > 2000) return '#F44336'; // Red - Above daily maximum
+      if (value > 1800) return '#FFC107'; // Yellow - Above daily minimum
+      return '#4CAF50'; // Green - Below daily minimum
     }
     else if (nutrient === 'fosforo') {
-      if (value > 300) return '#F44336'; // Red
-      if (value > 150) return '#FFC107'; // Yellow
-      return '#4CAF50'; // Green
+      if (value > 1000) return '#F44336'; // Red - Above daily maximum
+      if (value > 800) return '#FFC107'; // Yellow - Above daily minimum
+      return '#4CAF50'; // Green - Below daily minimum
     }
     return '#9E9E9E'; // Default gray
   };

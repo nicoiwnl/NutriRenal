@@ -590,12 +590,12 @@ export default function useFichaMedica(navigation, route) {
 
   const getNivelNutriente = (valor, tipo) => {
     if (tipo === 'sodio') {
-      if (valor < 1000) return { 
+      if (valor < 1300) return { 
         nivel: 'Bajo', 
         color: '#4CAF50',  // Color original
         colorPastel: '#C8E6C9'  // Verde pastel
       };
-      if (valor < 2000) return { 
+      if (valor < 1700) return { 
         nivel: 'Medio', 
         color: '#FFC107',  // Color original
         colorPastel: '#FFF9C4'  // Amarillo pastel
@@ -607,12 +607,12 @@ export default function useFichaMedica(navigation, route) {
       };
     }
     if (tipo === 'potasio') {
-      if (valor < 2000) return { 
+      if (valor < 1800) return { 
         nivel: 'Bajo', 
         color: '#4CAF50', 
         colorPastel: '#C8E6C9'  // Verde pastel
       };
-      if (valor < 3000) return { 
+      if (valor < 2000) return { 
         nivel: 'Medio', 
         color: '#FFC107', 
         colorPastel: '#FFF9C4'  // Amarillo pastel
@@ -624,7 +624,7 @@ export default function useFichaMedica(navigation, route) {
       };
     }
     if (tipo === 'fosforo') {
-      if (valor < 700) return { 
+      if (valor < 800) return { 
         nivel: 'Bajo', 
         color: '#4CAF50', 
         colorPastel: '#C8E6C9'  // Verde pastel

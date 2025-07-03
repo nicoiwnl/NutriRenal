@@ -1,3 +1,4 @@
+// No utilizado en el código actual, pero se mantiene para referencia futura
 import React from 'react';
 import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';

@@ -175,7 +175,7 @@ const NoMinutaCard = ({ pacienteData, onSolicitarMinuta }) => {
       
       <View style={styles.noMinutaInfo}>
         <Text style={styles.noMinutaDescription}>
-          Puedes solicitar un plan alimentario personalizado según tus necesidades nutricionales y restricciones dietéticas.
+          Recuerda que este plan es una recomendacion general y puede no ser adecuado para todos los casos.
         </Text>
       </View>
       

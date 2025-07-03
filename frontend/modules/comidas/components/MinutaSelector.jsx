@@ -1,3 +1,4 @@
+// No utilizado ya que se asignan de manera automatica ahora
 import React from 'react';
 import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
 import styles from '../styles/minutaStyles';

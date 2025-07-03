@@ -1,8 +1,5 @@
 import { Platform } from 'react-native';
-
-// Set the correct base URLs for accessing the backend
-const WEB_BASE_URL = 'http://127.0.0.1:8000';
-const MOBILE_BASE_URL = 'http://192.168.1.60:8000'; // Update this with your actual IP address
+import { BASE_URL } from '../config/apiConfig';
 
 /**
  * Get the full URL for an image, falling back to a default if not provided
@@ -17,9 +14,6 @@ export const getImageUrl = (imageUrl, defaultImageUrl = 'https://cdn.pixabay.com
   if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
     return imageUrl;
   }
-  
-  // Choose the appropriate base URL based on platform
-  const baseUrl = Platform.OS === 'web' ? WEB_BASE_URL : MOBILE_BASE_URL;
   
   // Clean the path - remove any leading slashes and normalize directory separators
   let cleanPath = imageUrl.replace(/^\//, '').replace(/\\/g, '/');
@@ -37,8 +31,8 @@ export const getImageUrl = (imageUrl, defaultImageUrl = 'https://cdn.pixabay.com
     cleanPath = `media/${cleanPath}`;
   }
   
-  // Construct and return the full URL
-  return `${baseUrl}/${cleanPath}`;
+  // Construct and return the full URL using the central BASE_URL from config
+  return `${BASE_URL}/${cleanPath}`;
 };
 
 /**
@@ -53,9 +47,6 @@ export const getProfileImageUrl = (photoName, defaultImage = 'https://cdn.pixaba
   // Extract just the filename if a path is provided
   const filename = photoName.split('/').pop().split('\\').pop();
   
-  // Get the appropriate base URL
-  const baseUrl = Platform.OS === 'web' ? WEB_BASE_URL : MOBILE_BASE_URL;
-  
-  // Always use the consistent media/fotos path for profile photos
-  return `${baseUrl}/media/fotos/${filename}`;
+  // Use BASE_URL from central config
+  return `${BASE_URL}/media/fotos/${filename}`;
 };

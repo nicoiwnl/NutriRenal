@@ -125,7 +125,7 @@ export default function MinutaScreen({ navigation }) {
       {/* Header */}
       <View style={styles.headerContainer}>
         <Text style={styles.screenTitle}>Plan Alimentario</Text>
-        <Text style={styles.screenSubtitle}>Nutrición personalizada para tu bienestar</Text>
+        <Text style={styles.screenSubtitle}>Recomendaciones para tu alimentación</Text>
         <View style={styles.dividerLine} />
       </View>
       

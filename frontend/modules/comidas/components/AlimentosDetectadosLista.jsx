@@ -1,3 +1,4 @@
+// No utilizado en el código actual, pero se mantiene para referencia futura
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ActivityIndicator, FlatList, StyleSheet, Image } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -31,7 +32,7 @@ const AlimentosDetectadosLista = ({ alimentosDetectados, unidadesMedida, loading
       <View style={localStyles.headerContainer}>
         <MaterialIcons name="local-grocery-store" size={20} color="#690B22" />
         <Text style={localStyles.headerText}>
-          Alimentos detectados en esta comida
+          Alimentos detectados comida
         </Text>
         {loading && <ActivityIndicator size="small" color="#690B22" style={{marginLeft: 10}} />}
       </View>

@@ -16,7 +16,7 @@ const CuidadoresCard = ({ currentPersonaId }) => {
     if (Platform.OS !== 'web') {
       try {
         const result = await Share.share({
-          message: `Mi código de paciente en SafetyIRC es: ${currentPersonaId}`,
+          message: `Mi código de paciente en NutriRenal es: ${currentPersonaId}`,
           title: 'Compartir código de paciente'
         });
       } catch (error) {

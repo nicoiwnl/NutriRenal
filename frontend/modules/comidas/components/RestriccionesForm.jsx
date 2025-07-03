@@ -112,6 +112,7 @@ const RestriccionesForm = ({
               <MaterialIcons name="info-outline" size={20} color="#1976D2" />
               <Text style={styles.formTipsText}>
                 Estas preferencias ayudarán al sistema a asignarte un plan alimentario adecuado para tu condición renal.
+                Recuerda que este plan es una recomendación general y puede no ser adecuado para todos los casos.
               </Text>
             </View>
           </ScrollView>

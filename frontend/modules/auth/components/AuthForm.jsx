@@ -52,7 +52,7 @@ const AuthForm = ({
           <MaterialIcons name="credit-card" size={24} color="#690B22" style={styles.icon} />
           <TextInput
             style={styles.input}
-            placeholder="RUT (sin puntos ni guión)"
+            placeholder="RUT sin DV (sin puntos ni guión)"
             placeholderTextColor="#666"
             value={formData.rut}
             onChangeText={(text) => setFormData({...formData, rut: text})}
@@ -96,7 +96,7 @@ const AuthForm = ({
             <MaterialIcons name="credit-card" size={24} color="#690B22" style={styles.icon} />
             <TextInput
               style={styles.input}
-              placeholder="RUT (sin puntos ni guión)"
+              placeholder="RUT sin DV (sin puntos ni guión)"
               placeholderTextColor="#666"
               value={formData.rut}
               onChangeText={(text) => setFormData({...formData, rut: text})}

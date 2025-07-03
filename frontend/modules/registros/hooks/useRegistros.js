@@ -185,13 +185,21 @@ export default function useRegistros(navigation) {
   const registrosFiltrados = useMemo(() => {
     if (!selectedDate) return [];
     
-    return registros.filter((registro) => {
+    // Primero filtramos los registros por la fecha seleccionada
+    const filtrados = registros.filter((registro) => {
       const fechaRegistro = new Date(registro.fecha_consumo);
       const year = fechaRegistro.getFullYear();
       const month = String(fechaRegistro.getMonth() + 1).padStart(2, '0');
       const day = String(fechaRegistro.getDate()).padStart(2, '0');
       const fechaRegistroLocal = `${year}-${month}-${day}`;
       return fechaRegistroLocal === selectedDate;
+    });
+    
+    // Luego ordenamos los registros filtrados por fecha de más reciente a más antiguo
+    return filtrados.sort((a, b) => {
+      const fechaA = new Date(a.fecha_consumo).getTime();
+      const fechaB = new Date(b.fecha_consumo).getTime();
+      return fechaB - fechaA; // Orden descendente (más reciente primero)
     });
   }, [selectedDate, registros]);
 
@@ -242,18 +250,18 @@ export default function useRegistros(navigation) {
   // Determinar color de nutriente basado en valor
   const getNutrientColor = (nutrient, value) => {
     if (nutrient === 'sodio') {
-      if (value > 500) return '#F44336';
-      if (value > 300) return '#FFC107';
+      if (value > 250) return '#F44336';
+      if (value >= 120) return '#FFC107';
       return '#4CAF50';
     } 
     else if (nutrient === 'potasio') {
-      if (value > 800) return '#F44336';
-      if (value > 500) return '#FFC107';
+      if (value > 350) return '#F44336';
+      if (value >= 200) return '#FFC107';
       return '#4CAF50';
     }
     else if (nutrient === 'fosforo') {
-      if (value > 300) return '#F44336';
-      if (value > 150) return '#FFC107';
+      if (value > 170) return '#F44336';
+      if (value >= 100) return '#FFC107';
       return '#4CAF50';
     }
     return '#9E9E9E';
@@ -262,18 +270,18 @@ export default function useRegistros(navigation) {
   // Determinar color del valor basado en los umbrales diarios
   const getNutrientDailyColor = (nutrient, value) => {
     if (nutrient === 'sodio') {
-      if (value > 1500) return '#F44336';
-      if (value > 1000) return '#FFC107';
+      if (value > 1700) return '#F44336';
+      if (value > 1300) return '#FFC107';
       return '#4CAF50';
     } 
     else if (nutrient === 'potasio') {
-      if (value > 2500) return '#F44336';
-      if (value > 2000) return '#FFC107';
+      if (value > 2000) return '#F44336';
+      if (value > 1800) return '#FFC107';
       return '#4CAF50';
     }
     else if (nutrient === 'fosforo') {
-      if (value > 900) return '#F44336';
-      if (value > 700) return '#FFC107';
+      if (value > 1000) return '#F44336';
+      if (value > 800) return '#FFC107';
       return '#4CAF50';
     }
     return '#1B4D3E';

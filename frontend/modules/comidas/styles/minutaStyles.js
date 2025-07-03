@@ -11,11 +11,12 @@ export default StyleSheet.create({
   contentContainer: {
     padding: 16,
     paddingBottom: 30,
+    paddingTop: 0, // Reducido de su valor original para acercar el contenido al header
   },
   headerContainer: {
     paddingTop: 10,
     paddingHorizontal: 18,
-    paddingBottom: 10,
+    paddingBottom: 5, // Reducido de 10 a 5 para menos espacio
     backgroundColor: '#F8E8D8',
   },
   screenTitle: {
@@ -64,11 +65,12 @@ export default StyleSheet.create({
   },
   
   // Estilo mejorado de tarjeta para No Profile
-  noPerfilCard: {
+  noMinutaCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 25,
-    marginTop: 10,
+    marginTop: 0, // Cambiado de 10 a 0 para acercar al header
+    marginBottom: 15,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 3 },
@@ -475,20 +477,20 @@ export default StyleSheet.create({
   },
   noMinutaHeader: {
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 15, // Reducido de 20 a 15
   },
   noMinutaTitle: {
-    fontSize: 18,
+    fontSize: 20, // Reducido de 22 para ahorrar espacio
     fontWeight: 'bold',
     color: '#1B4D3E',
-    marginTop: 15,
+    marginTop: 10, // Reducido de 15
     textAlign: 'center',
   },
   infoMedicaContainer: {
     backgroundColor: '#F8F9FA',
-    padding: 15,
+    padding: 12, // Reducido de 15 a 12
     borderRadius: 8,
-    marginBottom: 20,
+    marginBottom: 15, // Reducido de 20 a 15
   },
   infoMedicaTitle: {
     fontSize: 16,
@@ -513,7 +515,7 @@ export default StyleSheet.create({
     color: '#1B4D3E',
   },
   noMinutaInfo: {
-    marginBottom: 20,
+    marginBottom: 15, // Reducido de 20 a 15
   },
   noMinutaDescription: {
     fontSize: 14,

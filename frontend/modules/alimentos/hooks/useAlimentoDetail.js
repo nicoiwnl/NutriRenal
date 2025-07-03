@@ -185,9 +185,27 @@ export default function useAlimentoDetail(alimentoId) {
   };
 
   // Función para determinar el color del semáforo
-  const getSemaphoreColor = (value, lowThreshold, highThreshold) => {
-    if (value < lowThreshold) return '#4CAF50'; // Verde
-    if (value > highThreshold) return '#F44336'; // Rojo
+  const getSemaphoreColor = (nutriente, valor) => {
+    // Umbrales específicos para cada nutriente
+    if (nutriente === 'sodio') {
+      if (valor < 120) return '#4CAF50'; // Verde
+      if (valor > 250) return '#F44336'; // Rojo
+      return '#FFC107'; // Amarillo
+    } 
+    else if (nutriente === 'potasio') {
+      if (valor < 200) return '#4CAF50'; // Verde
+      if (valor > 350) return '#F44336'; // Rojo
+      return '#FFC107'; // Amarillo
+    }
+    else if (nutriente === 'fosforo') {
+      if (valor < 100) return '#4CAF50'; // Verde
+      if (valor > 170) return '#F44336'; // Rojo
+      return '#FFC107'; // Amarillo
+    }
+    
+    // Si no es uno de los nutrientes específicos, usar los umbrales genéricos
+    if (valor < lowThreshold) return '#4CAF50'; // Verde
+    if (valor > highThreshold) return '#F44336'; // Rojo
     return '#FFC107'; // Amarillo
   };
 
@@ -214,7 +232,8 @@ export default function useAlimentoDetail(alimentoId) {
       const registroData = {
         id_persona: persona_id,
         alimento: alimentoId,
-        fecha_consumo: fechaConsumo.toISOString(),
+        // Preservar la fecha local al guardar
+        fecha_consumo: formatLocalISOString(fechaConsumo),
         notas: notasConsumo,
         unidad_medida: selectedPortion.id,
         calorias: nutritionSummary.calorias,
@@ -237,6 +256,21 @@ export default function useAlimentoDetail(alimentoId) {
     } finally {
       setRegistrando(false);
     }
+  };
+
+  // Función helper para formatear fecha ISO preservando la zona horaria local
+  const formatLocalISOString = (date) => {
+    const localDate = new Date(date);
+    // Obtener año, mes, día, hora, minutos en formato local
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    const hours = String(localDate.getHours()).padStart(2, '0');
+    const minutes = String(localDate.getMinutes()).padStart(2, '0');
+    const seconds = String(localDate.getSeconds()).padStart(2, '0');
+    
+    // Crear string ISO pero preservando la fecha local, no en UTC
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   };
 
   // Seleccionar la primera unidad por defecto cuando se cargan 

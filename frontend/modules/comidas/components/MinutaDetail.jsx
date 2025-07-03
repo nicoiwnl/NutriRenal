@@ -218,7 +218,7 @@ const MinutaDetail = ({
           <Text style={styles.revocarButtonText}>Revocar plan alimentario</Text>
         </TouchableOpacity>
         <Text style={styles.revocarInfo}>
-          Al revocar el plan, podrás solicitar uno nuevo con diferentes restricciones
+          Al revocar el plan, podrás solicitar uno nuevo con diferentes restricciones y recomendaciones
         </Text>
       </View>
     </View>

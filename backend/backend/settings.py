@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-@b!j7+l224)2dug)23#x+ky+#yn#_0he&7y0#m(9oi&%z^443z
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1","192.168.100.37", "192.168.1.51", "192.168.1.42", "172.20.10.4", "192.168.1.60"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","192.168.100.37", "192.168.1.51", "192.168.1.42", "172.20.10.4", "192.168.1.18"]
 
 
 # Application definition
@@ -119,11 +119,12 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Cambiar la configuración de zona horaria para usar zona local de América/Santiago
+TIME_ZONE = 'America/Santiago'  # Ajustar a tu zona horaria local
 
-USE_I18N = True
-
-USE_TZ = True
+# Configurar para que Django no use timezone-aware dates automáticamente,
+# esto hará que las fechas se traten como fechas locales
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -161,7 +162,7 @@ CORS_ALLOWED_ORIGINS = [
     'exp://192.168.1.42:8081',
     'exp://172.20.10.4:8081',
     'exp://192.168.100.37:8081',
-    'exp://192.168.1.60:8081'
+    'exp://192.168.1.18:8081'
 ]
 
 # Asegurarse de que los directorios de media existan

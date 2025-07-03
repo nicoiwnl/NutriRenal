@@ -201,8 +201,8 @@ const RegistroConsumoScanModal = ({
         unidadMedidaId = 4; // ID 4 = Plato normal
       }
       
-      // Formatear fecha para API
-      const fechaFormateada = fecha.toISOString().split('T')[0];
+      // Formatear fecha para API - manteniendo la fecha local
+      const fechaFormateada = fecha.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD
       
       // Crear registro completo con unidad_medida como ID numérico
       // y el ID exacto del alimento que se seleccionó
@@ -213,7 +213,8 @@ const RegistroConsumoScanModal = ({
         cantidad: parseFloat(cantidad) || 1,
         unidad_medida: unidadMedidaId, // USAR ID NUMÉRICO, NO TEXTO
         fecha: fechaFormateada,
-        fecha_consumo: fecha.toISOString(),
+        // Usar función helper para preservar la fecha y hora locales
+        fecha_consumo: formatLocalISOString(fecha),
         notas: notas,
         persona_id: userId,
         id_persona: userId
@@ -251,6 +252,21 @@ const RegistroConsumoScanModal = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  // Función helper para formatear fecha ISO preservando la zona horaria local
+  const formatLocalISOString = (date) => {
+    const localDate = new Date(date);
+    // Obtener año, mes, día, hora, minutos en formato local
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    const hours = String(localDate.getHours()).padStart(2, '0');
+    const minutes = String(localDate.getMinutes()).padStart(2, '0');
+    const seconds = String(localDate.getSeconds()).padStart(2, '0');
+    
+    // Crear string ISO pero preservando la fecha local, no en UTC
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   };
 
   // Renderizar selector de fecha para web

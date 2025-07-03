@@ -102,14 +102,25 @@ const RegistroModal = ({
       );
       if (!isNaN(newDate.getTime())) {
         setFechaConsumo(newDate);
+        setDateConfirmed(true); // Indicar que se seleccionó una fecha
+        
+        // Mostrar confirmación temporal
+        setTimeout(() => setDateConfirmed(false), 2000);
       }
     }
   }, [webDate, webTime]);
 
-  // Reiniciar fecha a la actual cada vez que se abre el modal
+  // Estado para saber si es la primera apertura del modal
+  const [isFirstRender, setIsFirstRender] = useState(true);
+
+  // Reiniciar fecha a la actual solo en la primera apertura del modal
   useEffect(() => {
-    if (visible) {
+    if (visible && isFirstRender) {
       setFechaConsumo(new Date());
+      setIsFirstRender(false);
+    } else if (!visible) {
+      // Resetear el flag cuando se cierra el modal para la próxima apertura
+      setIsFirstRender(true);
     }
   }, [visible]);
 
@@ -149,7 +160,8 @@ const RegistroModal = ({
         alimento: alimento.id,
         cantidad: 1, // Cantidad fija = 1
         unidad_medida: currentSelectedUnit.id,
-        fecha_consumo: fechaConsumo.toISOString(),
+        // Preservar la fecha local al guardar, usando formato ISO pero ajustando para la zona horaria local
+        fecha_consumo: formatLocalISOString(fechaConsumo),
         notas: notas,
         id_persona: userData.persona_id
       };
@@ -187,6 +199,21 @@ const RegistroModal = ({
       Alert.alert('Error', errorMessage);
       console.error('Error registering consumption:', error);
     }
+  };
+
+  // Función helper para formatear fecha ISO preservando la zona horaria local
+  const formatLocalISOString = (date) => {
+    const localDate = new Date(date);
+    // Obtener año, mes, día, hora, minutos en formato local
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    const hours = String(localDate.getHours()).padStart(2, '0');
+    const minutes = String(localDate.getMinutes()).padStart(2, '0');
+    const seconds = String(localDate.getSeconds()).padStart(2, '0');
+    
+    // Crear string ISO pero preservando la fecha local, no en UTC
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   };
 
   // Componente de Modal para seleccionar unidad
@@ -299,6 +326,9 @@ const RegistroModal = ({
     );
   };
 
+  // Estado para mostrar confirmación de fecha seleccionada
+  const [dateConfirmed, setDateConfirmed] = useState(false);
+
   return (
     <Modal
       visible={visible}
@@ -383,9 +413,21 @@ const RegistroModal = ({
                       setShowDatePicker(false);
                       if (selectedDate) {
                         setFechaConsumo(selectedDate);
+                        setDateConfirmed(true); // Indicar que se seleccionó una fecha
+                        
+                        // Mostrar confirmación temporal
+                        setTimeout(() => setDateConfirmed(false), 2000);
                       }
                     }}
                   />
+                )}
+                
+                {/* Mensaje de confirmación cuando se selecciona fecha */}
+                {dateConfirmed && (
+                  <View style={styles.dateConfirmContainer}>
+                    <MaterialIcons name="check-circle" size={16} color="#4CAF50" />
+                    <Text style={styles.dateConfirmText}>Fecha personalizada aplicada</Text>
+                  </View>
                 )}
               </View>
             </View>
@@ -717,28 +759,30 @@ const styles = StyleSheet.create({
     borderRadius: '5px',
     border: '1px solid #ccc',
     backgroundColor: '#fff',
+    fontStyle: 'italic',
+    color: '#666666',
   },
   webTimeInput: {
+    marginTop: 2,
     width: '100%',
     padding: '8px 12px',
-    fontSize: '16px',
+    fontSize: 14,
     borderRadius: '5px',
     border: '1px solid #ccc',
     backgroundColor: '#fff',
+    color: '#666666',
+    fontStyle: 'italic',
+  },
+  unitEquivalenceText: {
+    flex: 1,
+    fontStyle: 'italic',
+    color: '#666666',
   },
   unitItemContent: {
     flex: 1,
-  },
-  unitEquivalenceText: {
-    fontSize: 14,
-    color: '#666666',
-    fontStyle: 'italic',
-    marginTop: 2,
-  },
-  unitSelectorEquivalence: {
-    fontSize: 14,
-    color: '#666666', 
-    fontStyle: 'italic',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
 });
 

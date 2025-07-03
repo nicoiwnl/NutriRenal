@@ -17,9 +17,16 @@ const RestriccionesFallidas = ({ criteriosFallidos }) => {
     calorias: "Balance calórico adecuado para tu metabolismo"
   };
 
+  // Agregar dentro de view la funcion de los criterios por ahora se deja comentado
   return (
-    <View style={styles.restriccionesFallidasContainer}>
-      <View style={styles.restriccionesFallidasHeader}>
+    <View>
+    </View>
+  );
+};
+
+export default RestriccionesFallidas;
+
+/*       <View style={styles.restriccionesFallidasHeader}>
         <MaterialIcons name="info-outline" size={20} color="#690B22" />
         <Text style={styles.restriccionesFallidasTitle}>
           Aspectos a tener en cuenta en este plan
@@ -38,8 +45,5 @@ const RestriccionesFallidas = ({ criteriosFallidos }) => {
       <Text style={styles.restriccionesFallidasNota}>
         Consulta con tu nutricionista sobre estos aspectos para mejorar tu alimentación.
       </Text>
-    </View>
-  );
-};
+    */
 
-export default RestriccionesFallidas;

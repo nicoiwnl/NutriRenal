@@ -16,7 +16,7 @@ const ResumenDiario = ({ selectedDate, registrosFiltrados, totalesDiarios, forma
   const showInfoAlert = () => {
     Alert.alert(
       "Rangos recomendados diarios", 
-      "Para pacientes renales:\n\n• Sodio: 1500-2000 mg/día\n• Potasio: 2000-3000 mg/día\n• Fósforo: 800-1000 mg/día\n\nConsulta siempre con tu médico para recomendaciones personalizadas.",
+      "Para pacientes renales:\n\n• Sodio: 1300-1700 mg/día\n• Potasio: 1800-2000 mg/día\n• Fósforo: 800-1000 mg/día\n\nConsulta siempre con tu médico para recomendaciones personalizadas.",
       [{ text: "Entendido" }]
     );
   };
@@ -52,8 +52,8 @@ const ResumenDiario = ({ selectedDate, registrosFiltrados, totalesDiarios, forma
               {Math.round(totalesDiarios.sodio)}
             </Text>
             <Text style={styles.statLabel}>Sodio</Text>
-            <Text style={styles.rangeText}>1500-2000mg</Text>
-            {totalesDiarios.sodio > 1000 && (
+            <Text style={styles.rangeText}>1300-1700mg</Text>
+            {totalesDiarios.sodio > 1300 && (
               <MaterialIcons 
                 name="warning" 
                 size={14} 
@@ -71,7 +71,7 @@ const ResumenDiario = ({ selectedDate, registrosFiltrados, totalesDiarios, forma
             </Text>
             <Text style={styles.statLabel}>Fósforo</Text>
             <Text style={styles.rangeText}>800-1000mg</Text>
-            {totalesDiarios.fosforo > 700 && (
+            {totalesDiarios.fosforo > 800 && (
               <MaterialIcons 
                 name="warning" 
                 size={14} 
@@ -88,8 +88,8 @@ const ResumenDiario = ({ selectedDate, registrosFiltrados, totalesDiarios, forma
               {Math.round(totalesDiarios.potasio)}
             </Text>
             <Text style={styles.statLabel}>Potasio</Text>
-            <Text style={styles.rangeText}>2000-3000mg</Text>
-            {totalesDiarios.potasio > 2000 && (
+            <Text style={styles.rangeText}>1800-2000mg</Text>
+            {totalesDiarios.potasio > 1800 && (
               <MaterialIcons 
                 name="warning" 
                 size={14} 
@@ -100,7 +100,7 @@ const ResumenDiario = ({ selectedDate, registrosFiltrados, totalesDiarios, forma
           </View>
         </View>
         
-        {(totalesDiarios.sodio > 1000 || totalesDiarios.potasio > 2000 || totalesDiarios.fosforo > 700) && (
+        {(totalesDiarios.sodio > 1300 || totalesDiarios.potasio > 1800 || totalesDiarios.fosforo > 800) && (
           <View style={styles.dailyWarningContainer}>
             <MaterialIcons name="info-outline" size={16} color="#F44336" />
             <Text style={styles.dailyWarningText}>

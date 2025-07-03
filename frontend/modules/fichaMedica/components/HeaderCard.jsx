@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
 import { Card } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
 import { formatearRut } from '../../../utils/rutHelper';
@@ -41,9 +41,11 @@ const HeaderCard = ({
                   style={styles.profileImage}
                   resizeMode="cover"
                 />
-                <View style={styles.cameraIconContainer}>
-                  <MaterialIcons name="photo-camera" size={20} color="#FFFFFF" />
-                </View>
+                {Platform.OS !== 'web' && (
+                  <View style={styles.cameraIconContainer}>
+                    <MaterialIcons name="photo-camera" size={20} color="#FFFFFF" />
+                  </View>
+                )}
               </>
             )}
           </TouchableOpacity>
@@ -76,9 +78,6 @@ const HeaderCard = ({
           <Text style={styles.nombreLabel}>Apellidos:</Text>
           <Text style={styles.nombreValue}>{pacienteData?.paciente?.apellidos || 'No disponible'}</Text>
           
-          <View style={[styles.statusBadge, {backgroundColor: pacienteData?.paciente?.activo ? '#4CAF50' : '#F44336'}]}>
-            <Text style={styles.statusText}>{pacienteData?.paciente?.activo ? 'Activo' : 'Inactivo'}</Text>
-          </View>
         </View>
       </View>
     </Card>

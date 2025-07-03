@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 // Base URLs para diferentes entornos
 export const BASE_URL = Platform.OS === 'web' 
   ? 'http://127.0.0.1:8000'
-  : 'http://192.168.1.60:8000';
+  : 'http://192.168.1.18:8000';
   
 export const API_BASE = `${BASE_URL}/api`;
 

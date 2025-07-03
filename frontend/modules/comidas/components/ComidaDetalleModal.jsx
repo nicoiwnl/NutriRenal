@@ -15,6 +15,7 @@ const ComidaDetalleModal = ({ visible, comida, onClose }) => {
   // Comprobar si tenemos una imagen válida
   const hasValidImage = comida && comida.image && typeof comida.image === 'string';
   
+  // No usar este componente directamente, está en desuso.
   return (
     <Modal
       visible={visible}
@@ -63,13 +64,15 @@ const ComidaDetalleModal = ({ visible, comida, onClose }) => {
                     <Text style={styles.modalDescription}>{comida.desc}</Text>
                   </View>
                   
-                  {/* Componente de alimentos detectados - ahora con unidades */}
+
+                  {/* No utilizado para eso se creo el escaneo de alimentos 
                   <AlimentosDetectadosLista 
                     alimentosDetectados={alimentosDetectados}
                     unidadesMedida={unidadesMedida}
                     loading={loading}
                     error={error}
                   />
+                  */}
                   
                   <View style={styles.modalTips}>
                     <MaterialIcons name="lightbulb" size={20} color="#E07A5F" />

@@ -12,23 +12,8 @@
  * @returns {number} - Calorías diarias recomendadas
  */
 export const calcularCalorias = (genero, peso, altura, edad, nivelActividad, ajusteRenal = true, categorizar = true) => {
-  // Convertir altura de metros a cm
-  const alturaCm = altura * 100;
-  
-  // Calcular TMB (Tasa Metabólica Basal)
-  let tmb = 0;
-  
-  if (genero === 'Masculino' || genero === 'M') {
-    tmb = 88.362 + (13.397 * peso) + (4.799 * alturaCm) - (5.677 * edad);
-  } else {
-    tmb = 447.593 + (9.247 * peso) + (3.098 * alturaCm) - (4.330 * edad);
-  }
-  
-  // Factores de actividad
   const factores = {
-    'sedentario': 1.2,       // Poco o ningún ejercicio
-    'ligera': 1.375,         // Ejercicio ligero 1-3 días por semana
-    'ligero': 1.375,         // Alternativa
+    'sedentario': 1.2,    'ligera': 1.375,    'ligero': 1.375,         // Alternativa
     'moderada': 1.55,        // Ejercicio moderado 3-5 días por semana
     'moderado': 1.55,        // Alternativa
     'alta': 1.725,           // Ejercicio intenso 6-7 días por semana
@@ -36,6 +21,14 @@ export const calcularCalorias = (genero, peso, altura, edad, nivelActividad, aju
     'muy alta': 1.9,         // Ejercicio muy intenso o entrenamiento 2x/día
     'muy_activo': 1.9        // Alternativa
   };
+  
+  // Calcular TMB (Tasa Metabólica Basal) según la fórmula de Harris-Benedict
+  let tmb;
+  if (genero === 'Masculino' || genero.toLowerCase() === 'masculino') {
+    tmb = 88.362 + (13.397 * peso) + (4.799 * altura * 100) - (5.677 * edad);
+  } else {
+    tmb = 447.593 + (9.247 * peso) + (3.098 * altura * 100) - (4.330 * edad);
+  }
   
   // Aplicar factor de actividad
   const factor = factores[nivelActividad?.toLowerCase()] || factores.moderado;
@@ -51,20 +44,18 @@ export const calcularCalorias = (genero, peso, altura, edad, nivelActividad, aju
   // Redondear resultado
   const caloriasExactas = Math.round(calorias);
   
-  console.log(`Calculando calorías: Género=${genero}, Peso=${peso}kg, Altura=${altura}m, Edad=${edad}, 
-    Actividad=${nivelActividad}, TMB=${Math.round(tmb)}, Factor=${factor}, 
-    Calorias=${caloriasExactas}${ajusteRenal ? ' (con ajuste renal)' : ''}`);
-  
-  // Categorizar en grupos de calorías predefinidos si se solicita
+  // Si se solicita categorización, devolver también una categoría descriptiva
   if (categorizar) {
-    // Ampliamos las categorías para cubrir más rangos de calorías
-    const categoriasMinuta = [1400, 1600, 1800, 2000, 2200];
-    const categoriaElegida = categoriasMinuta.reduce((prev, curr) => 
-      (Math.abs(curr - caloriasExactas) < Math.abs(prev - caloriasExactas) ? curr : prev)
-    );
+    let categoria;
+    if (caloriasExactas < 1500) categoria = "bajo";
+    else if (caloriasExactas >= 1500 && caloriasExactas < 2000) categoria = "moderado";
+    else if (caloriasExactas >= 2000 && caloriasExactas < 2500) categoria = "medio";
+    else categoria = "alto";
     
-    console.log(`Calorías exactas: ${caloriasExactas}, Categoría asignada: ${categoriaElegida}`);
-    return categoriaElegida;
+    return {
+      calorias: caloriasExactas,
+      categoria: categoria
+    };
   }
   
   return caloriasExactas;
@@ -94,3 +85,4 @@ export const determinarCategoriaCalorías = (calorias) => {
     caloriasExactas: calorias
   };
 };
+

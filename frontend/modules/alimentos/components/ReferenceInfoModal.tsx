@@ -64,10 +64,10 @@ const ReferenceInfoModal: React.FC<ReferenceInfoModalProps> = ({
                   <Text style={styles.thresholdText}>Verde: Menos de 120 mg</Text>
                 </View>
                 <View style={[styles.thresholdItem, styles.yellowThreshold]}>
-                  <Text style={styles.thresholdText}>Amarillo: 120 - 500 mg</Text>
+                  <Text style={styles.thresholdText}>Amarillo: 120 - 250 mg</Text>
                 </View>
                 <View style={[styles.thresholdItem, styles.redThreshold]}>
-                  <Text style={styles.thresholdText}>Rojo: Más de 500 mg</Text>
+                  <Text style={styles.thresholdText}>Rojo: Más de 250 mg</Text>
                 </View>
               </View>
               <Text style={styles.nutrientNote}>
@@ -86,10 +86,10 @@ const ReferenceInfoModal: React.FC<ReferenceInfoModalProps> = ({
                   <Text style={styles.thresholdText}>Verde: Menos de 200 mg</Text>
                 </View>
                 <View style={[styles.thresholdItem, styles.yellowThreshold]}>
-                  <Text style={styles.thresholdText}>Amarillo: 200 - 800 mg</Text>
+                  <Text style={styles.thresholdText}>Amarillo: 200 - 350 mg</Text>
                 </View>
                 <View style={[styles.thresholdItem, styles.redThreshold]}>
-                  <Text style={styles.thresholdText}>Rojo: Más de 800 mg</Text>
+                  <Text style={styles.thresholdText}>Rojo: Más de 350 mg</Text>
                 </View>
               </View>
               <Text style={styles.nutrientNote}>
@@ -108,10 +108,10 @@ const ReferenceInfoModal: React.FC<ReferenceInfoModalProps> = ({
                   <Text style={styles.thresholdText}>Verde: Menos de 100 mg</Text>
                 </View>
                 <View style={[styles.thresholdItem, styles.yellowThreshold]}>
-                  <Text style={styles.thresholdText}>Amarillo: 100 - 300 mg</Text>
+                  <Text style={styles.thresholdText}>Amarillo: 100 - 170 mg</Text>
                 </View>
                 <View style={[styles.thresholdItem, styles.redThreshold]}>
-                  <Text style={styles.thresholdText}>Rojo: Más de 300 mg</Text>
+                  <Text style={styles.thresholdText}>Rojo: Más de 170 mg</Text>
                 </View>
               </View>
               <Text style={styles.nutrientNote}>
