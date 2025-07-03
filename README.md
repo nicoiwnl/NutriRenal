@@ -9,12 +9,12 @@
 
 | Funcionalidad              | Descripción                                                                 |
 |---------------------------|-----------------------------------------------------------------------------|
-| 📷 Escáner de Alimentos    | Escanea productos alimenticios para obtener información nutricional detallada |
-| 🧪 Análisis de Ingredientes| Comprende los componentes de tus alimentos                                   |
-| 🗓️ Planificación de Comidas| Crea y gestiona planes de comidas saludables                                  |
+| 📷 Escáner de Alimentos    | Escanea productos alimenticios para obtener su información nutricional  |
+| 🧪 Análisis de Ingredientes| Comprende los ingredientes de alimentos envasados                          |
+| 🗓️ Minutas                 | Entrega recomendaciones de comidas para su condición                       |
 | 👥 Comunidad               | Comparte recetas y consejos nutricionales con otros usuarios                 |
-| 🩺 Ficha Médica            | Almacena y realiza seguimiento de tu información de salud                     |
-| 🧠 Consejos Nutricionales  | Recibe recomendaciones personalizadas                                        |
+| 🩺 Ficha Médica            | Almacena tu información de salud                                             |
+| 🧠 Consejos Nutricionales  | Recibe recomendaciones y aprende con la aplicación                           |
 | 🍽️ Registro de Alimentos   | Lleva un registro diario de tu consumo                                       |
 
 
