@@ -16,6 +16,7 @@ import ForgotPasswordForm from '../modules/auth/components/ForgotPasswordForm';
 import BackButton from '../modules/auth/components/BackButton';
 import useForgotPassword from '../modules/auth/hooks/useForgotPassword';
 import styles from '../modules/auth/styles/forgotPasswordStyles';
+import Logo from '../assets/images/logo-sinfondo.png';
 
 export default function ForgotPasswordScreen({ navigation }) {
   // Obtener estado y funciones del hook personalizado
@@ -50,14 +51,11 @@ export default function ForgotPasswordScreen({ navigation }) {
             <View style={styles.formContainer}>
               <View style={styles.logoContainer}>
                 {/* Usar un texto como logo temporalmente */}
-                <Text style={{
-                  fontSize: 28,
-                  fontWeight: 'bold',
-                  color: '#690B22',
-                  marginBottom: 10
-                }}>
-                  SafetyIRC
-                </Text>
+                <Image
+                  source={Logo}
+                  style={styles.logo}
+                  resizeMode="contain"
+                />
               </View>
               
               <Text style={styles.title}>Recuperar Contraseña</Text>
